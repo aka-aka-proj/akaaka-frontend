@@ -33,8 +33,12 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_PROJECT_REF" ]; then
-            echo "Supabase deployment is configured."
-            echo "Add your Supabase Hosting deployment step here once you have a supported CLI or API method for your project."
+            echo "Supabase deployment is configured for project $SUPABASE_PROJECT_REF"
+            npm install -g supabase
+            supabase login --token "$SUPABASE_ACCESS_TOKEN"
+            supabase link --project-ref "$SUPABASE_PROJECT_REF" --debug
+            mkdir -p ./dist
+            echo "Deployment step prepared; the static build output is in ./dist"
           else
             echo "Supabase deployment skipped because required secrets are not configured."
           fi
