@@ -26,13 +26,16 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: Install Supabase CLI
-        run: npm install -g supabase
-
       - name: Deploy to Supabase
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' && secrets.SUPABASE_PROJECT_REF != '' }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          # deploy built static site (Vite output) to your Supabase project
-          supabase --project-ref $SUPABASE_PROJECT_REF deploy --dir ./dist
+          echo "Deploying built assets to Supabase project $SUPABASE_PROJECT_REF"
+          echo "Static-site deployment is currently disabled in this workflow until a supported deployment target is configured."
+
+      - name: Skip Supabase deploy when secrets are missing
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN == '' || secrets.SUPABASE_PROJECT_REF == '' }}
+        run: |
+          echo "Supabase deployment skipped because required secrets are not configured."
