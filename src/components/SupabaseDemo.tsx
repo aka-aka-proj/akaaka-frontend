@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function SupabaseDemo() {
@@ -20,8 +20,8 @@ export default function SupabaseDemo() {
       }
       await fetchTodos();
     })();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser((session as any)?.user ?? null);
+    const { data: listener } = supabase.auth.onAuthStateChange((_: string, session: { user?: { email?: string } | null } | null) => {
+      setUser(session?.user ?? null);
     });
     return () => { listener.subscription.unsubscribe(); };
   }, []);
@@ -44,7 +44,7 @@ export default function SupabaseDemo() {
 
   async function signUp() {
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (error) { setMsg(error.message); return; }
     setMsg('註冊成功，請檢查電子郵件以完成驗證（如啟用）。');
