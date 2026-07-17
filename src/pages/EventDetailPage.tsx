@@ -7,6 +7,7 @@ import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import type { EventItem, EventThread } from '../types'
 
 export function EventDetailPage() {
@@ -103,6 +104,23 @@ export function EventDetailPage() {
               {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
             </p>
             <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(eventItem.start_time).toLocaleString()}</p>
+            <div className="calendar-actions">
+              <button
+                type="button"
+                className="calendar-btn"
+                onClick={() => downloadIcs(eventItem)}
+              >
+                {t('events.downloadIcs')}
+              </button>
+              <a
+                href={getGoogleCalendarUrl(eventItem)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="calendar-btn"
+              >
+                {t('events.googleCalendar')}
+              </a>
+            </div>
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>

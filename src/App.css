@@ -300,6 +300,83 @@ button {
   font-weight: 500;
 }
 
+/* ── Search & Filter Chips ── */
+
+.search-input {
+  width: 100%;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d0d7de;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chip:hover {
+  background: #f6f8fa;
+}
+
+.chip-active {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+
+.chip-active:hover {
+  background: #0b5ed7;
+}
+
+/* ── Event List Item ── */
+
+.event-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* ── Calendar Actions ── */
+
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.375rem;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.calendar-btn:hover {
+  background: #f6f8fa;
+}
+
 /* ── Bottom Navigation (Mobile) ── */
 
 .bottom-nav {
