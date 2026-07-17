@@ -46,13 +46,13 @@ This repository is responsible for **frontend-only** CI/CD.
 
 - Workflow: `.github/workflows/frontend-cd.yml`
 - Trigger: `push` to `main` and `workflow_dispatch`
-- Scope: frontend build artifact + deploy integration skeleton (placeholder only)
-- Note: backend must be deployed first, and frontend runtime/env vars should point to deployed backend endpoints.
+- Scope: frontend build artifact and deploy to Vercel via CLI
+- Note: **Supabase backend must be deployed first** before deploying frontend, and frontend runtime env vars must point to deployed backend endpoints.
 
-### Required repository configuration for enabling real deploy
+### Required repository secrets
 
-- Secret: `FRONTEND_DEPLOY_TOKEN`
-- Variable: `FRONTEND_DEPLOY_PROJECT_ID`
-- Variable: `FRONTEND_DEPLOY_ORG_ID`
+- Secret: `VERCEL_TOKEN`
+- Secret: `VERCEL_PROJECT_ID`
+- Secret: `VERCEL_ORG_ID`
 
-The deploy step is intentionally a placeholder. Replace it with your hosting provider command when secrets/vars are ready.
+`frontend-cd.yml` uses `npx vercel deploy dist --prod --yes --token "$VERCEL_TOKEN"` after the frontend build job finishes.
