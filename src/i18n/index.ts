@@ -10,11 +10,14 @@ export const locales: { value: Locale; label: string }[] = [
 
 export const defaultLocale: Locale = 'zh-TW'
 
-const translations = { 'zh-TW': zhTW, en } as const
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TranslationKeys {}
 
-export type TranslationKeys = typeof zhTW
+type NestedStrings = { [key: string]: string | NestedStrings }
 
-export function getTranslations(locale: Locale): TranslationKeys {
+const translations: Record<Locale, NestedStrings> = { 'zh-TW': zhTW as NestedStrings, en: en as NestedStrings }
+
+export function getTranslations(locale: Locale): NestedStrings {
   return translations[locale]
 }
 

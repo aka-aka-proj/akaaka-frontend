@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useLanguage } from '../context/LanguageContext'
-import { t as translate, type TranslationKeys } from '../i18n'
+import { t as translate } from '../i18n'
 
 export function useT() {
   const { locale } = useLanguage()
@@ -14,5 +14,3 @@ export function useT() {
 
   return { t, locale } as const
 }
-
-export type { TranslationKeys }
