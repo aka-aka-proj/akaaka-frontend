@@ -1,4 +1,4 @@
-name: Frontend CD (Skeleton)
+name: Frontend CD to Vercel
 
 on:
   push:
@@ -48,22 +48,15 @@ jobs:
           name: frontend-dist
           path: dist
 
-      - name: Backend dependency note
+      - name: Supabase backend dependency note
         run: |
-          echo "This frontend CD assumes backend has already been deployed."
-          echo "Make sure API endpoint vars point to the deployed backend before enabling real deploy."
+          echo "Frontend deploy requires Supabase backend to be deployed first."
+          echo "Ensure frontend runtime env points to the deployed Supabase backend."
 
-      - name: Frontend deploy placeholder
+      - name: Deploy frontend to Vercel
         env:
-          FRONTEND_DEPLOY_TOKEN: ${{ secrets.FRONTEND_DEPLOY_TOKEN }}
-          FRONTEND_DEPLOY_PROJECT_ID: ${{ vars.FRONTEND_DEPLOY_PROJECT_ID }}
-          FRONTEND_DEPLOY_ORG_ID: ${{ vars.FRONTEND_DEPLOY_ORG_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
-          if [ -z "$FRONTEND_DEPLOY_TOKEN" ] || [ -z "$FRONTEND_DEPLOY_PROJECT_ID" ] || [ -z "$FRONTEND_DEPLOY_ORG_ID" ]; then
-            echo "::warning::CD skeleton only: missing FRONTEND_DEPLOY_TOKEN / FRONTEND_DEPLOY_PROJECT_ID / FRONTEND_DEPLOY_ORG_ID."
-            echo "::warning::Add repository secret/vars and replace this step with real deploy command."
-            exit 0
-          fi
-
-          echo "TODO: Replace this placeholder with your frontend hosting deploy command."
-          echo "Example inputs already wired: FRONTEND_DEPLOY_TOKEN / FRONTEND_DEPLOY_PROJECT_ID / FRONTEND_DEPLOY_ORG_ID."
+          npx vercel deploy dist --prod --yes --token "$VERCEL_TOKEN"
