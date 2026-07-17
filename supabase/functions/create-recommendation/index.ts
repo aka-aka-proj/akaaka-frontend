@@ -109,6 +109,7 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse({ success: true, recommendation_id: insertData.id }, 200)
   } catch (err) {
-    return jsonResponse({ error: 'internal', message: String(err) }, 500)
+    console.error('create-recommendation unexpected error', err)
+    return jsonResponse({ error: 'internal', message: 'Internal server error' }, 500)
   }
 })
