@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { SafetyCompactModal } from '../components/SafetyCompactModal'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -15,6 +16,7 @@ export function OnboardingPage() {
   const navigate = useNavigate()
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
+  const [compactOpen, setCompactOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
@@ -87,13 +89,24 @@ export function OnboardingPage() {
   return (
     <Layout title={t('onboarding.title')}>
       <img src="/illustration-welcome.svg" alt="" width={480} height={240} className="illustration" />
+      <SafetyCompactModal
+        open={compactOpen}
+        onClose={() => setCompactOpen(false)}
+        onAgree={() => {
+          setAgreed(true)
+          setCompactOpen(false)
+        }}
+      />
       <form className="card" onSubmit={submit}>
-        <label className="checkbox">
+        <label className={`checkbox${agreed ? ' checkbox-locked' : ''}`}>
           <input
             aria-label={t('onboarding.agreeAria')}
             type="checkbox"
             checked={agreed}
-            onChange={(event) => setAgreed(event.target.checked)}
+            disabled={agreed}
+            onChange={() => {
+              if (!agreed) setCompactOpen(true)
+            }}
           />
           {t('onboarding.agreeLabel')}
         </label>
