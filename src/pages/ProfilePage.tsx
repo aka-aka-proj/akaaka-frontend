@@ -136,35 +136,20 @@ export function ProfilePage() {
       return
     }
 
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { count, error: countError } = await supabase
-      .from('recommendations')
-      .select('id', { count: 'exact', head: true })
-      .eq('from_profile_id', user.id)
-      .eq('to_profile_id', targetProfileId)
-      .gte('created_at', since)
-
-    if (countError) {
-      setMessage(countError.message)
-      return
-    }
-
-    if ((count ?? 0) > 0) {
-      setMessage('You can only recommend this user once per 24 hours.')
-      return
-    }
-
-    const { error } = await supabase.from('recommendations').insert([
-      {
-        from_profile_id: user.id,
+    const { error } = await supabase.functions.invoke('create-recommendation', {
+      body: {
         to_profile_id: targetProfileId,
-        score_increment: 1,
-        comment: recommendComment.trim() || null,
+        comment: recommendComment.trim() || undefined,
       },
-    ])
+    })
 
     if (error) {
-      setMessage(error.message)
+      const status = (error as { status?: number }).status
+      if (status === 429) {
+        setMessage('You can only recommend this person once every 24 hours.')
+      } else {
+        setMessage((error as { message?: string }).message ?? 'An error occurred.')
+      }
       return
     }
 

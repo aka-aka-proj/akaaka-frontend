@@ -6,6 +6,7 @@ import { ProfilePage } from './ProfilePage'
 
 const mockUseAuth = vi.fn()
 const from = vi.fn()
+const functionsInvoke = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -14,6 +15,9 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    functions: {
+      invoke: (...args: unknown[]) => functionsInvoke(...args),
+    },
   },
 }))
 
@@ -117,7 +121,7 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
   })
 
-  it('shows rate limit message when recommendation already exists in 24h window', async () => {
+  it('shows rate limit message when Edge Function returns 429', async () => {
     const profilesQuery = queryBuilder({
       data: {
         id: 'target-user',
@@ -131,7 +135,6 @@ describe('ProfilePage', () => {
       error: null,
     })
     const blocksQuery = queryBuilder({ data: null, error: null })
-    const recommendationsQuery = queryBuilder({ count: 1, error: null })
 
     from.mockImplementation((table: string) => {
       if (table === 'profiles') {
@@ -140,10 +143,58 @@ describe('ProfilePage', () => {
       if (table === 'blocks') {
         return blocksQuery
       }
-      if (table === 'recommendations') {
-        return recommendationsQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    functionsInvoke.mockResolvedValue({ data: null, error: { status: 429, message: 'rate_limited' } })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Give Recommendation' })).toBeTruthy()
+    })
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Give Recommendation' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('You can only recommend this person once every 24 hours.')).toBeTruthy()
+    })
+  })
+
+  it('shows success message when recommendation is submitted via Edge Function', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user',
+        role_status: 'general',
+        display_name: 'Target User',
+        bio: 'Public bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 5,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return profilesQuery
+      }
+      if (table === 'blocks') {
+        return blocksQuery
       }
       return queryBuilder({ data: null, error: null })
+    })
+
+    functionsInvoke.mockResolvedValue({
+      data: { success: true, recommendation_id: 'rec-uuid-1' },
+      error: null,
     })
 
     render(
@@ -161,7 +212,7 @@ describe('ProfilePage', () => {
     await user.click(screen.getByRole('button', { name: 'Give Recommendation' }))
 
     await waitFor(() => {
-      expect(screen.getByText('You can only recommend this user once per 24 hours.')).toBeTruthy()
+      expect(screen.getByText('Recommendation submitted.')).toBeTruthy()
     })
   })
 })
