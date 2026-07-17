@@ -32,10 +32,10 @@ export function EventDetailPage() {
 
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }] =
       await Promise.all([
-        supabase.from('events').select('*').eq('id', id).maybeSingle(),
+        supabase.from('events').select('*, creator:profiles(display_name)').eq('id', id).maybeSingle(),
         supabase
           .from('event_threads')
-          .select('*')
+          .select('*, profile:profiles(display_name)')
           .eq('event_id', id)
           .order('created_at', { ascending: true }),
       ])
@@ -100,7 +100,7 @@ export function EventDetailPage() {
             <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
             <p className="event-meta">
               <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
-              {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_id}</Link>
+              {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
             </p>
             <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(eventItem.start_time).toLocaleString()}</p>
           </>
@@ -140,7 +140,7 @@ export function EventDetailPage() {
                   <div>
                     <p>{thread.content}</p>
                     <small>
-                      <Link to={`/profile/${thread.profile_id}`}>{thread.profile_id}</Link>{' '}
+                      <Link to={`/profile/${thread.profile_id}`}>{thread.profile?.display_name || thread.profile_id}</Link>{' '}
                       {thread.parent_id ? t('eventDetail.replyTo', { id: thread.parent_id }) : ''}
                     </small>
                   </div>

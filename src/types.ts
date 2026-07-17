@@ -61,6 +61,7 @@ export interface EventItem {
   visibility_settings: { type?: string } | null
   start_time: string
   created_at: string
+  creator?: Profile | null
 }
 
 export interface EventThread {
@@ -70,6 +71,7 @@ export interface EventThread {
   content: string
   parent_id: string | null
   created_at: string
+  profile?: Profile | null
 }
 
 export interface ReportItem {
