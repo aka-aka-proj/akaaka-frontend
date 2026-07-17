@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
+import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
@@ -78,6 +79,14 @@ function App() {
         element={
           <ProtectedRoute>
             <MyReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/moderation"
+        element={
+          <ProtectedRoute>
+            <AdminModerationPanel />
           </ProtectedRoute>
         }
       />
