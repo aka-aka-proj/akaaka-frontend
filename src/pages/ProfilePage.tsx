@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
-import type { Profile, SocialLink, Visibility } from '../types'
+import type { BdsmRole, GenderIdentity, Profile, SocialLink, Visibility } from '../types'
 
 const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
 
@@ -36,6 +36,10 @@ export function ProfilePage() {
   const [bio, setBio] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
+  const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
+  const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
+  const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
+  const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
   const [message, setMessage] = useState('')
@@ -72,6 +76,10 @@ export function ProfilePage() {
     setBio(mapped?.bio ?? '')
     setVisibility(getBioVisibility(mapped))
     setSocialLinks(mapped?.external_social_links ?? [createSocialLink()])
+    setGenderIdentity(mapped?.metadata?.gender_identity ?? '')
+    setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
+    setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
+    setBdsmRolesVisibility(mapped?.metadata?.visibility?.bdsm_roles ?? 'public')
 
     if (user && targetProfileId) {
       const { data: blockData, error: blockError } = await supabase
@@ -114,7 +122,11 @@ export function ProfilePage() {
         metadata: {
           visibility: {
             bio: visibility || 'public',
+            gender_identity: genderIdentityVisibility || 'public',
+            bdsm_roles: bdsmRolesVisibility || 'public',
           },
+          gender_identity: genderIdentity || undefined,
+          bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : undefined,
         },
       })
       .eq('id', user.id)
@@ -210,6 +222,18 @@ export function ProfilePage() {
                 <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
                 {' '}{t('profile.reputation')}: {profile.reputation_score}
               </p>
+              {profile.metadata?.gender_identity ? (
+                <p>
+                  {t('profile.genderIdentityLabel')}:{' '}
+                  {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
+                </p>
+              ) : null}
+              {profile.metadata?.bdsm_roles && profile.metadata.bdsm_roles.length > 0 ? (
+                <p>
+                  {t('profile.bdsmRolesLabel')}:{' '}
+                  {profile.metadata.bdsm_roles.map((r) => t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)).join(', ')}
+                </p>
+              ) : null}
               <p>
                 {t('profile.bio')}:{' '}
                 {showBio
@@ -260,6 +284,71 @@ export function ProfilePage() {
               aria-label={t('profile.bioVisibilityLabel')}
               value={visibility}
               onChange={(event) => setVisibility(event.target.value as Visibility)}
+            >
+              <option value="public">{t('profile.public')}</option>
+              <option value="connections_only">{t('profile.connectionsOnly')}</option>
+              <option value="private">{t('profile.private')}</option>
+            </select>
+          </label>
+          <label>
+            {t('profile.genderIdentityLabel')}
+            <select
+              aria-label={t('profile.genderIdentityLabel')}
+              value={genderIdentity}
+              onChange={(event) => setGenderIdentity(event.target.value as GenderIdentity | '')}
+            >
+              <option value="">{t('profile.genderIdentityLabel')}</option>
+              <option value="man">{t('profile.genderIdentityMan')}</option>
+              <option value="woman">{t('profile.genderIdentityWoman')}</option>
+              <option value="non_binary">{t('profile.genderIdentityNonBinary')}</option>
+              <option value="genderqueer">{t('profile.genderIdentityGenderqueer')}</option>
+              <option value="agender">{t('profile.genderIdentityAgender')}</option>
+              <option value="bigender">{t('profile.genderIdentityBigender')}</option>
+              <option value="demiboy">{t('profile.genderIdentityDemiboy')}</option>
+              <option value="demigirl">{t('profile.genderIdentityDemigirl')}</option>
+              <option value="genderfluid">{t('profile.genderIdentityGenderfluid')}</option>
+              <option value="two_spirit">{t('profile.genderIdentityTwoSpirit')}</option>
+              <option value="questioning">{t('profile.genderIdentityQuestioning')}</option>
+              <option value="other">{t('profile.genderIdentityOther')}</option>
+            </select>
+          </label>
+          <label>
+            {t('profile.genderIdentityVisibilityLabel')}
+            <select
+              aria-label={t('profile.genderIdentityVisibilityLabel')}
+              value={genderIdentityVisibility}
+              onChange={(event) => setGenderIdentityVisibility(event.target.value as Visibility)}
+            >
+              <option value="public">{t('profile.public')}</option>
+              <option value="connections_only">{t('profile.connectionsOnly')}</option>
+              <option value="private">{t('profile.private')}</option>
+            </select>
+          </label>
+          <fieldset>
+            <legend>{t('profile.bdsmRolesLabel')}</legend>
+            {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rope_bunny', 'rigging'] as BdsmRole[]).map((role) => (
+              <label key={role} className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={bdsmRoles.includes(role)}
+                  onChange={(event) => {
+                    setBdsmRoles((prev) =>
+                      event.target.checked
+                        ? [...prev, role]
+                        : prev.filter((r) => r !== role),
+                    )
+                  }}
+                />
+                {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
+              </label>
+            ))}
+          </fieldset>
+          <label>
+            {t('profile.bdsmRolesVisibilityLabel')}
+            <select
+              aria-label={t('profile.bdsmRolesVisibilityLabel')}
+              value={bdsmRolesVisibility}
+              onChange={(event) => setBdsmRolesVisibility(event.target.value as Visibility)}
             >
               <option value="public">{t('profile.public')}</option>
               <option value="connections_only">{t('profile.connectionsOnly')}</option>

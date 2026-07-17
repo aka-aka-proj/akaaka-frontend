@@ -2,6 +2,32 @@ export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved'
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 
+export type GenderIdentity =
+  | 'man'
+  | 'woman'
+  | 'non_binary'
+  | 'genderqueer'
+  | 'agender'
+  | 'bigender'
+  | 'demiboy'
+  | 'demigirl'
+  | 'genderfluid'
+  | 'two_spirit'
+  | 'questioning'
+  | 'other'
+
+export type BdsmRole =
+  | 'dom'
+  | 'sub'
+  | 'switch'
+  | 'master'
+  | 'slave'
+  | 'owner'
+  | 'pet'
+  | 'brat'
+  | 'rope_bunny'
+  | 'rigging'
+
 export interface SocialLink {
   platform: SocialPlatform
   url: string
@@ -16,7 +42,11 @@ export interface Profile {
   metadata: {
     visibility?: {
       bio?: Visibility
+      gender_identity?: Visibility
+      bdsm_roles?: Visibility
     }
+    gender_identity?: GenderIdentity
+    bdsm_roles?: BdsmRole[]
   } | null
   reputation_score: number
 }
