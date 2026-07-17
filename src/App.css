@@ -186,6 +186,11 @@ button {
   height: 96px;
 }
 
+.avatar-xl {
+  width: 128px;
+  height: 128px;
+}
+
 .profile-header {
   display: flex;
   gap: 1.25rem;

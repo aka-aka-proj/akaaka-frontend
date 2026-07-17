@@ -233,7 +233,7 @@ export function ProfilePage() {
       <section className="card">
         {profile ? (
           <div className="profile-header">
-            <img src="/default-avatar.svg" alt="" width={96} height={96} className="avatar avatar-lg" />
+            <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
             <div className="profile-info">
               <h2>{profile.display_name || profile.id}</h2>
               <p className="profile-role">
@@ -265,8 +265,9 @@ export function ProfilePage() {
               <ul className="social-links-list">
                 {profile.external_social_links.map((link) => (
                   <li key={`${link.platform}-${link.url}`} className="social-link-item">
-                    <Icon href="/icons.svg" name={`${link.platform}-icon`} size={18} />
-                    <a href={link.url} target="_blank" rel="noopener noreferrer">{link.platform}: {link.url}</a>
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.platform}>
+                      <Icon href="/icons.svg" name={`${link.platform}-icon`} size={32} />
+                    </a>
                   </li>
                 ))}
               </ul>
