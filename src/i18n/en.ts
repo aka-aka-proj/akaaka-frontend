@@ -118,6 +118,10 @@ const en = {
     recommendationCommentPlaceholder: 'Optional recommendation comment',
     unblockUser: 'Unblock User',
     blockUser: 'Block User',
+    deleteAccount: 'Delete Account',
+    deleteAccountConfirm: 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+    deleteAccountSuccess: 'Account deleted.',
+    deleteAccountError: 'An error occurred while deleting the account.',
   },
   onboarding: {
     title: 'Onboarding',

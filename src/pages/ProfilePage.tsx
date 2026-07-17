@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ReportForm } from '../components/ReportForm'
@@ -27,6 +27,7 @@ function mapProfileRow(row: unknown): Profile {
 
 export function ProfilePage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { user, refreshProfile } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
@@ -206,6 +207,27 @@ export function ProfilePage() {
     setMessage(t('profile.userBlocked'))
   }
 
+  const deleteAccount = async () => {
+    if (!user) {
+      return
+    }
+
+    if (!window.confirm(t('profile.deleteAccountConfirm'))) {
+      return
+    }
+
+    const { error } = await supabase.functions.invoke('delete-account')
+
+    if (error) {
+      setMessage(t('profile.deleteAccountError'))
+      return
+    }
+
+    await supabase.auth.signOut()
+    setMessage(t('profile.deleteAccountSuccess'))
+    navigate('/auth', { replace: true })
+  }
+
   return (
     <Layout title={t('profile.title')}>
       <section className="card">
@@ -260,6 +282,7 @@ export function ProfilePage() {
       </section>
 
       {isOwner ? (
+        <>
         <form className="card" onSubmit={saveProfile}>
           <h3>{t('profile.editProfile')}</h3>
           <label>
@@ -386,6 +409,14 @@ export function ProfilePage() {
           </section>
           <button type="submit">{t('profile.saveProfile')}</button>
         </form>
+
+        <section className="card danger-zone">
+          <h3>{t('profile.deleteAccount')}</h3>
+          <button type="button" className="btn-danger" onClick={() => void deleteAccount()}>
+            <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('profile.deleteAccount')}
+          </button>
+        </section>
+        </>
       ) : (
         <section className="card">
           <h3>{t('profile.trustActions')}</h3>

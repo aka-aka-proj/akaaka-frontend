@@ -118,6 +118,10 @@ const zhTW = {
     recommendationCommentPlaceholder: '選填推薦留言',
     unblockUser: '取消封鎖用戶',
     blockUser: '封鎖用戶',
+    deleteAccount: '刪除帳號',
+    deleteAccountConfirm: '確定要刪除帳號嗎？此操作無法復原，您的所有資料將被永久刪除。',
+    deleteAccountSuccess: '帳號已刪除。',
+    deleteAccountError: '刪除帳號時發生錯誤。',
   },
   onboarding: {
     title: '新手導覽',
