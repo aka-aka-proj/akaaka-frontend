@@ -3,6 +3,7 @@ import './App.css'
 import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
+import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
@@ -81,6 +82,14 @@ function App() {
           <ProtectedRoute>
             <MyReportsPage />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/moderation"
+        element={
+          <AdminRoute>
+            <AdminModerationPanel />
+          </AdminRoute>
         }
       />
       <Route
