@@ -23,6 +23,11 @@ const zhTW = {
     needAccount: '需要帳號？註冊',
     emailRequired: '請輸入電子郵件和密碼。',
     signUpSuccess: '註冊成功。',
+    orContinueWith: '或使用電子郵件繼續',
+    continueWithGoogle: '使用 Google 登入',
+    continueWithFacebook: '使用 Facebook 登入',
+    continueWithApple: '使用 Apple 登入',
+    socialLoginError: '社交登入失敗，請稍後再試',
   },
   events: {
     title: '活動',

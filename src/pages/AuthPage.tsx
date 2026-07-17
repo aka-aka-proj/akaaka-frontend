@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -15,6 +15,8 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   over_request_rate_limit: '請求過於頻繁，請稍後再試',
 }
 
+type SocialProvider = 'google' | 'facebook' | 'apple'
+
 export function AuthPage() {
   const { user } = useAuth()
   const location = useLocation()
@@ -26,9 +28,31 @@ export function AuthPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error_description') ?? params.get('error')
+    if (error) {
+      setMessage(t('auth.socialLoginError'))
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [t])
+
   if (user) {
     const from = (location.state as { from?: string } | null)?.from
     return <Navigate to={from ?? '/events'} replace />
+  }
+
+  const signInWithSocial = async (provider: SocialProvider) => {
+    setMessage('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/events`,
+      },
+    })
+    if (error) {
+      setMessage(t('auth.socialLoginError'))
+    }
   }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -67,6 +91,19 @@ export function AuthPage() {
       <form className="card auth-card" onSubmit={submit}>
         <img src="/logo-login.svg" alt="AkaAka" width={80} height={80} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
+        <button type="button" className="social-btn" onClick={() => signInWithSocial('google')}>
+          <Icon href="/social-icons.svg" name="social-google" size={20} />
+          {t('auth.continueWithGoogle')}
+        </button>
+        <button type="button" className="social-btn" onClick={() => signInWithSocial('facebook')}>
+          <Icon href="/social-icons.svg" name="social-facebook" size={20} />
+          {t('auth.continueWithFacebook')}
+        </button>
+        <button type="button" className="social-btn" onClick={() => signInWithSocial('apple')}>
+          <Icon href="/social-icons.svg" name="social-apple" size={20} />
+          {t('auth.continueWithApple')}
+        </button>
+        <div className="social-divider">{t('auth.orContinueWith')}</div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-user" size={16} /> {t('common.email')}

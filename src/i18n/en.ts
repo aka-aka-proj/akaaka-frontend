@@ -23,6 +23,11 @@ const en = {
     needAccount: 'Need an account? Sign Up',
     emailRequired: 'Email and password are required.',
     signUpSuccess: 'Sign up successful.',
+    orContinueWith: 'Or continue with email',
+    continueWithGoogle: 'Continue with Google',
+    continueWithFacebook: 'Continue with Facebook',
+    continueWithApple: 'Continue with Apple',
+    socialLoginError: 'Social login failed. Please try again.',
   },
   events: {
     title: 'Events',
