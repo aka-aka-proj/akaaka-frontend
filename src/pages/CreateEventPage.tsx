@@ -3,11 +3,13 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
 export function CreateEventPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
+  const { t } = useT()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState('')
@@ -20,17 +22,17 @@ export function CreateEventPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user) {
-      setMessage('Please sign in first.')
+      setMessage(t('createEvent.signInFirst'))
       return
     }
 
     if (!title.trim() || !startTime) {
-      setMessage('Title and start time are required.')
+      setMessage(t('createEvent.titleRequired'))
       return
     }
 
     if (isVenueHosted && profile?.role_status !== 'venue_approved') {
-      setMessage('Only venue_approved users can create venue-hosted events.')
+      setMessage(t('createEvent.venueApprovalRequired'))
       return
     }
 
@@ -61,36 +63,36 @@ export function CreateEventPage() {
   }
 
   return (
-    <Layout title="Create Event">
+    <Layout title={t('createEvent.title')}>
       <form className="card" onSubmit={submit}>
         <label>
-          Title
+          {t('createEvent.titleLabel')}
           <input
-            aria-label="Title"
+            aria-label={t('createEvent.titleLabel')}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
         <label>
-          Description
+          {t('createEvent.descriptionLabel')}
           <textarea
-            aria-label="Description"
+            aria-label={t('createEvent.descriptionLabel')}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
         <label>
-          Event type
+          {t('createEvent.eventTypeLabel')}
           <input
-            aria-label="Event type"
+            aria-label={t('createEvent.eventTypeLabel')}
             value={eventType}
             onChange={(event) => setEventType(event.target.value)}
           />
         </label>
         <label>
-          Start time
+          {t('createEvent.startTimeLabel')}
           <input
-            aria-label="Start time"
+            aria-label={t('createEvent.startTimeLabel')}
             type="datetime-local"
             value={startTime}
             onChange={(event) => setStartTime(event.target.value)}
@@ -98,27 +100,27 @@ export function CreateEventPage() {
         </label>
         <label className="checkbox">
           <input
-            aria-label="Venue hosted"
+            aria-label={t('createEvent.venueHostedLabel')}
             type="checkbox"
             checked={isVenueHosted}
             onChange={(event) => setIsVenueHosted(event.target.checked)}
           />
-          Venue hosted
+          {t('createEvent.venueHostedLabel')}
         </label>
         <label>
-          Visibility
+          {t('createEvent.visibilityLabel')}
           <select
-            aria-label="Visibility"
+            aria-label={t('createEvent.visibilityLabel')}
             value={visibilityType}
             onChange={(event) => setVisibilityType(event.target.value)}
           >
-            <option value="public">public</option>
-            <option value="connections_only">connections_only</option>
-            <option value="private">private</option>
+            <option value="public">{t('createEvent.public')}</option>
+            <option value="connections_only">{t('createEvent.connectionsOnly')}</option>
+            <option value="private">{t('createEvent.private')}</option>
           </select>
         </label>
         <button type="submit" disabled={submitting}>
-          Save event
+          {t('createEvent.saveEvent')}
         </button>
         {message ? <p className="message">{message}</p> : null}
       </form>

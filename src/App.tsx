@@ -3,6 +3,7 @@ import './App.css'
 import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
+import { useT } from './hooks/useT'
 import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
@@ -15,9 +16,10 @@ import { ProfilePage } from './pages/ProfilePage'
 
 function RootRedirect() {
   const { user, loading } = useAuth()
+  const { t } = useT()
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p>{t('common.loading')}</p>
   }
 
   return <Navigate to={user ? '/events' : '/auth'} replace />

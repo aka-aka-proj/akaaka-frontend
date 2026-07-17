@@ -4,12 +4,14 @@ import { Link, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem, EventThread } from '../types'
 
 export function EventDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
+  const { t } = useT()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
@@ -38,7 +40,7 @@ export function EventDetailPage() {
       ])
 
     if (eventError || threadError) {
-      setMessage(eventError?.message ?? threadError?.message ?? 'Unable to load event.')
+      setMessage(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'))
       return
     }
 
@@ -89,34 +91,34 @@ export function EventDetailPage() {
   }
 
   return (
-    <Layout title="Event Detail">
+    <Layout title={t('eventDetail.title')}>
       <section className="card">
         {eventItem ? (
           <>
             <h2>{eventItem.title}</h2>
-            <p>{eventItem.description ?? 'No description'}</p>
-            <p>Created by: <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_id}</Link></p>
+            <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
+            <p>{t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_id}</Link></p>
             <p>{new Date(eventItem.start_time).toLocaleString()}</p>
           </>
         ) : (
-          <p>Event not found.</p>
+          <p>{t('eventDetail.notFound')}</p>
         )}
         {message ? <p className="message">{message}</p> : null}
       </section>
 
       <section className="card">
-        <h3>Discussion</h3>
+        <h3>{t('eventDetail.discussion')}</h3>
         <form onSubmit={postThread}>
           <textarea
-            aria-label="Thread content"
+            aria-label={t('eventDetail.discussion')}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder={replyParentId ? `Replying to ${replyParentId}` : 'Post a comment'}
+            placeholder={replyParentId ? t('eventDetail.replyingTo', { id: replyParentId }) : t('eventDetail.postComment')}
           />
-          <button type="submit">Post</button>
+          <button type="submit">{t('eventDetail.post')}</button>
           {replyParentId ? (
             <button type="button" onClick={() => setReplyParentId(null)}>
-              Cancel reply
+              {t('common.cancelReply')}
             </button>
           ) : null}
         </form>
@@ -126,11 +128,11 @@ export function EventDetailPage() {
               <p>{thread.content}</p>
               <small>
                 <Link to={`/profile/${thread.profile_id}`}>{thread.profile_id}</Link>{' '}
-                {thread.parent_id ? `(reply to ${thread.parent_id})` : ''}
+                {thread.parent_id ? t('eventDetail.replyTo', { id: thread.parent_id }) : ''}
               </small>
               <div>
                 <button type="button" onClick={() => setReplyParentId(thread.id)}>
-                  Reply
+                  {t('eventDetail.reply')}
                 </button>
               </div>
             </li>

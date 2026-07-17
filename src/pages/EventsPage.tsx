@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem } from '../types'
 
 export function EventsPage() {
+  const { t } = useT()
   const [events, setEvents] = useState<EventItem[]>([])
   const [message, setMessage] = useState('')
 
@@ -27,15 +29,15 @@ export function EventsPage() {
   }, [])
 
   return (
-    <Layout title="Events">
+    <Layout title={t('events.title')}>
       <section className="card">
-        <Link to="/events/new">Create event</Link>
+        <Link to="/events/new">{t('events.createEvent')}</Link>
         {message ? <p className="message">{message}</p> : null}
         <ul>
           {events.map((event) => (
             <li key={event.id}>
               <Link to={`/events/${event.id}`}>{event.title}</Link>
-              <p>{event.description ?? 'No description'}</p>
+              <p>{event.description ?? t('events.noDescription')}</p>
               <p>{new Date(event.start_time).toLocaleString()}</p>
             </li>
           ))}

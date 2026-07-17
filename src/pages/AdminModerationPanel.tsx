@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { ReportItem } from '../types'
 
@@ -13,19 +14,11 @@ interface ActionFormState {
   payload: string
 }
 
-const ACTION_OPTIONS: { value: ActionType; label: string }[] = [
-  { value: 'warn', label: 'Warn' },
-  { value: 'suspend', label: 'Suspend' },
-  { value: 'ban', label: 'Ban' },
-  { value: 'role_upgrade', label: 'Role Upgrade' },
-  { value: 'role_revoke', label: 'Role Revoke' },
-  { value: 'note', label: 'Note' },
-]
-
 const DEFAULT_FORM: ActionFormState = { action_type: 'warn', payload: '{}' }
 
 export function AdminModerationPanel() {
   const { user, loading } = useAuth()
+  const { t } = useT()
   const [reports, setReports] = useState<ReportItem[]>([])
   const [forms, setForms] = useState<Record<string, ActionFormState>>({})
   const [messages, setMessages] = useState<Record<string, string>>({})
@@ -33,6 +26,15 @@ export function AdminModerationPanel() {
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({})
 
   const isAdmin = (user?.app_metadata as Record<string, unknown> | undefined)?.role === 'admin'
+
+  const ACTION_OPTIONS: { value: ActionType; label: string }[] = [
+    { value: 'warn', label: t('admin.moderation.warn') },
+    { value: 'suspend', label: t('admin.moderation.suspend') },
+    { value: 'ban', label: t('admin.moderation.ban') },
+    { value: 'role_upgrade', label: t('admin.moderation.roleUpgrade') },
+    { value: 'role_revoke', label: t('admin.moderation.roleRevoke') },
+    { value: 'note', label: t('admin.moderation.note') },
+  ]
 
   const loadReports = async () => {
     const { data, error } = await supabase
@@ -49,7 +51,6 @@ export function AdminModerationPanel() {
     const loaded = (data as ReportItem[]) ?? []
     setReports(loaded)
 
-    // Initialise form state for any new reports
     setForms((prev) => {
       const next = { ...prev }
       for (const r of loaded) {
@@ -66,7 +67,7 @@ export function AdminModerationPanel() {
   }, [loading, isAdmin])
 
   if (loading) {
-    return <p>Loading...</p>
+    return <p>{t('admin.moderation.loading')}</p>
   }
 
   if (!user) {
@@ -75,9 +76,9 @@ export function AdminModerationPanel() {
 
   if (!isAdmin) {
     return (
-      <Layout title="Admin Moderation">
+      <Layout title={t('admin.moderation.title')}>
         <section className="card">
-          <p className="message">Access denied: admin role required.</p>
+          <p className="message">{t('admin.moderation.accessDenied')}</p>
         </section>
       </Layout>
     )
@@ -95,7 +96,7 @@ export function AdminModerationPanel() {
     try {
       parsedPayload = JSON.parse(form.payload) as Record<string, unknown>
     } catch {
-      setMessages((prev) => ({ ...prev, [report.id]: 'Payload must be valid JSON.' }))
+      setMessages((prev) => ({ ...prev, [report.id]: t('admin.moderation.invalidJson') }))
       return
     }
 
@@ -126,19 +127,18 @@ export function AdminModerationPanel() {
 
     setMessages((prev) => ({
       ...prev,
-      [report.id]: `Action recorded. ID: ${result.moderation_action_id ?? 'unknown'}`,
+      [report.id]: t('admin.moderation.actionRecorded', { id: result.moderation_action_id ?? 'unknown' }),
     }))
 
-    // Refresh the list so acted-upon reports disappear when resolved
     await loadReports()
   }
 
   return (
-    <Layout title="Admin Moderation">
+    <Layout title={t('admin.moderation.title')}>
       {pageMessage ? <p className="message">{pageMessage}</p> : null}
       {reports.length === 0 ? (
         <section className="card">
-          <p>No open or triaging reports.</p>
+          <p>{t('admin.moderation.noReports')}</p>
         </section>
       ) : null}
       {reports.map((report) => {
@@ -154,30 +154,30 @@ export function AdminModerationPanel() {
               <strong>{report.category}</strong>
             </div>
             <p>
-              <strong>Reporter:</strong> {report.reporter_id}
+              <strong>{t('admin.moderation.reporter')}:</strong> {report.reporter_id}
             </p>
             {report.target_profile_id ? (
               <p>
-                <strong>Target:</strong> {report.target_profile_id}
+                <strong>{t('admin.moderation.target')}:</strong> {report.target_profile_id}
               </p>
             ) : null}
             {report.target_event_id ? (
               <p>
-                <strong>Event:</strong> {report.target_event_id}
+                <strong>{t('admin.moderation.event')}:</strong> {report.target_event_id}
               </p>
             ) : null}
             <p>
-              <strong>Details:</strong> {report.details}
+              <strong>{t('admin.moderation.details')}:</strong> {report.details}
             </p>
             <p>
-              <strong>Submitted:</strong> {new Date(report.created_at).toLocaleString()}
+              <strong>{t('admin.moderation.submitted')}:</strong> {new Date(report.created_at).toLocaleString()}
             </p>
 
             <form onSubmit={(e) => void handleSubmit(e, report)}>
               <label>
-                Action
+                {t('admin.moderation.actionLabel')}
                 <select
-                  aria-label="Action type"
+                  aria-label={t('admin.moderation.actionType')}
                   value={form.action_type}
                   onChange={(e) => updateForm(report.id, { action_type: e.target.value as ActionType })}
                   disabled={isBusy}
@@ -190,9 +190,9 @@ export function AdminModerationPanel() {
                 </select>
               </label>
               <label>
-                Payload (JSON)
+                {t('admin.moderation.payloadLabel')}
                 <textarea
-                  aria-label="Action payload"
+                  aria-label={t('admin.moderation.payloadAria')}
                   value={form.payload}
                   onChange={(e) => updateForm(report.id, { payload: e.target.value })}
                   disabled={isBusy}
@@ -200,14 +200,14 @@ export function AdminModerationPanel() {
                 />
               </label>
               <button type="submit" disabled={isBusy || !report.target_profile_id}>
-                {isBusy ? 'Submitting…' : 'Apply Action'}
+                {isBusy ? t('admin.moderation.submitting') : t('admin.moderation.applyAction')}
               </button>
               {!report.target_profile_id ? (
-                <p className="message">No target profile — action cannot be applied.</p>
+                <p className="message">{t('admin.moderation.noTargetProfile')}</p>
               ) : null}
             </form>
 
-            {msg ? <p className={msg.startsWith('Action recorded') ? '' : 'message'}>{msg}</p> : null}
+            {msg ? <p className={msg.startsWith(t('admin.moderation.actionRecorded', { id: '' }).slice(0, 20)) ? '' : 'message'}>{msg}</p> : null}
           </section>
         )
       })}

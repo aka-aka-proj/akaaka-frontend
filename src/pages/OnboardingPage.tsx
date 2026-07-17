@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { SocialLink, Visibility } from '../types'
 
@@ -11,6 +12,7 @@ const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
 export function OnboardingPage() {
   const { user, refreshProfile } = useAuth()
   const navigate = useNavigate()
+  const { t } = useT()
   const [agreed, setAgreed] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
@@ -36,18 +38,18 @@ export function OnboardingPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user) {
-      setMessage('Please sign in first.')
+      setMessage(t('onboarding.signInFirst'))
       return
     }
 
     if (!agreed) {
-      setMessage('You must agree to the safety compact.')
+      setMessage(t('onboarding.mustAgree'))
       return
     }
 
     const sanitizedLinks = socialLinks.filter((link) => link.url.trim().length > 0)
     if (sanitizedLinks.length === 0) {
-      setMessage('Add at least one external social link to continue.')
+      setMessage(t('onboarding.addSocialLinkRequired'))
       return
     }
 
@@ -78,51 +80,51 @@ export function OnboardingPage() {
   }
 
   return (
-    <Layout title="Onboarding">
+    <Layout title={t('onboarding.title')}>
       <form className="card" onSubmit={submit}>
         <label className="checkbox">
           <input
-            aria-label="Agree to safety compact"
+            aria-label={t('onboarding.agreeAria')}
             type="checkbox"
             checked={agreed}
             onChange={(event) => setAgreed(event.target.checked)}
           />
-          I agree to the AkaAka safety compact.
+          {t('onboarding.agreeLabel')}
         </label>
         <label>
-          Display name
+          {t('onboarding.displayNameLabel')}
           <input
-            aria-label="Display name"
+            aria-label={t('onboarding.displayNameLabel')}
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
           />
         </label>
         <label>
-          Bio
+          {t('onboarding.bioLabel')}
           <textarea
-            aria-label="Bio"
+            aria-label={t('onboarding.bioLabel')}
             value={bio}
             onChange={(event) => setBio(event.target.value)}
           />
         </label>
         <label>
-          Bio visibility
+          {t('onboarding.bioVisibilityLabel')}
           <select
-            aria-label="Bio visibility"
+            aria-label={t('onboarding.bioVisibilityLabel')}
             value={visibility}
             onChange={(event) => setVisibility(event.target.value as Visibility)}
           >
-            <option value="public">public</option>
-            <option value="connections_only">connections_only</option>
-            <option value="private">private</option>
+            <option value="public">{t('onboarding.public')}</option>
+            <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
+            <option value="private">{t('onboarding.private')}</option>
           </select>
         </label>
         <section>
-          <h3>External social links</h3>
+          <h3>{t('onboarding.externalSocialLinks')}</h3>
           {socialLinks.map((link, index) => (
             <div key={`social-link-${index}`} className="row">
               <select
-                aria-label={`Social platform ${index + 1}`}
+                aria-label={t('onboarding.socialPlatform', { index: index + 1 })}
                 value={link.platform}
                 onChange={(event) =>
                   updateLink(index, {
@@ -135,22 +137,22 @@ export function OnboardingPage() {
                 <option value="x">x</option>
               </select>
               <input
-                aria-label={`Social url ${index + 1}`}
+                aria-label={t('onboarding.socialUrl', { index: index + 1 })}
                 placeholder="https://..."
                 value={link.url}
                 onChange={(event) => updateLink(index, { url: event.target.value })}
               />
               <button type="button" onClick={() => removeLink(index)}>
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           ))}
           <button type="button" onClick={addLink}>
-            Add social link
+            {t('onboarding.addSocialLink')}
           </button>
         </section>
         <button type="submit" disabled={submitting}>
-          Complete onboarding
+          {t('onboarding.completeOnboarding')}
         </button>
         {message ? <p className="message">{message}</p> : null}
       </form>

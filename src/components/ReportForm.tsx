@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
 interface ReportFormProps {
@@ -10,8 +11,11 @@ interface ReportFormProps {
 
 const REPORT_CATEGORIES = ['harassment', 'impersonation', 'spam', 'safety_risk', 'other'] as const
 
+const CATEGORY_KEYS = ['harassment', 'impersonation', 'spam', 'safetyRisk', 'other'] as const
+
 export function ReportForm({ targetProfileId, targetEventId }: ReportFormProps) {
   const { user } = useAuth()
+  const { t } = useT()
   const [category, setCategory] = useState('')
   const [details, setDetails] = useState('')
   const [message, setMessage] = useState('')
@@ -20,12 +24,12 @@ export function ReportForm({ targetProfileId, targetEventId }: ReportFormProps) 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user) {
-      setMessage('Please sign in to submit a report.')
+      setMessage(t('report.signInRequired'))
       return
     }
 
     if (!category || details.trim().length === 0) {
-      setMessage('Category and details are required.')
+      setMessage(t('report.categoryRequired'))
       return
     }
 
@@ -48,38 +52,38 @@ export function ReportForm({ targetProfileId, targetEventId }: ReportFormProps) 
 
     setCategory('')
     setDetails('')
-    setMessage('Report submitted successfully.')
+    setMessage(t('report.submittedSuccess'))
   }
 
   return (
     <form className="card" onSubmit={submit}>
-      <h3>Report</h3>
+      <h3>{t('report.title')}</h3>
       <label>
-        Category
+        {t('report.categoryLabel')}
         <select
-          aria-label="Category"
+          aria-label={t('report.categoryLabel')}
           value={category}
           onChange={(event) => setCategory(event.target.value)}
         >
-          <option value="">Select category</option>
-          {REPORT_CATEGORIES.map((item) => (
+          <option value="">{t('report.selectCategory')}</option>
+          {REPORT_CATEGORIES.map((item, index) => (
             <option key={item} value={item}>
-              {item}
+              {t(`report.${CATEGORY_KEYS[index]}`)}
             </option>
           ))}
         </select>
       </label>
       <label>
-        Details
+        {t('report.detailsLabel')}
         <textarea
-          aria-label="Details"
+          aria-label={t('report.detailsLabel')}
           value={details}
           onChange={(event) => setDetails(event.target.value)}
-          placeholder="Describe what happened"
+          placeholder={t('report.detailsPlaceholder')}
         />
       </label>
       <button type="submit" disabled={submitting}>
-        Submit report
+        {t('report.submitReport')}
       </button>
       {message ? <p className="message">{message}</p> : null}
     </form>

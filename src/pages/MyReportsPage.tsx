@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { ReportItem } from '../types'
 
 export function MyReportsPage() {
   const { user } = useAuth()
+  const { t } = useT()
   const [reports, setReports] = useState<ReportItem[]>([])
   const [message, setMessage] = useState('')
 
@@ -33,7 +35,7 @@ export function MyReportsPage() {
   }, [user?.id])
 
   return (
-    <Layout title="My Reports">
+    <Layout title={t('myReports.title')}>
       <section className="card">
         {message ? <p className="message">{message}</p> : null}
         <ul>

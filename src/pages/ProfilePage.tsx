@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { Profile, SocialLink, Visibility } from '../types'
@@ -26,6 +27,7 @@ function mapProfileRow(row: unknown): Profile {
 export function ProfilePage() {
   const { id } = useParams()
   const { user, refreshProfile } = useAuth()
+  const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -121,7 +123,7 @@ export function ProfilePage() {
       return
     }
 
-    setMessage('Profile updated.')
+    setMessage(t('profile.profileUpdated'))
     await refreshProfile()
     await loadProfile()
   }
@@ -132,7 +134,7 @@ export function ProfilePage() {
     }
 
     if (user.id === targetProfileId) {
-      setMessage('You cannot recommend yourself.')
+      setMessage(t('profile.cannotRecommendSelf'))
       return
     }
 
@@ -146,15 +148,15 @@ export function ProfilePage() {
     if (error) {
       const status = (error as { status?: number }).status
       if (status === 429) {
-        setMessage('You can only recommend this person once every 24 hours.')
+        setMessage(t('profile.recommendRateLimit'))
       } else {
-        setMessage((error as { message?: string }).message ?? 'An error occurred.')
+        setMessage((error as { message?: string }).message ?? t('profile.errorOccurred'))
       }
       return
     }
 
     setRecommendComment('')
-    setMessage('Recommendation submitted.')
+    setMessage(t('profile.recommendationSubmitted'))
     await loadProfile()
   }
 
@@ -175,7 +177,7 @@ export function ProfilePage() {
       }
 
       setIsBlocked(false)
-      setMessage('User unblocked.')
+      setMessage(t('profile.userUnblocked'))
       return
     }
 
@@ -188,22 +190,22 @@ export function ProfilePage() {
     }
 
     setIsBlocked(true)
-    setMessage('User blocked.')
+    setMessage(t('profile.userBlocked'))
   }
 
   return (
-    <Layout title="Profile">
+    <Layout title={t('profile.title')}>
       <section className="card">
         {profile ? (
           <>
             <h2>{profile.display_name || profile.id}</h2>
-            <p>Role: {profile.role_status}</p>
-            <p>Reputation: {profile.reputation_score}</p>
+            <p>{t('profile.role')}: {profile.role_status}</p>
+            <p>{t('profile.reputation')}: {profile.reputation_score}</p>
             <p>
-              Bio:{' '}
+              {t('profile.bio')}:{' '}
               {showBio
-                ? profile.bio || 'No bio set.'
-                : `Hidden (${bioVisibility})`}
+                ? profile.bio || t('profile.noBio')
+                : t('profile.hidden', { visibility: bioVisibility })}
             </p>
             <ul>
               {profile.external_social_links.map((link) => (
@@ -214,48 +216,48 @@ export function ProfilePage() {
             </ul>
           </>
         ) : (
-          <p>Profile not found.</p>
+          <p>{t('profile.notFound')}</p>
         )}
         {message ? <p className="message">{message}</p> : null}
       </section>
 
       {isOwner ? (
         <form className="card" onSubmit={saveProfile}>
-          <h3>Edit profile</h3>
+          <h3>{t('profile.editProfile')}</h3>
           <label>
-            Display name
+            {t('profile.displayNameLabel')}
             <input
-              aria-label="Display name"
+              aria-label={t('profile.displayNameLabel')}
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
             />
           </label>
           <label>
-            Bio
+            {t('profile.bioLabel')}
             <textarea
-              aria-label="Bio"
+              aria-label={t('profile.bioLabel')}
               value={bio}
               onChange={(event) => setBio(event.target.value)}
             />
           </label>
           <label>
-            Bio visibility
+            {t('profile.bioVisibilityLabel')}
             <select
-              aria-label="Bio visibility"
+              aria-label={t('profile.bioVisibilityLabel')}
               value={visibility}
               onChange={(event) => setVisibility(event.target.value as Visibility)}
             >
-              <option value="public">public</option>
-              <option value="connections_only">connections_only</option>
-              <option value="private">private</option>
+              <option value="public">{t('profile.public')}</option>
+              <option value="connections_only">{t('profile.connectionsOnly')}</option>
+              <option value="private">{t('profile.private')}</option>
             </select>
           </label>
           <section>
-            <h4>Social links</h4>
+            <h4>{t('profile.socialLinks')}</h4>
             {socialLinks.map((link, index) => (
               <div className="row" key={`owner-social-${index}`}>
                 <select
-                  aria-label={`Social platform ${index + 1}`}
+                  aria-label={t('profile.socialPlatform', { index: index + 1 })}
                   value={link.platform}
                   onChange={(event) =>
                     updateLink(index, {
@@ -268,7 +270,7 @@ export function ProfilePage() {
                   <option value="x">x</option>
                 </select>
                 <input
-                  aria-label={`Social url ${index + 1}`}
+                  aria-label={t('profile.socialUrl', { index: index + 1 })}
                   value={link.url}
                   placeholder="https://..."
                   onChange={(event) => updateLink(index, { url: event.target.value })}
@@ -276,24 +278,24 @@ export function ProfilePage() {
               </div>
             ))}
             <button type="button" onClick={() => setSocialLinks((links) => [...links, createSocialLink()])}>
-              Add social link
+              {t('profile.addSocialLink')}
             </button>
           </section>
-          <button type="submit">Save profile</button>
+          <button type="submit">{t('profile.saveProfile')}</button>
         </form>
       ) : (
         <section className="card">
-          <h3>Trust actions</h3>
+          <h3>{t('profile.trustActions')}</h3>
           <button
             type="button"
             onClick={() => void recommend()}
             disabled={user?.id === targetProfileId}
           >
-            Give Recommendation
+            {t('profile.giveRecommendation')}
           </button>
           <textarea
-            aria-label="Recommendation comment"
-            placeholder="Optional recommendation comment"
+            aria-label={t('profile.recommendationCommentLabel')}
+            placeholder={t('profile.recommendationCommentPlaceholder')}
             value={recommendComment}
             onChange={(event) => setRecommendComment(event.target.value)}
           />
@@ -302,10 +304,10 @@ export function ProfilePage() {
             onClick={() => void toggleBlock()}
             disabled={user?.id === targetProfileId}
           >
-            {isBlocked ? 'Unblock User' : 'Block User'}
+            {isBlocked ? t('profile.unblockUser') : t('profile.blockUser')}
           </button>
           {user?.id === targetProfileId ? (
-            <p className="message">You cannot recommend yourself.</p>
+            <p className="message">{t('profile.cannotRecommendSelf')}</p>
           ) : null}
         </section>
       )}

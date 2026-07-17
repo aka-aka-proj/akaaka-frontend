@@ -1,12 +1,14 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Layout } from '../components/Layout'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { RoleStatus } from '../types'
 
 const ROLES: RoleStatus[] = ['general', 'venue_pending', 'venue_approved']
 
 export function AdminRoleUpgrade() {
+  const { t } = useT()
   const [targetUserId, setTargetUserId] = useState('')
   const [newRole, setNewRole] = useState<RoleStatus>('general')
   const [message, setMessage] = useState('')
@@ -20,7 +22,7 @@ export function AdminRoleUpgrade() {
 
     const userId = targetUserId.trim()
     if (!userId) {
-      setMessage('Target user ID is required.')
+      setMessage(t('admin.roleUpgrade.userIdRequired'))
       setIsError(true)
       return
     }
@@ -32,7 +34,6 @@ export function AdminRoleUpgrade() {
       })
 
       if (error) {
-        // FunctionsHttpError exposes a JSON body; fall back to error.message
         let detail = error.message
         try {
           const body = await (error as { context?: Response }).context?.json?.()
@@ -44,12 +45,15 @@ export function AdminRoleUpgrade() {
         setIsError(true)
       } else {
         setMessage(
-          `Success — user ${(data as { user_id: string }).user_id} is now "${(data as { new_role: string }).new_role}".`,
+          t('admin.roleUpgrade.success', {
+            userId: (data as { user_id: string }).user_id,
+            role: (data as { new_role: string }).new_role,
+          }),
         )
         setTargetUserId('')
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Unexpected error')
+      setMessage(err instanceof Error ? err.message : t('admin.roleUpgrade.unexpectedError'))
       setIsError(true)
     } finally {
       setLoading(false)
@@ -57,15 +61,15 @@ export function AdminRoleUpgrade() {
   }
 
   return (
-    <Layout title="Admin — Role Upgrade">
+    <Layout title={t('admin.roleUpgrade.title')}>
       <section className="card">
-        <h2>Admin Role Upgrade</h2>
-        <p>Assign a new role to any user. All changes are recorded in the audit log.</p>
+        <h2>{t('admin.roleUpgrade.heading')}</h2>
+        <p>{t('admin.roleUpgrade.description')}</p>
         <form onSubmit={(e) => void handleSubmit(e)}>
           <label>
-            Target user ID
+            {t('admin.roleUpgrade.targetUserIdLabel')}
             <input
-              aria-label="Target user ID"
+              aria-label={t('admin.roleUpgrade.targetUserIdLabel')}
               value={targetUserId}
               onChange={(e) => setTargetUserId(e.target.value)}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -73,9 +77,9 @@ export function AdminRoleUpgrade() {
             />
           </label>
           <label>
-            New role
+            {t('admin.roleUpgrade.newRoleLabel')}
             <select
-              aria-label="New role"
+              aria-label={t('admin.roleUpgrade.newRoleLabel')}
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as RoleStatus)}
             >
@@ -87,7 +91,7 @@ export function AdminRoleUpgrade() {
             </select>
           </label>
           <button type="submit" disabled={loading}>
-            {loading ? 'Upgrading…' : 'Apply role change'}
+            {loading ? t('admin.roleUpgrade.upgrading') : t('admin.roleUpgrade.applyRoleChange')}
           </button>
         </form>
         {message ? (

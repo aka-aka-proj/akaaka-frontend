@@ -3,12 +3,14 @@ import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
 export function AuthPage() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useT()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,7 +25,7 @@ export function AuthPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (email.trim().length === 0 || password.trim().length === 0) {
-      setMessage('Email and password are required.')
+      setMessage(t('auth.emailRequired'))
       return
     }
 
@@ -36,7 +38,7 @@ export function AuthPage() {
         return
       }
 
-      setMessage('Sign up successful.')
+      setMessage(t('auth.signUpSuccess'))
       navigate('/onboarding', { replace: true })
       return
     }
@@ -52,32 +54,32 @@ export function AuthPage() {
   }
 
   return (
-    <Layout title="AkaAka Auth">
+    <Layout title={t('auth.title')}>
       <form className="card" onSubmit={submit}>
-        <h2>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
+        <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
         <label>
-          Email
+          {t('common.email')}
           <input
-            aria-label="Email"
+            aria-label={t('common.email')}
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
         <label>
-          Password
+          {t('common.password')}
           <input
-            aria-label="Password"
+            aria-label={t('common.password')}
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
         <button type="submit" disabled={loading}>
-          {isSignUp ? 'Create account' : 'Sign in'}
+          {isSignUp ? t('auth.createAccount') : t('auth.signIn')}
         </button>
         <button type="button" onClick={() => setIsSignUp((value) => !value)}>
-          {isSignUp ? 'Have an account? Sign In' : 'Need an account? Sign Up'}
+          {isSignUp ? t('auth.haveAccount') : t('auth.needAccount')}
         </button>
         {message ? <p className="message">{message}</p> : null}
       </form>
