@@ -30,3 +30,29 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Frontend CI/CD (after frontend/backend/IaC split)
+
+This repository is responsible for **frontend-only** CI/CD.
+
+### CI for Pull Requests
+
+- Workflow: `.github/workflows/ci.yml`
+- Trigger: `pull_request` to `main`
+- Scope: frontend quality checks only
+- Steps: `npm ci` -> `npm run lint` -> `npm run test` -> `npm run build`
+
+### CD for Main Branch
+
+- Workflow: `.github/workflows/frontend-cd.yml`
+- Trigger: `push` to `main` and `workflow_dispatch`
+- Scope: frontend build artifact + deploy integration skeleton (placeholder only)
+- Note: backend must be deployed first, and frontend runtime/env vars should point to deployed backend endpoints.
+
+### Required repository configuration for enabling real deploy
+
+- Secret: `FRONTEND_DEPLOY_TOKEN`
+- Variable: `FRONTEND_DEPLOY_PROJECT_ID`
+- Variable: `FRONTEND_DEPLOY_ORG_ID`
+
+The deploy step is intentionally a placeholder. Replace it with your hosting provider command when secrets/vars are ready.
