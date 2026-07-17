@@ -1,0 +1,69 @@
+name: Frontend CD (Skeleton)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-cd-main
+  cancel-in-progress: true
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: build-frontend
+    environment: production
+    steps:
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Backend dependency note
+        run: |
+          echo "This frontend CD assumes backend has already been deployed."
+          echo "Make sure API endpoint vars point to the deployed backend before enabling real deploy."
+
+      - name: Frontend deploy placeholder
+        env:
+          FRONTEND_DEPLOY_TOKEN: ${{ secrets.FRONTEND_DEPLOY_TOKEN }}
+          FRONTEND_DEPLOY_PROJECT_ID: ${{ vars.FRONTEND_DEPLOY_PROJECT_ID }}
+          FRONTEND_DEPLOY_ORG_ID: ${{ vars.FRONTEND_DEPLOY_ORG_ID }}
+        run: |
+          if [ -z "$FRONTEND_DEPLOY_TOKEN" ] || [ -z "$FRONTEND_DEPLOY_PROJECT_ID" ] || [ -z "$FRONTEND_DEPLOY_ORG_ID" ]; then
+            echo "::warning::CD skeleton only: missing FRONTEND_DEPLOY_TOKEN / FRONTEND_DEPLOY_PROJECT_ID / FRONTEND_DEPLOY_ORG_ID."
+            echo "::warning::Add repository secret/vars and replace this step with real deploy command."
+            exit 0
+          fi
+
+          echo "TODO: Replace this placeholder with your frontend hosting deploy command."
+          echo "Example inputs already wired: FRONTEND_DEPLOY_TOKEN / FRONTEND_DEPLOY_PROJECT_ID / FRONTEND_DEPLOY_ORG_ID."
