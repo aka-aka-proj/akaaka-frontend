@@ -30,3 +30,29 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Frontend CI/CD (after frontend/backend/IaC split)
+
+This repository is responsible for **frontend-only** CI/CD.
+
+### CI for Pull Requests
+
+- Workflow: `.github/workflows/ci.yml`
+- Trigger: `pull_request` to `main`
+- Scope: frontend quality checks only
+- Steps: `npm ci` -> `npm run lint` -> `npm run test` -> `npm run build`
+
+### CD for Main Branch
+
+- Workflow: `.github/workflows/frontend-cd.yml`
+- Trigger: `push` to `main` and `workflow_dispatch`
+- Scope: frontend build artifact and deploy to Vercel via CLI
+- Note: **Supabase backend must be deployed first** before deploying frontend, and frontend runtime env vars must point to deployed backend endpoints.
+
+### Required repository secrets
+
+- Secret: `VERCEL_TOKEN`
+- Secret: `VERCEL_PROJECT_ID`
+- Secret: `VERCEL_ORG_ID`
+
+`frontend-cd.yml` uses `npx vercel deploy dist --prod --yes --token "$VERCEL_TOKEN"` after the frontend build job finishes.
