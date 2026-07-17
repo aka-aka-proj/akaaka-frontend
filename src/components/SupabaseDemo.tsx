@@ -15,7 +15,7 @@ export default function SupabaseDemo() {
       try {
         const { data } = await supabase.auth.getUser();
         setUser((data as any)?.user ?? null);
-      } catch (e) {
+      } catch {
         // ignore
       }
       await fetchTodos();
