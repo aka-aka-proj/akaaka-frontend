@@ -138,6 +138,10 @@ const zhTW = {
     deleteAccountConfirm: '確定要刪除帳號嗎？此操作無法復原，您的所有資料將被永久刪除。',
     deleteAccountSuccess: '帳號已刪除。',
     deleteAccountError: '刪除帳號時發生錯誤。',
+    iconTheme: '圖示主題',
+    iconThemeLabel: '選擇圖示主題',
+    iconThemePurple: '紫色（AkaAka）',
+    iconThemeRed: '紅色（赤赤）',
   },
   onboarding: {
     title: '新手導覽',

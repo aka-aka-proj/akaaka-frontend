@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
+import { useIconTheme } from '../context/IconThemeContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
@@ -29,6 +30,7 @@ export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, refreshProfile } = useAuth()
+  const { iconTheme, setIconTheme } = useIconTheme()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -422,6 +424,21 @@ export function ProfilePage() {
           </section>
           <button type="submit">{t('profile.saveProfile')}</button>
         </form>
+
+        <section className="card">
+          <h3>{t('profile.iconTheme')}</h3>
+          <label>
+            {t('profile.iconThemeLabel')}
+            <select
+              aria-label={t('profile.iconThemeLabel')}
+              value={iconTheme}
+              onChange={(event) => setIconTheme(event.target.value as 'purple' | 'red')}
+            >
+              <option value="purple">{t('profile.iconThemePurple')}</option>
+              <option value="red">{t('profile.iconThemeRed')}</option>
+            </select>
+          </label>
+        </section>
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>

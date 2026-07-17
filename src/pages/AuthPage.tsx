@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
+import { useIconTheme, getIconSrc } from '../context/IconThemeContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
@@ -19,6 +20,7 @@ type SocialProvider = 'google' | 'facebook' | 'apple'
 
 export function AuthPage() {
   const { user } = useAuth()
+  const { iconTheme } = useIconTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useT()
@@ -89,7 +91,7 @@ export function AuthPage() {
   return (
     <Layout title={t('auth.title')}>
       <form className="card auth-card" onSubmit={submit}>
-        <img src="/logo-login.svg" alt="AkaAka" width={80} height={80} className="auth-logo" />
+        <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={80} height={80} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
         <button type="button" className="social-btn" onClick={() => signInWithSocial('google')}>
           <Icon href="/social-icons.svg" name="social-google" size={20} />

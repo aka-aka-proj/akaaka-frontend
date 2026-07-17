@@ -138,6 +138,10 @@ const en = {
     deleteAccountConfirm: 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
     deleteAccountSuccess: 'Account deleted.',
     deleteAccountError: 'An error occurred while deleting the account.',
+    iconTheme: 'Icon Theme',
+    iconThemeLabel: 'Choose icon theme',
+    iconThemePurple: 'Purple (AkaAka)',
+    iconThemeRed: 'Red (赤赤)',
   },
   onboarding: {
     title: 'Onboarding',
