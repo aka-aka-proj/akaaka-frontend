@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="nav-events" viewBox="0 0 20 20">
+    <rect x="2.5" y="3.333" width="15" height="13.334" rx="2" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M2.5 7.5h15" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M6.667 1.667v3.333M13.333 1.667v3.333" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <circle cx="6.667" cy="11.667" r="1" fill="#aa3bff"/>
+    <circle cx="10" cy="11.667" r="1" fill="#aa3bff"/>
+    <circle cx="13.333" cy="11.667" r="1" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="nav-create" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M10 6.25v7.5M6.25 10h7.5" fill="none" stroke="#aa3bff" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="nav-profile" viewBox="0 0 20 20">
+    <circle cx="10" cy="6.667" r="3.333" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M3.333 17.5c0-3.683 2.984-6.667 6.667-6.667s6.667 2.984 6.667 6.667" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="nav-reports" viewBox="0 0 20 20">
+    <path d="M3.333 2.5h13.334l-2.5 5 2.5 5v3.333a.833.833 0 0 1-.834.834H3.333a.833.833 0 0 1-.833-.834V12.5l2.5-5z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 17.5v-5h5v5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="nav-logout" viewBox="0 0 20 20">
+    <path d="M7.5 17.5H4.167a.833.833 0 0 1-.834-.833V3.333c0-.46.373-.833.834-.833H7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M13.333 14.167l4.167-4.167-4.167-4.167M17.5 10H7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="nav-language" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <ellipse cx="10" cy="10" rx="3.333" ry="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M2.5 10h15M3.333 6.667h13.334M3.333 13.333h13.334" fill="none" stroke="#aa3bff" stroke-width="1" stroke-linecap="round"/>
+  </symbol>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280" fill="none">
+  <defs>
+    <linearGradient id="disc-bg" x1="0" y1="0" x2="480" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f5f0ff"/>
+      <stop offset="100%" stop-color="#ede6ff"/>
+    </linearGradient>
+    <linearGradient id="disc-bolt" x1="220" y1="40" x2="260" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#aa3bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="280" rx="16" fill="url(#disc-bg)"/>
+  <!-- Speech bubbles (discussion) -->
+  <rect x="60" y="60" width="140" height="80" rx="12" fill="white" opacity="0.7"/>
+  <path d="M80 140l15 15v-15" fill="white" opacity="0.7"/>
+  <rect x="80" y="80" width="80" height="6" rx="3" fill="#d4c4ff"/>
+  <rect x="80" y="96" width="100" height="4" rx="2" fill="#e0d0ff"/>
+  <rect x="80" y="108" width="60" height="4" rx="2" fill="#e0d0ff"/>
+  <rect x="280" y="100" width="140" height="80" rx="12" fill="white" opacity="0.7"/>
+  <path d="M400 180l-15 15v-15" fill="white" opacity="0.7"/>
+  <rect x="300" y="120" width="80" height="6" rx="3" fill="#d4c4ff"/>
+  <rect x="300" y="136" width="100" height="4" rx="2" fill="#e0d0ff"/>
+  <rect x="300" y="148" width="70" height="4" rx="2" fill="#e0d0ff"/>
+  <!-- Lightning bolt connecting -->
+  <path d="M228 90l-12 38h22l-16 54 32-46h-22z" fill="url(#disc-bolt)" opacity="0.6"/>
+  <!-- Dots indicating typing -->
+  <circle cx="200" cy="220" r="4" fill="#c4a8ff"/>
+  <circle cx="220" cy="220" r="4" fill="#c4a8ff"/>
+  <circle cx="240" cy="220" r="4" fill="#c4a8ff"/>
+  <!-- Decorative -->
+  <circle cx="40" cy="40" r="3" fill="#aa3bff" opacity="0.2"/>
+  <circle cx="440" cy="240" r="4" fill="#aa3bff" opacity="0.2"/>
+</svg>

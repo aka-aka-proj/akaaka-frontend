@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="action-thumbsup" viewBox="0 0 20 20">
+    <path d="M5.833 8.333V17.5H3.333a.833.833 0 0 1-.833-.833V9.167c0-.46.373-.834.833-.834h2.5m0-1.667h6.25a1.667 1.667 0 0 1 1.659 1.89l-1.25 6.25A1.667 1.667 0 0 1 11.25 15H5.833m0-8.333V5a2.5 2.5 0 0 1 5 0v3.333" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="action-block" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M4.403 15.597A7.47 7.47 0 0 1 2.5 10c0-4.143 3.357-7.5 7.5-7.5 1.89 0 3.628.7 4.963 1.866" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M15.597 15.597A7.47 7.47 0 0 1 10 17.5c-4.143 0-7.5-3.357-7.5-7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M2.5 10h15" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="action-edit" viewBox="0 0 20 20">
+    <path d="M11.667 3.333l5 5-8.334 8.334H3.333v-5z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9.167 5.833l5 5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="action-reply" viewBox="0 0 20 20">
+    <path d="M7.5 15.833 3.333 11.667 7.5 7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M3.333 11.667h8.334a4.167 4.167 0 0 0 4.166-4.167V5.833" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="action-plus" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M10 6.25v7.5M6.25 10h7.5" fill="none" stroke="#aa3bff" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="action-trash" viewBox="0 0 20 20">
+    <path d="M3.333 5.833h13.334M7.5 5.833V3.333a1.667 1.667 0 0 1 1.667-1.666h1.666a1.667 1.667 0 0 1 1.667 1.666v2.5m2.5 0v10a1.667 1.667 0 0 1-1.667 1.667H6.667A1.667 1.667 0 0 1 5 15.833v-10" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8.333 8.75v5M11.667 8.75v5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+</svg>

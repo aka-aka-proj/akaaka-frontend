@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none">
+  <defs>
+    <linearGradient id="bolt-grad-lg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#aa3bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+    <linearGradient id="circle-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0e6ff"/>
+      <stop offset="100%" stop-color="#e0d0ff"/>
+    </linearGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#circle-grad)" stroke="#863bff" stroke-width="2"/>
+  <path d="M44.5 14c-.8 1-2.4.6-2.4-1V10c0-1.2-.8-2-2-2H25c-1.2 0-2-1.2-1.2-2.4l8.8-12.4c1.2-1.8 0-4.2-2.2-4.2H13.6c-1.2 0-2 1.2-1.2 2.4l8.8 12.4c.2.3.6.6 1 .6h34c1.2 0 2 1.2 1.2 2.4l-8.8 12.4c-1.2 1.8 0 4.2 2.2 4.2h13.4c1.2 0 2 1.2 1.2 2.4L53 50.8" transform="translate(4, 16) scale(0.95)" fill="url(#bolt-grad-lg)"/>
+  <text x="40" y="68" text-anchor="middle" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#863bff">AkaAka</text>
+</svg>

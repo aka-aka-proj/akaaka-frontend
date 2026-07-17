@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40" fill="none">
+  <defs>
+    <linearGradient id="bolt-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#aa3bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+  </defs>
+  <path d="M17.2 3.2c-.4.5-1.2.2-1.2-.4V.8c0-.6-.4-1-1-1H5.6c-.6 0-1-.6-.6-1.2l4.4-6.2c.6-.9 0-2.1-1.1-2.1H.8c-.6 0-1 .6-.6 1.2L5 1.4c.1.2.3.3.5.3h17c.6 0 1 .6.6 1.2l-4.4 6.2c-.6.9 0 2.1 1.1 2.1h6.7c.6 0 1 .6.6 1.2l-5.7 9.6" transform="translate(2, 6) scale(0.7)" fill="url(#bolt-grad)"/>
+  <text x="28" y="27" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#863bff">Aka</text>
+  <text x="68" y="27" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#1f2937">Aka</text>
+</svg>

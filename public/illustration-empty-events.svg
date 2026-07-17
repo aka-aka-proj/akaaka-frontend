@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" fill="none">
+  <defs>
+    <linearGradient id="empty-bg" x1="0" y1="0" x2="480" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f5f0ff"/>
+      <stop offset="100%" stop-color="#ede6ff"/>
+    </linearGradient>
+    <linearGradient id="empty-bolt" x1="210" y1="60" x2="270" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#aa3bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" rx="16" fill="url(#empty-bg)"/>
+  <!-- Calendar icon (large) -->
+  <rect x="170" y="80" width="140" height="120" rx="12" fill="none" stroke="#c4a8ff" stroke-width="3"/>
+  <path d="M170 120h140" fill="none" stroke="#c4a8ff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M210 68v24M270 68v24" fill="none" stroke="#c4a8ff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Empty calendar dots -->
+  <circle cx="210" cy="155" r="6" fill="#d4c4ff"/>
+  <circle cx="240" cy="155" r="6" fill="#d4c4ff"/>
+  <circle cx="270" cy="155" r="6" fill="#d4c4ff"/>
+  <circle cx="210" cy="180" r="6" fill="#d4c4ff"/>
+  <circle cx="240" cy="180" r="6" fill="#d4c4ff"/>
+  <!-- Lightning bolt in calendar -->
+  <path d="M232 130l-8 22h14l-10 30 22-24h-14z" fill="url(#empty-bolt)" opacity="0.7"/>
+  <!-- Plus sign to create -->
+  <circle cx="340" cy="100" r="20" fill="#863bff" opacity="0.15"/>
+  <path d="M340 90v20M330 100h20" fill="none" stroke="#863bff" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <!-- Decorative elements -->
+  <circle cx="80" cy="60" r="4" fill="#aa3bff" opacity="0.2"/>
+  <circle cx="400" cy="260" r="5" fill="#aa3bff" opacity="0.2"/>
+  <circle cx="60" cy="240" r="3" fill="#aa3bff" opacity="0.15"/>
+  <circle cx="420" cy="80" r="3" fill="#aa3bff" opacity="0.15"/>
+  <!-- Wavy line decoration -->
+  <path d="M50 280q40-10 80 0t80 0t80 0t80 0t80 0" fill="none" stroke="#c4a8ff" stroke-width="1.5" opacity="0.3"/>
+</svg>

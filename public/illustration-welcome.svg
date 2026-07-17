@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="240" viewBox="0 0 480 240" fill="none">
+  <defs>
+    <linearGradient id="welc-bg" x1="0" y1="0" x2="480" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f0e6ff"/>
+      <stop offset="100%" stop-color="#e0d0ff"/>
+    </linearGradient>
+    <linearGradient id="welc-bolt" x1="200" y1="40" x2="280" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#aa3bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="240" rx="16" fill="url(#welc-bg)"/>
+  <!-- Abstract people silhouettes representing community -->
+  <circle cx="120" cy="160" r="24" fill="#c4a8ff" opacity="0.6"/>
+  <path d="M96 200c0-13.255 10.745-24 24-24s24 10.745 24 24" fill="#c4a8ff" opacity="0.6"/>
+  <circle cx="200" cy="140" r="28" fill="#b88aff" opacity="0.7"/>
+  <path d="M172 192c0-15.464 12.536-28 28-28s28 12.536 28 28" fill="#b88aff" opacity="0.7"/>
+  <circle cx="280" cy="148" r="26" fill="#c4a8ff" opacity="0.65"/>
+  <path d="M254 196c0-14.36 11.64-26 26-26s26 11.64 26 26" fill="#c4a8ff" opacity="0.65"/>
+  <!-- Lightning bolt accent -->
+  <path d="M248 60l-16 50h28l-20 70 40-60h-28z" fill="url(#welc-bolt)" opacity="0.8"/>
+  <!-- Connection lines between people (trust network) -->
+  <line x1="144" y1="155" x2="172" y2="145" stroke="#863bff" stroke-width="2" opacity="0.4" stroke-dasharray="4 4"/>
+  <line x1="228" y1="145" x2="254" y2="150" stroke="#863bff" stroke-width="2" opacity="0.4" stroke-dasharray="4 4"/>
+  <!-- Shield icon (safety) -->
+  <path d="M380 100v20c0 20-15 35-35 40-20-5-35-20-35-40v-20l35-15z" fill="none" stroke="#863bff" stroke-width="2.5" opacity="0.5"/>
+  <path d="M372 120l-8 8-4-4" fill="none" stroke="#863bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  <!-- Small decorative dots -->
+  <circle cx="60" cy="40" r="3" fill="#aa3bff" opacity="0.3"/>
+  <circle cx="420" cy="50" r="4" fill="#aa3bff" opacity="0.3"/>
+  <circle cx="400" cy="200" r="3" fill="#aa3bff" opacity="0.3"/>
+  <circle cx="80" cy="100" r="2" fill="#aa3bff" opacity="0.2"/>
+  <circle cx="440" cy="120" r="2" fill="#aa3bff" opacity="0.2"/>
+</svg>

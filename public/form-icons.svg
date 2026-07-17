@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="form-user" viewBox="0 0 20 20">
+    <circle cx="10" cy="6.667" r="3.333" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M3.333 17.5c0-3.683 2.984-6.667 6.667-6.667s6.667 2.984 6.667 6.667" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="form-lock" viewBox="0 0 20 20">
+    <rect x="4.167" y="9.167" width="11.667" height="8.333" rx="1.667" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M6.667 9.167V6.667a3.333 3.333 0 0 1 6.666 0v2.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <circle cx="10" cy="13.333" r="1.25" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="form-calendar" viewBox="0 0 20 20">
+    <rect x="2.5" y="4.167" width="15" height="13.333" rx="1.667" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M6.25 2.5v3.333M13.75 2.5v3.333M2.5 8.333h15" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <rect x="5.833" y="10.833" width="2.5" height="2.5" rx="0.417" fill="#aa3bff"/>
+    <rect x="9.167" y="10.833" width="2.5" height="2.5" rx="0.417" fill="#aa3bff"/>
+    <rect x="12.5" y="10.833" width="2.5" height="2.5" rx="0.417" fill="#aa3bff"/>
+    <rect x="5.833" y="14.167" width="2.5" height="2.5" rx="0.417" fill="#aa3bff"/>
+    <rect x="9.167" y="14.167" width="2.5" height="2.5" rx="0.417" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="form-location" viewBox="0 0 20 20">
+    <path d="M10 10.833a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M10 17.5s5.833-4.917 5.833-9.167C15.833 4.54 13.293 2.5 10 2.5S4.167 4.54 4.167 8.333C4.167 12.583 10 17.5 10 17.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="form-eye" viewBox="0 0 20 20">
+    <path d="M1.667 10s3.333-5.833 8.333-5.833S18.333 10 18.333 10s-3.333 5.833-8.333 5.833S1.667 10 1.667 10" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <circle cx="10" cy="10" r="2.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+  </symbol>
+</svg>
