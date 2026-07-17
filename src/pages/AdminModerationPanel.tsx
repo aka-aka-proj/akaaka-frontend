@@ -25,7 +25,7 @@ const ACTION_OPTIONS: { value: ActionType; label: string }[] = [
 const DEFAULT_FORM: ActionFormState = { action_type: 'warn', payload: '{}' }
 
 export function AdminModerationPanel() {
-  const { user, session, loading } = useAuth()
+  const { user, loading } = useAuth()
   const [reports, setReports] = useState<ReportItem[]>([])
   const [forms, setForms] = useState<Record<string, ActionFormState>>({})
   const [messages, setMessages] = useState<Record<string, string>>({})
@@ -108,9 +108,6 @@ export function AdminModerationPanel() {
         target_profile_id: report.target_profile_id,
         report_id: report.id,
         payload: parsedPayload,
-      },
-      headers: {
-        Authorization: `Bearer ${session?.access_token ?? ''}`,
       },
     })
 

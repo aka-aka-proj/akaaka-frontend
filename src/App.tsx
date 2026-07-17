@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
 import { AdminModerationPanel } from './pages/AdminModerationPanel'
+import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
@@ -85,9 +87,17 @@ function App() {
       <Route
         path="/admin/moderation"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <AdminModerationPanel />
-          </ProtectedRoute>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/role-upgrade"
+        element={
+          <AdminRoute>
+            <AdminRoleUpgrade />
+          </AdminRoute>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
