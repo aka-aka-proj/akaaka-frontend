@@ -10,9 +10,12 @@ import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
+import { IssueDetailPage } from './pages/IssueDetailPage'
+import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { ReportIssuePage } from './pages/ReportIssuePage'
 
 function RootRedirect() {
   const { user, loading } = useAuth()
@@ -83,6 +86,30 @@ function App() {
         element={
           <ProtectedRoute>
             <MyReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues"
+        element={
+          <ProtectedRoute>
+            <IssuesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues/new"
+        element={
+          <ProtectedRoute>
+            <ReportIssuePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/issues/:id"
+        element={
+          <ProtectedRoute>
+            <IssueDetailPage />
           </ProtectedRoute>
         }
       />

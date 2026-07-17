@@ -7,6 +7,14 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  invalid_login_credentials: '電子郵件或密碼不正確',
+  email_not_confirmed: '電子郵件尚未驗證，請先完成驗證後再登入',
+  signup_disabled: '註冊功能目前已關閉',
+  too_many_requests: '登入嘗試次數過多，請稍後再試',
+  over_request_rate_limit: '請求過於頻繁，請稍後再試',
+}
+
 export function AuthPage() {
   const { user } = useAuth()
   const location = useLocation()
@@ -35,7 +43,7 @@ export function AuthPage() {
       const { error } = await supabase.auth.signUp({ email, password })
       setLoading(false)
       if (error) {
-        setMessage(error.message)
+        setMessage(AUTH_ERROR_MESSAGES[error.message] ?? error.message)
         return
       }
 
@@ -47,7 +55,7 @@ export function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) {
-      setMessage(error.message)
+      setMessage(AUTH_ERROR_MESSAGES[error.message] ?? error.message)
       return
     }
 
