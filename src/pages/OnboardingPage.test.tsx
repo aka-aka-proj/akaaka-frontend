@@ -33,7 +33,7 @@ describe('OnboardingPage', () => {
     })
   })
 
-  it('blocks completion when no social link has url', async () => {
+  it('allows completion without any social links', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter>
@@ -44,8 +44,7 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByLabelText('Agree to safety compact'))
     await user.click(screen.getByRole('button', { name: 'Complete onboarding' }))
 
-    expect(screen.getByText('Add at least one external social link to continue.')).toBeTruthy()
-    expect(upsert).not.toHaveBeenCalled()
+    expect(upsert).toHaveBeenCalled()
   })
 
   it('accepts completion with at least one social link', async () => {

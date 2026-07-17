@@ -18,7 +18,7 @@ export function OnboardingPage() {
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([createSocialLink()])
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
   const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
@@ -53,10 +53,6 @@ export function OnboardingPage() {
     }
 
     const sanitizedLinks = socialLinks.filter((link) => link.url.trim().length > 0)
-    if (sanitizedLinks.length === 0) {
-      setMessage(t('onboarding.addSocialLinkRequired'))
-      return
-    }
 
     setSubmitting(true)
     const { error } = await supabase.from('profiles').upsert(
