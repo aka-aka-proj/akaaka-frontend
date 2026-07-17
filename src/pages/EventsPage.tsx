@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem } from '../types'
@@ -31,17 +32,24 @@ export function EventsPage() {
   return (
     <Layout title={t('events.title')}>
       <section className="card">
-        <Link to="/events/new">{t('events.createEvent')}</Link>
+        <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
         {message ? <p className="message">{message}</p> : null}
-        <ul>
-          {events.map((event) => (
-            <li key={event.id}>
-              <Link to={`/events/${event.id}`}>{event.title}</Link>
-              <p>{event.description ?? t('events.noDescription')}</p>
-              <p>{new Date(event.start_time).toLocaleString()}</p>
-            </li>
-          ))}
-        </ul>
+        {events.length === 0 ? (
+          <div className="empty-state">
+            <img src="/illustration-empty-events.svg" alt="" width={480} height={320} className="illustration" />
+            <p>{t('events.noDescription')}</p>
+          </div>
+        ) : (
+          <ul>
+            {events.map((event) => (
+              <li key={event.id}>
+                <Link to={`/events/${event.id}`}>{event.title}</Link>
+                <p>{event.description ?? t('events.noDescription')}</p>
+                <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(event.start_time).toLocaleString()}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </Layout>
   )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -65,32 +66,40 @@ export function CreateEventPage() {
   return (
     <Layout title={t('createEvent.title')}>
       <form className="card" onSubmit={submit}>
-        <label>
-          {t('createEvent.titleLabel')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
+          </span>
           <input
             aria-label={t('createEvent.titleLabel')}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
-        <label>
-          {t('createEvent.descriptionLabel')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
+          </span>
           <textarea
             aria-label={t('createEvent.descriptionLabel')}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
-        <label>
-          {t('createEvent.eventTypeLabel')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
+          </span>
           <input
             aria-label={t('createEvent.eventTypeLabel')}
             value={eventType}
             onChange={(event) => setEventType(event.target.value)}
           />
         </label>
-        <label>
-          {t('createEvent.startTimeLabel')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
+          </span>
           <input
             aria-label={t('createEvent.startTimeLabel')}
             type="datetime-local"
@@ -105,10 +114,13 @@ export function CreateEventPage() {
             checked={isVenueHosted}
             onChange={(event) => setIsVenueHosted(event.target.checked)}
           />
+          <Icon href="/form-icons.svg" name="form-location" size={16} />
           {t('createEvent.venueHostedLabel')}
         </label>
-        <label>
-          {t('createEvent.visibilityLabel')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('createEvent.visibilityLabel')}
+          </span>
           <select
             aria-label={t('createEvent.visibilityLabel')}
             value={visibilityType}
@@ -120,7 +132,7 @@ export function CreateEventPage() {
           </select>
         </label>
         <button type="submit" disabled={submitting}>
-          {t('createEvent.saveEvent')}
+          <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveEvent')}
         </button>
         {message ? <p className="message">{message}</p> : null}
       </form>

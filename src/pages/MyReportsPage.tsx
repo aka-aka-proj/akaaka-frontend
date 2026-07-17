@@ -38,15 +38,21 @@ export function MyReportsPage() {
     <Layout title={t('myReports.title')}>
       <section className="card">
         {message ? <p className="message">{message}</p> : null}
-        <ul>
-          {reports.map((report) => (
-            <li key={report.id}>
-              <p>{report.category}</p>
-              <p>{report.details}</p>
-              <span className={`status status-${report.status}`}>{report.status}</span>
-            </li>
-          ))}
-        </ul>
+        {reports.length === 0 ? (
+          <div className="empty-state">
+            <p>{t('myReports.title')}</p>
+          </div>
+        ) : (
+          <ul>
+            {reports.map((report) => (
+              <li key={report.id}>
+                <p>{report.category}</p>
+                <p>{report.details}</p>
+                <span className={`status status-${report.status}`}>{report.status}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </Layout>
   )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -55,10 +56,13 @@ export function AuthPage() {
 
   return (
     <Layout title={t('auth.title')}>
-      <form className="card" onSubmit={submit}>
+      <form className="card auth-card" onSubmit={submit}>
+        <img src="/logo-login.svg" alt="AkaAka" width={80} height={80} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
-        <label>
-          {t('common.email')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-user" size={16} /> {t('common.email')}
+          </span>
           <input
             aria-label={t('common.email')}
             type="email"
@@ -66,8 +70,10 @@ export function AuthPage() {
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
-        <label>
-          {t('common.password')}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-lock" size={16} /> {t('common.password')}
+          </span>
           <input
             aria-label={t('common.password')}
             type="password"

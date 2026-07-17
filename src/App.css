@@ -98,3 +98,156 @@ button {
 .status-rejected {
   background: #fce7f3;
 }
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-brand img {
+  display: block;
+}
+
+.topbar-title {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-direction: row;
+}
+
+.nav a,
+.nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.auth-card {
+  align-items: center;
+}
+
+.auth-logo {
+  margin-bottom: 0.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+
+.illustration {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.empty-state .illustration {
+  max-width: 360px;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-sm {
+  width: 24px;
+  height: 24px;
+}
+
+.avatar-lg {
+  width: 96px;
+  height: 96px;
+}
+
+.profile-header {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-role,
+.profile-reputation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.social-links-list {
+  list-style: none;
+  padding: 0;
+}
+
+.social-link-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.thread-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.thread-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.thread-header .avatar {
+  flex-shrink: 0;
+}
+
+.thread-header > div {
+  flex: 1;
+}
+
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.create-event-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+}

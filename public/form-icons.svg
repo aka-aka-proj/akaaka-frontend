@@ -25,4 +25,8 @@
     <path d="M1.667 10s3.333-5.833 8.333-5.833S18.333 10 18.333 10s-3.333 5.833-8.333 5.833S1.667 10 1.667 10" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
     <circle cx="10" cy="10" r="2.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
   </symbol>
+  <symbol id="form-edit" viewBox="0 0 20 20">
+    <path d="M11.667 3.333l5 5-8.334 8.334H3.333v-5z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M9.167 5.833l5 5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
 </svg>

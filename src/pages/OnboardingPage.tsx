@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -81,6 +82,7 @@ export function OnboardingPage() {
 
   return (
     <Layout title={t('onboarding.title')}>
+      <img src="/illustration-welcome.svg" alt="" width={480} height={240} className="illustration" />
       <form className="card" onSubmit={submit}>
         <label className="checkbox">
           <input
@@ -143,12 +145,12 @@ export function OnboardingPage() {
                 onChange={(event) => updateLink(index, { url: event.target.value })}
               />
               <button type="button" onClick={() => removeLink(index)}>
-                {t('common.remove')}
+                <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('common.remove')}
               </button>
             </div>
           ))}
           <button type="button" onClick={addLink}>
-            {t('onboarding.addSocialLink')}
+            <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('onboarding.addSocialLink')}
           </button>
         </section>
         <button type="submit" disabled={submitting}>

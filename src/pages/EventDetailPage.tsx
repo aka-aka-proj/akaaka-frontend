@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
@@ -97,8 +98,11 @@ export function EventDetailPage() {
           <>
             <h2>{eventItem.title}</h2>
             <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
-            <p>{t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_id}</Link></p>
-            <p>{new Date(eventItem.start_time).toLocaleString()}</p>
+            <p className="event-meta">
+              <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
+              {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_id}</Link>
+            </p>
+            <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(eventItem.start_time).toLocaleString()}</p>
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>
@@ -115,29 +119,41 @@ export function EventDetailPage() {
             onChange={(event) => setContent(event.target.value)}
             placeholder={replyParentId ? t('eventDetail.replyingTo', { id: replyParentId }) : t('eventDetail.postComment')}
           />
-          <button type="submit">{t('eventDetail.post')}</button>
+          <button type="submit"><Icon href="/action-icons.svg" name="action-reply" size={16} /> {t('eventDetail.post')}</button>
           {replyParentId ? (
             <button type="button" onClick={() => setReplyParentId(null)}>
               {t('common.cancelReply')}
             </button>
           ) : null}
         </form>
-        <ul>
-          {visibleThreads.map((thread) => (
-            <li key={thread.id}>
-              <p>{thread.content}</p>
-              <small>
-                <Link to={`/profile/${thread.profile_id}`}>{thread.profile_id}</Link>{' '}
-                {thread.parent_id ? t('eventDetail.replyTo', { id: thread.parent_id }) : ''}
-              </small>
-              <div>
-                <button type="button" onClick={() => setReplyParentId(thread.id)}>
-                  {t('eventDetail.reply')}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {visibleThreads.length === 0 ? (
+          <div className="empty-state">
+            <img src="/illustration-empty-discussion.svg" alt="" width={480} height={280} className="illustration" />
+            <p>{t('eventDetail.postComment')}</p>
+          </div>
+        ) : (
+          <ul>
+            {visibleThreads.map((thread) => (
+              <li key={thread.id} className="thread-item">
+                <div className="thread-header">
+                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
+                  <div>
+                    <p>{thread.content}</p>
+                    <small>
+                      <Link to={`/profile/${thread.profile_id}`}>{thread.profile_id}</Link>{' '}
+                      {thread.parent_id ? t('eventDetail.replyTo', { id: thread.parent_id }) : ''}
+                    </small>
+                  </div>
+                </div>
+                <div>
+                  <button type="button" onClick={() => setReplyParentId(thread.id)}>
+                    <Icon href="/action-icons.svg" name="action-reply" size={14} /> {t('eventDetail.reply')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {id ? <ReportForm targetEventId={id} /> : null}

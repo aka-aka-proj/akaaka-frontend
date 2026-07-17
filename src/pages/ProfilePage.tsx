@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
@@ -197,26 +198,39 @@ export function ProfilePage() {
     <Layout title={t('profile.title')}>
       <section className="card">
         {profile ? (
-          <>
-            <h2>{profile.display_name || profile.id}</h2>
-            <p>{t('profile.role')}: {profile.role_status}</p>
-            <p>{t('profile.reputation')}: {profile.reputation_score}</p>
-            <p>
-              {t('profile.bio')}:{' '}
-              {showBio
-                ? profile.bio || t('profile.noBio')
-                : t('profile.hidden', { visibility: bioVisibility })}
-            </p>
-            <ul>
-              {profile.external_social_links.map((link) => (
-                <li key={`${link.platform}-${link.url}`}>
-                  {link.platform}: {link.url}
-                </li>
-              ))}
-            </ul>
-          </>
+          <div className="profile-header">
+            <img src="/default-avatar.svg" alt="" width={96} height={96} className="avatar avatar-lg" />
+            <div className="profile-info">
+              <h2>{profile.display_name || profile.id}</h2>
+              <p className="profile-role">
+                <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
+                {' '}{t('profile.role')}: {profile.role_status}
+              </p>
+              <p className="profile-reputation">
+                <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
+                {' '}{t('profile.reputation')}: {profile.reputation_score}
+              </p>
+              <p>
+                {t('profile.bio')}:{' '}
+                {showBio
+                  ? profile.bio || t('profile.noBio')
+                  : t('profile.hidden', { visibility: bioVisibility })}
+              </p>
+              <ul className="social-links-list">
+                {profile.external_social_links.map((link) => (
+                  <li key={`${link.platform}-${link.url}`} className="social-link-item">
+                    <Icon href="/icons.svg" name={`${link.platform}-icon`} size={18} />
+                    <a href={link.url} target="_blank" rel="noopener noreferrer">{link.platform}: {link.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         ) : (
-          <p>{t('profile.notFound')}</p>
+          <div className="empty-state">
+            <img src="/illustration-empty-profile.svg" alt="" width={400} height={280} className="illustration" />
+            <p>{t('profile.notFound')}</p>
+          </div>
         )}
         {message ? <p className="message">{message}</p> : null}
       </section>
@@ -278,7 +292,7 @@ export function ProfilePage() {
               </div>
             ))}
             <button type="button" onClick={() => setSocialLinks((links) => [...links, createSocialLink()])}>
-              {t('profile.addSocialLink')}
+              <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('profile.addSocialLink')}
             </button>
           </section>
           <button type="submit">{t('profile.saveProfile')}</button>
@@ -291,7 +305,7 @@ export function ProfilePage() {
             onClick={() => void recommend()}
             disabled={user?.id === targetProfileId}
           >
-            {t('profile.giveRecommendation')}
+            <Icon href="/action-icons.svg" name="action-thumbsup" size={16} /> {t('profile.giveRecommendation')}
           </button>
           <textarea
             aria-label={t('profile.recommendationCommentLabel')}
@@ -304,7 +318,8 @@ export function ProfilePage() {
             onClick={() => void toggleBlock()}
             disabled={user?.id === targetProfileId}
           >
-            {isBlocked ? t('profile.unblockUser') : t('profile.blockUser')}
+            <Icon href="/action-icons.svg" name="action-block" size={16} />
+            {' '}{isBlocked ? t('profile.unblockUser') : t('profile.blockUser')}
           </button>
           {user?.id === targetProfileId ? (
             <p className="message">{t('profile.cannotRecommendSelf')}</p>

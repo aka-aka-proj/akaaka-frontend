@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Icon } from './Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -57,7 +58,7 @@ export function ReportForm({ targetProfileId, targetEventId }: ReportFormProps) 
 
   return (
     <form className="card" onSubmit={submit}>
-      <h3>{t('report.title')}</h3>
+      <h3><Icon href="/report-icons.svg" name="report-safety-risk" size={20} /> {t('report.title')}</h3>
       <label>
         {t('report.categoryLabel')}
         <select
@@ -83,7 +84,7 @@ export function ReportForm({ targetProfileId, targetEventId }: ReportFormProps) 
         />
       </label>
       <button type="submit" disabled={submitting}>
-        {t('report.submitReport')}
+        <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('report.submitReport')}
       </button>
       {message ? <p className="message">{message}</p> : null}
     </form>
