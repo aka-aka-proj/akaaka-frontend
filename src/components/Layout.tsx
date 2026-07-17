@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { locales, type Locale } from '../i18n'
@@ -7,11 +7,20 @@ import { supabase } from '../supabaseClient'
 import { useT } from '../hooks/useT'
 import { Icon } from './Icon'
 
+const BOTTOM_NAV_ITEMS = [
+  { to: '/events', icon: 'nav-events', labelKey: 'nav.events' },
+  { to: '/events/new', icon: 'nav-create', labelKey: 'nav.createEvent' },
+  { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile' },
+  { to: '/reports/me', icon: 'nav-reports', labelKey: 'nav.myReports' },
+  { to: '/issues', icon: 'nav-reports', labelKey: 'nav.myIssues' },
+] as const
+
 export function Layout({ title, children }: { title: string; children: ReactNode }) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleSignOut = async () => {
     try {
@@ -33,7 +42,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
           <span className="topbar-title">{title}</span>
         </div>
         {user ? (
-          <nav className="nav">
+          <nav className="nav desktop-nav">
             <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
             <Link to="/events/new"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
@@ -58,7 +67,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             </button>
           </nav>
         ) : (
-          <label className="lang-switch">
+          <label className="lang-switch desktop-only">
             <Icon href="/nav-icons.svg" name="nav-language" size={16} />
             <select
               aria-label="Language"
@@ -75,6 +84,20 @@ export function Layout({ title, children }: { title: string; children: ReactNode
         )}
       </header>
       {children}
+      {user ? (
+        <nav className="bottom-nav" aria-label="Mobile navigation">
+          {BOTTOM_NAV_ITEMS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`bottom-nav-item${location.pathname === item.to || (item.to !== '/events' && location.pathname.startsWith(item.to)) ? ' active' : ''}`}
+            >
+              <Icon href="/nav-icons.svg" name={item.icon} size={20} />
+              <span>{t(item.labelKey)}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </main>
   )
 }
