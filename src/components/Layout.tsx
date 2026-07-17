@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { locales, type Locale } from '../i18n'
@@ -11,9 +11,16 @@ export function Layout({ title, children }: { title: string; children: ReactNode
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
+  const navigate = useNavigate()
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch {
+      // session 可能已失效，強制清除本地狀態並導向登入頁
+    }
+    navigate('/auth', { replace: true })
   }
 
   return (
@@ -31,6 +38,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             <Link to="/events/new"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
             <Link to="/reports/me"><Icon href="/nav-icons.svg" name="nav-reports" size={16} /> {t('nav.myReports')}</Link>
+            <Link to="/issues"><Icon href="/nav-icons.svg" name="nav-reports" size={16} /> {t('nav.myIssues')}</Link>
             <label className="lang-switch">
               <Icon href="/nav-icons.svg" name="nav-language" size={16} />
               <select

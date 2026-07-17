@@ -60,7 +60,12 @@ export default function SupabaseDemo() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch {
+      // session 可能已失效，強制清除本地狀態
+    }
     setUser(null);
     setMsg('已登出');
   }

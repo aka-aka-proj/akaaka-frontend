@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ReportForm } from '../components/ReportForm'
@@ -223,7 +223,12 @@ export function ProfilePage() {
       return
     }
 
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch {
+      // session 可能已失效，強制導向登入頁
+    }
     setMessage(t('profile.deleteAccountSuccess'))
     navigate('/auth', { replace: true })
   }
@@ -279,7 +284,14 @@ export function ProfilePage() {
             <p>{t('profile.notFound')}</p>
           </div>
         )}
-        {message ? <p className="message">{message}</p> : null}
+        {message ? (
+          <p className="message">
+            {message}{' '}
+            <Link to={`/issues/new?title=profile-error&description=${encodeURIComponent(message)}`}>
+              {t('issues.reportThisIssue')}
+            </Link>
+          </p>
+        ) : null}
       </section>
 
       {isOwner ? (
