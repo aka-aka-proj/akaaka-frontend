@@ -30,7 +30,7 @@ export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, refreshProfile } = useAuth()
-  const { iconTheme, setIconTheme } = useIconTheme()
+  const { iconTheme, setIconTheme, syncFromProfile } = useIconTheme()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -84,6 +84,10 @@ export function ProfilePage() {
     setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
     setBdsmRolesVisibility(mapped?.metadata?.visibility?.bdsm_roles ?? 'public')
 
+    if (mapped && isOwner) {
+      syncFromProfile(mapped)
+    }
+
     if (user && targetProfileId) {
       const { data: blockData, error: blockError } = await supabase
         .from('blocks')
@@ -130,6 +134,7 @@ export function ProfilePage() {
           },
           gender_identity: genderIdentity || undefined,
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : undefined,
+          icon_theme: iconTheme,
         },
       })
       .eq('id', user.id)

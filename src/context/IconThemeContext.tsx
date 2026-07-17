@@ -1,44 +1,56 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-
-export type IconTheme = 'purple' | 'red'
+import type { IconTheme, Profile } from '../types'
+import { supabase } from '../supabaseClient'
 
 interface IconThemeContextValue {
   iconTheme: IconTheme
   setIconTheme: (theme: IconTheme) => void
+  syncFromProfile: (profile: Profile) => void
 }
 
 const IconThemeContext = createContext<IconThemeContextValue>({
   iconTheme: 'purple',
   setIconTheme: () => {},
+  syncFromProfile: () => {},
 })
-
-const STORAGE_KEY = 'akaaka-icon-theme'
 
 const ICON_MAP: Record<IconTheme, { logo: string; logoLogin: string; favicon: string }> = {
   purple: { logo: '/logo.svg', logoLogin: '/logo-login.svg', favicon: '/favicon.svg' },
   red: { logo: '/logo-red.svg', logoLogin: '/logo-login-red.svg', favicon: '/favicon-red.svg' },
 }
 
-function getInitialTheme(): IconTheme {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'purple' || stored === 'red') return stored
-  } catch {
-    // ignore
-  }
-  return 'purple'
-}
-
 export function IconThemeProvider({ children }: { children: ReactNode }) {
-  const [iconTheme, setIconThemeState] = useState<IconTheme>(getInitialTheme)
+  const [iconTheme, setIconThemeState] = useState<IconTheme>('purple')
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const applyTheme = (theme: IconTheme) => {
+    setIconThemeState(theme)
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (link) {
+      link.href = ICON_MAP[theme].favicon
+    }
+  }
 
   const setIconTheme = (newTheme: IconTheme) => {
-    setIconThemeState(newTheme)
-    try {
-      localStorage.setItem(STORAGE_KEY, newTheme)
-    } catch {
-      // ignore
+    applyTheme(newTheme)
+    if (userId) {
+      void supabase.auth.getSession().then(({ data }) => {
+        const uid = data.session?.user.id
+        if (!uid) return
+        void supabase
+          .from('profiles')
+          .update({ metadata: { icon_theme: newTheme } })
+          .eq('id', uid)
+      })
+    }
+  }
+
+  const syncFromProfile = (profile: Profile) => {
+    setUserId(profile.id)
+    const theme = profile.metadata?.icon_theme
+    if (theme === 'purple' || theme === 'red') {
+      applyTheme(theme)
     }
   }
 
@@ -50,7 +62,7 @@ export function IconThemeProvider({ children }: { children: ReactNode }) {
   }, [iconTheme])
 
   return (
-    <IconThemeContext.Provider value={{ iconTheme, setIconTheme }}>
+    <IconThemeContext.Provider value={{ iconTheme, setIconTheme, syncFromProfile }}>
       {children}
     </IconThemeContext.Provider>
   )
