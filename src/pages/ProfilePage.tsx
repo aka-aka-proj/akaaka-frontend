@@ -263,18 +263,31 @@ export function ProfilePage() {
           <div className="profile-header">
             <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
             <div className="profile-info">
+              <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
+                <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
+                  <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
+                </button>
+              </div>
               <h2>{profile.display_name || profile.id}</h2>
               <p className="profile-role">
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
                 {' '}{t('profile.role')}: {profile.role_status}
               </p>
               <p className="profile-reputation">
-                <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
-                {' '}{t('profile.reputation')}: {profile.reputation_score}
+                <Link to={`/profile/${targetProfileId}/reputation`}>
+                  <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
+                  {' '}{t('profile.reputation')}: {profile.reputation_score}
+                </Link>
+                {' '}
+                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
+                  ({t('profile.viewFeedback')})
+                </Link>
               </p>
               <p className="profile-reports">
-                <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
-                {' '}{t('profile.reports')}: {reportCount}
+                <Link to={`/profile/${targetProfileId}/reputation`}>
+                  <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+                  {' '}{t('profile.reports')}: {reportCount}
+                </Link>
               </p>
               {profile.metadata?.gender_identity ? (
                 <p>

@@ -213,6 +213,9 @@ const zhTW = {
     loginInfoEmail: '電子信箱',
     loginInfoPrivate: '僅供自己查看，其他人無法看見',
     recommendations: '推薦留言',
+    feedbackTitle: '推薦留言',
+    noFeedback: '尚無推薦留言。',
+    viewFeedback: '查看推薦留言',
     myReports: '我的檢舉記錄',
   },
   onboarding: {

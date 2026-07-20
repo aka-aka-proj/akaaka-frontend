@@ -213,6 +213,9 @@ const en = {
     loginInfoEmail: 'Email',
     loginInfoPrivate: 'Visible only to you — others cannot see this',
     recommendations: 'Recommendation comments',
+    feedbackTitle: 'Feedback Comments',
+    noFeedback: 'No feedback comments yet.',
+    viewFeedback: 'View Feedback',
     myReports: 'My report details',
   },
   onboarding: {
