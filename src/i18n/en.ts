@@ -35,6 +35,7 @@ const en = {
     continueWithApple: 'Continue with Apple',
     socialLoginError: 'Social login failed. Please try again.',
     emailNotConfirmed: 'Your email has not been verified. A new verification email has been sent. Please check your inbox and click the confirmation link before signing in.',
+    emailAlreadyRegistered: 'This email is already registered. Please sign in with the social login you originally used (Google, Facebook, or Apple).',
   },
   events: {
     title: 'Events',

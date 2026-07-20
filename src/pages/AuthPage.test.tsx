@@ -138,6 +138,44 @@ describe('AuthPage', () => {
     expect(screen.getByText('您的電子郵件尚未驗證，驗證信已重新發送，請至信箱點擊確認連結後再登入。')).toBeTruthy()
   })
 
+  it('shows friendly message when signUp returns "User already registered"', async () => {
+    const user = userEvent.setup()
+    signUp.mockResolvedValue({ error: { message: 'User already registered' } })
+
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
+    await user.type(screen.getByLabelText('電子郵件'), 'existing@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '建立帳號' }))
+
+    expect(screen.getByText('此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。')).toBeTruthy()
+  })
+
+  it('shows friendly message when signUp returns newer duplicate email error', async () => {
+    const user = userEvent.setup()
+    signUp.mockResolvedValue({
+      error: { message: 'A user with this email address has already been registered' },
+    })
+
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
+    await user.type(screen.getByLabelText('電子郵件'), 'existing@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '建立帳號' }))
+
+    expect(screen.getByText('此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。')).toBeTruthy()
+  })
+
   it('shows generic error when signIn returns invalid_login_credentials and resend also fails', async () => {
     const user = userEvent.setup()
     signInWithPassword.mockResolvedValue({ error: { message: 'invalid_login_credentials' } })

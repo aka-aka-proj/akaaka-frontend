@@ -35,6 +35,7 @@ const zhTW = {
     continueWithApple: '使用 Apple 登入',
     socialLoginError: '社交登入失敗，請稍後再試',
     emailNotConfirmed: '您的電子郵件尚未驗證，驗證信已重新發送，請至信箱點擊確認連結後再登入。',
+    emailAlreadyRegistered: '此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。',
   },
   events: {
     title: '活動',
