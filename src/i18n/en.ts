@@ -49,6 +49,7 @@ const en = {
     downloadIcs: 'Download ICS',
     googleCalendar: 'Google Calendar',
     noResults: 'No events match your filters.',
+    myEvents: 'My Events',
   },
   createEvent: {
     title: 'Create Event',

@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { useAuth } from '../context/AuthContext'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import type { EventItem } from '../types'
 
@@ -11,11 +12,13 @@ type TimeFilter = 'all' | 'upcoming' | 'past'
 
 export function EventsPage() {
   const { t } = useT()
+  const { user } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
+  const [myEventsOnly, setMyEventsOnly] = useState(false)
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -67,9 +70,13 @@ export function EventsPage() {
         if (new Date(event.start_time).getTime() >= now) return false
       }
 
+      if (myEventsOnly && user) {
+        if (event.creator_id !== user.id) return false
+      }
+
       return true
     })
-  }, [events, search, selectedType, timeFilter])
+  }, [events, search, selectedType, timeFilter, myEventsOnly, user])
 
   return (
     <Layout title={t('events.title')}>
@@ -130,6 +137,18 @@ export function EventsPage() {
             {t('events.past')}
           </button>
         </div>
+
+        {user && (
+          <div className="chip-group">
+            <button
+              type="button"
+              className={`chip${myEventsOnly ? ' chip-active' : ''}`}
+              onClick={() => setMyEventsOnly((v) => !v)}
+            >
+              {t('events.myEvents')}
+            </button>
+          </div>
+        )}
 
         {message ? <p className="message">{message}</p> : null}
 

@@ -49,6 +49,7 @@ const zhTW = {
     downloadIcs: '下載 ICS',
     googleCalendar: 'Google Calendar',
     noResults: '找不到符合條件的活動。',
+    myEvents: '我的活動',
   },
   createEvent: {
     title: '建立活動',
