@@ -202,6 +202,8 @@ export function EventDetailPage() {
 
     await load()
   }
+
+  const handleReview = async (registrationId: string, action: 'approve' | 'reject') => {
     if (!id || !user) {
       return
     }
@@ -256,8 +258,6 @@ export function EventDetailPage() {
       default: return status
     }
   }
-
-  const pendingRegistrations = registrations.filter((r) => r.status === 'pending')
 
   return (
     <Layout title={t('eventDetail.title')}>

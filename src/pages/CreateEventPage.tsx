@@ -17,7 +17,6 @@ export function CreateEventPage() {
   const [startTime, setStartTime] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
-  const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -34,12 +33,8 @@ export function CreateEventPage() {
       return
     }
 
-    if (isVenueHosted && profile?.role_status !== 'venue_approved') {
-      setMessage(t('createEvent.venueApprovalRequired'))
-      return
-    }
-
     setSubmitting(true)
+    const isVenueHosted = profile?.role_status === 'venue_approved'
     const { data, error } = await supabase
       .from('events')
       .insert([
@@ -134,16 +129,6 @@ export function CreateEventPage() {
             value={registrationDeadline}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
-        </label>
-        <label className="checkbox">
-          <input
-            aria-label={t('createEvent.venueHostedLabel')}
-            type="checkbox"
-            checked={isVenueHosted}
-            onChange={(event) => setIsVenueHosted(event.target.checked)}
-          />
-          <Icon href="/form-icons.svg" name="form-location" size={16} />
-          {t('createEvent.venueHostedLabel')}
         </label>
         <label className="form-field">
           <span className="form-label-row">

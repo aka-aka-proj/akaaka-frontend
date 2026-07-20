@@ -33,7 +33,7 @@ describe('CreateEventPage', () => {
     })
   })
 
-  it('blocks venue hosted event for non-approved user', async () => {
+  it('creates non-venue-hosted event for general user', async () => {
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1' },
       profile: { role_status: 'general' },
@@ -46,16 +46,19 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Title'), 'My Event')
-    await user.type(screen.getByLabelText('Start time'), '2026-07-17T12:00')
-    await user.click(screen.getByLabelText('Venue hosted'))
-    await user.click(screen.getByRole('button', { name: 'Save event' }))
+    await user.type(screen.getByLabelText('標題'), 'My Event')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.click(screen.getByRole('button', { name: '儲存活動' }))
 
-    expect(screen.getByText('Only venue_approved users can create venue-hosted events.')).toBeTruthy()
-    expect(insert).not.toHaveBeenCalled()
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        title: 'My Event',
+        is_venue_hosted: false,
+      }),
+    ])
   })
 
-  it('allows venue hosted event for venue approved user', async () => {
+  it('creates venue-hosted event for venue approved user', async () => {
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1' },
       profile: { role_status: 'venue_approved' },
@@ -68,11 +71,15 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Title'), 'Approved Event')
-    await user.type(screen.getByLabelText('Start time'), '2026-07-17T12:00')
-    await user.click(screen.getByLabelText('Venue hosted'))
-    await user.click(screen.getByRole('button', { name: 'Save event' }))
+    await user.type(screen.getByLabelText('標題'), 'Approved Event')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.click(screen.getByRole('button', { name: '儲存活動' }))
 
-    expect(insert).toHaveBeenCalled()
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        title: 'Approved Event',
+        is_venue_hosted: true,
+      }),
+    ])
   })
 })

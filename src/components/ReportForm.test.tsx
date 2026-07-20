@@ -28,19 +28,19 @@ describe('ReportForm', () => {
     const user = userEvent.setup()
     render(<ReportForm targetProfileId="target-user" />)
 
-    await user.click(screen.getByRole('button', { name: 'Submit report' }))
-    expect(screen.getByText('Category and details are required.')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: '提交檢舉' }))
+    expect(screen.getByText('類別和詳細說明為必填。')).toBeTruthy()
   })
 
   it('shows success on submit', async () => {
     const user = userEvent.setup()
     render(<ReportForm targetProfileId="target-user" />)
 
-    await user.selectOptions(screen.getByLabelText('Category'), 'spam')
-    await user.type(screen.getByLabelText('Details'), 'Spam account details')
-    await user.click(screen.getByRole('button', { name: 'Submit report' }))
+    await user.selectOptions(screen.getByLabelText('類別'), 'spam')
+    await user.type(screen.getByLabelText('詳細說明'), 'Spam account details')
+    await user.click(screen.getByRole('button', { name: '提交檢舉' }))
 
     expect(insert).toHaveBeenCalled()
-    expect(screen.getByText('Report submitted successfully.')).toBeTruthy()
+    expect(screen.getByText('檢舉已成功提交。')).toBeTruthy()
   })
 })
