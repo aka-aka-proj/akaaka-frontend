@@ -31,6 +31,8 @@ function queryBuilder(response: QueryResponse) {
   return {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue(response),
     gte: vi.fn().mockResolvedValue(response),
     maybeSingle: vi.fn().mockResolvedValue(response),
     insert: vi.fn().mockResolvedValue(response),
@@ -222,5 +224,51 @@ describe('ProfilePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Recommendation submitted.')).toBeTruthy()
     })
+  })
+
+  it('displays report count from profile_report_stats', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user',
+        role_status: 'general',
+        display_name: 'Target User',
+        bio: 'Public bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 5,
+      },
+      error: null,
+    })
+    const reportStatsQuery = queryBuilder({
+      data: { report_count: 3 },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return profilesQuery
+      }
+      if (table === 'profile_report_stats') {
+        return reportStatsQuery
+      }
+      if (table === 'blocks') {
+        return blocksQuery
+      }
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Target User')).toBeTruthy()
+    })
+    expect(screen.getByText('Reports: 3')).toBeTruthy()
   })
 })

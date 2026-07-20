@@ -104,6 +104,7 @@ const en = {
     title: 'Profile',
     role: 'Role',
     reputation: 'Reputation',
+    reports: 'Reports',
     bio: 'Bio',
     noBio: 'No bio set.',
     hidden: 'Hidden ({visibility})',
@@ -173,6 +174,8 @@ const en = {
     loginInfoUserId: 'User ID',
     loginInfoEmail: 'Email',
     loginInfoPrivate: 'Visible only to you — others cannot see this',
+    recommendations: 'Recommendation comments',
+    myReports: 'My report details',
   },
   onboarding: {
     title: 'Onboarding',

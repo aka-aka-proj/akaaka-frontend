@@ -45,6 +45,7 @@ export function ProfilePage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
+  const [reportCount, setReportCount] = useState(0)
   const [message, setMessage] = useState('')
 
   const bioVisibility = getBioVisibility(profile)
@@ -83,6 +84,13 @@ export function ProfilePage() {
     setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
     setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
     setBdsmRolesVisibility(mapped?.metadata?.visibility?.bdsm_roles ?? 'public')
+
+    const { data: reportStats } = await supabase
+      .from('profile_report_stats')
+      .select('report_count')
+      .eq('profile_id', targetProfileId)
+      .maybeSingle()
+    setReportCount(Number(reportStats?.report_count ?? 0))
 
     if (mapped && isOwner) {
       syncFromProfile(mapped)
@@ -263,6 +271,10 @@ export function ProfilePage() {
               <p className="profile-reputation">
                 <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
                 {' '}{t('profile.reputation')}: {profile.reputation_score}
+              </p>
+              <p className="profile-reports">
+                <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+                {' '}{t('profile.reports')}: {reportCount}
               </p>
               {profile.metadata?.gender_identity ? (
                 <p>

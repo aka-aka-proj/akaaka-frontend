@@ -104,6 +104,7 @@ const zhTW = {
     title: '個人資料',
     role: '角色',
     reputation: '聲望',
+    reports: '檢舉',
     bio: '簡介',
     noBio: '尚未設定簡介。',
     hidden: '隱藏（{visibility}）',
@@ -173,6 +174,8 @@ const zhTW = {
     loginInfoUserId: 'User ID',
     loginInfoEmail: '電子信箱',
     loginInfoPrivate: '僅供自己查看，其他人無法看見',
+    recommendations: '推薦留言',
+    myReports: '我的檢舉記錄',
   },
   onboarding: {
     title: '新手導覽',
