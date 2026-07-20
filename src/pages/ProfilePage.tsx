@@ -260,7 +260,7 @@ export function ProfilePage() {
     <Layout title={t('profile.title')}>
       <section className="card">
         {profile ? (
-          <div className="profile-header">
+          <div className="profile-header" style={{position: 'relative'}}>
             <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
             <div className="profile-info">
               <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
@@ -512,14 +512,6 @@ export function ProfilePage() {
             value={recommendComment}
             onChange={(event) => setRecommendComment(event.target.value)}
           />
-          <button
-            type="button"
-            onClick={() => void toggleBlock()}
-            disabled={user?.id === targetProfileId}
-          >
-            <Icon href="/action-icons.svg" name="action-block" size={16} />
-            {' '}{isBlocked ? t('profile.unblockUser') : t('profile.blockUser')}
-          </button>
           {user?.id === targetProfileId ? (
             <p className="message">{t('profile.cannotRecommendSelf')}</p>
           ) : null}
