@@ -141,7 +141,7 @@ export function AuthPage() {
     <Layout title={t('auth.title')}>
       {showVerificationPrompt ? (
         <div className="card auth-card">
-          <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={80} height={80} className="auth-logo" />
+          <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={140} height={140} className="auth-logo" />
           <h2>{t('auth.signUp')}</h2>
           <p className="message">{t('auth.verificationSent')}</p>
           <p className="verification-email">{email}</p>
@@ -161,7 +161,7 @@ export function AuthPage() {
         </div>
       ) : (
       <form className="card auth-card" onSubmit={submit}>
-        <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={80} height={80} className="auth-logo" />
+        <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={140} height={140} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
         <button type="button" className="social-btn" onClick={() => signInWithSocial('google')}>
           <Icon href="/social-icons.svg" name="social-google" size={20} />
