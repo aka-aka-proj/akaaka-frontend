@@ -93,6 +93,16 @@ export interface EventThread {
   profile?: Profile | null
 }
 
+export interface Recommendation {
+  id: string
+  from_profile_id: string
+  to_profile_id: string
+  score_increment: number
+  comment: string | null
+  created_at: string
+  from_profile: { display_name: string | null } | null
+}
+
 export interface ReportItem {
   id: string
   reporter_id: string
