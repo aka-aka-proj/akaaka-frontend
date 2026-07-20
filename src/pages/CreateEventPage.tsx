@@ -13,7 +13,8 @@ export function CreateEventPage() {
   const { t } = useT()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [eventType, setEventType] = useState('')
+  const [eventType, setEventType] = useState<string[]>([])
+  const [currentType, setCurrentType] = useState('')
   const [startTime, setStartTime] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
@@ -42,7 +43,7 @@ export function CreateEventPage() {
           creator_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
-          event_type: eventType.trim() || null,
+          event_type: eventType.length > 0 ? eventType : null,
           start_time: new Date(startTime).toISOString(),
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },
@@ -89,11 +90,38 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
           </span>
-          <input
-            aria-label={t('createEvent.eventTypeLabel')}
-            value={eventType}
-            onChange={(event) => setEventType(event.target.value)}
-          />
+          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--border-color, #ccc)', borderRadius: '4px', background: 'var(--bg-primary, #fff)' }}>
+            {eventType.map(type => (
+              <span key={type} className="tag" style={{ background: 'var(--bg-secondary, #eee)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
+                {type}
+                <button 
+                  type="button" 
+                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--text-secondary, #666)' }}
+                  aria-label={t('createEvent.removeType') || 'Remove type'}
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            <input
+              aria-label={t('createEvent.eventTypeLabel')}
+              value={currentType}
+              onChange={(event) => setCurrentType(event.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault()
+                  const newType = currentType.trim()
+                  if (newType && !eventType.includes(newType)) {
+                    setEventType([...eventType, newType])
+                  }
+                  setCurrentType('')
+                }
+              }}
+              placeholder={t('createEvent.eventTypePlaceholder') || 'Type and press Enter'}
+              style={{ border: 'none', outline: 'none', flex: 1, minWidth: '120px', background: 'transparent', padding: '4px 0' }}
+            />
+          </div>
         </label>
         <label className="form-field">
           <span className="form-label-row">
