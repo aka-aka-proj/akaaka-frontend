@@ -19,14 +19,18 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
 
 function RootRedirect() {
-  const { user, loading } = useAuth()
+  const { user, loading, hasOnboarded } = useAuth()
   const { t } = useT()
 
   if (loading) {
     return <p>{t('common.loading')}</p>
   }
 
-  return <Navigate to={user ? '/events' : '/auth'} replace />
+  if (!user) return <Navigate to="/auth" replace />
+
+  if (hasOnboarded) return <Navigate to="/events" replace />
+
+  return <Navigate to="/onboarding" replace />
 }
 
 function App() {

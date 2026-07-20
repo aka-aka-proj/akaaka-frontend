@@ -12,10 +12,15 @@ import type { BdsmRole, GenderIdentity, SocialLink, Visibility } from '../types'
 const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
 
 export function OnboardingPage() {
-  const { user, refreshProfile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
+
+  if (profile) {
+    navigate('/events', { replace: true })
+    return null
+  }
   const [compactOpen, setCompactOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')

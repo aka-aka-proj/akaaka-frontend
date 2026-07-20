@@ -10,6 +10,7 @@ interface AuthContextValue {
   session: Session | null
   profile: Profile | null
   loading: boolean
+  hasOnboarded: boolean
   refreshProfile: () => Promise<void>
 }
 
@@ -82,15 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshProfile()
   }, [session?.user.id])
 
+  const hasOnboarded = profile !== null
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
       profile,
       loading,
+      hasOnboarded,
       refreshProfile,
     }),
-    [loading, profile, session],
+    [loading, profile, session, hasOnboarded],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
