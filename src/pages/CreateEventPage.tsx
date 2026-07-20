@@ -15,6 +15,8 @@ export function CreateEventPage() {
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState('')
   const [startTime, setStartTime] = useState('')
+  const [maxCapacity, setMaxCapacity] = useState('')
+  const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [message, setMessage] = useState('')
@@ -49,6 +51,8 @@ export function CreateEventPage() {
           start_time: new Date(startTime).toISOString(),
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },
+          max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
+          registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
         },
       ])
       .select('id')
@@ -105,6 +109,30 @@ export function CreateEventPage() {
             type="datetime-local"
             value={startTime}
             onChange={(event) => setStartTime(event.target.value)}
+          />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.maxCapacityLabel')}
+          </span>
+          <input
+            aria-label={t('createEvent.maxCapacityLabel')}
+            type="number"
+            min="1"
+            placeholder={t('createEvent.maxCapacityPlaceholder')}
+            value={maxCapacity}
+            onChange={(event) => setMaxCapacity(event.target.value)}
+          />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.registrationDeadlineLabel')}
+          </span>
+          <input
+            aria-label={t('createEvent.registrationDeadlineLabel')}
+            type="datetime-local"
+            value={registrationDeadline}
+            onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label>
         <label className="checkbox">

@@ -13,6 +13,7 @@ import { EventsPage } from './pages/EventsPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
+import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
@@ -86,6 +87,14 @@ function App() {
         element={
           <ProtectedRoute>
             <MyReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/registrations/me"
+        element={
+          <ProtectedRoute>
+            <MyRegistrationsPage />
           </ProtectedRoute>
         }
       />

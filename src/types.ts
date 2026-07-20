@@ -62,8 +62,25 @@ export interface EventItem {
   is_venue_hosted: boolean
   visibility_settings: { type?: string } | null
   start_time: string
+  max_capacity: number | null
+  registration_deadline: string | null
   created_at: string
   creator?: Profile | null
+}
+
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlisted'
+
+export interface Registration {
+  id: string
+  event_id: string
+  profile_id: string
+  status: RegistrationStatus
+  waitlist_position: number | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  event?: EventItem | null
+  profile?: Profile | null
 }
 
 export interface EventThread {
