@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -29,6 +29,9 @@ export function AuthPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -38,6 +41,41 @@ export function AuthPage() {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [t])
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) {
+        clearInterval(cooldownRef.current)
+      }
+    }
+  }, [])
+
+  const startCooldown = useCallback(() => {
+    setResendCooldown(60)
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) {
+            clearInterval(cooldownRef.current)
+            cooldownRef.current = null
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setMessage(t('auth.resendSuccess'))
+    startCooldown()
+  }
 
   if (user) {
     const from = (location.state as { from?: string } | null)?.from
@@ -74,7 +112,8 @@ export function AuthPage() {
       }
 
       setMessage(t('auth.signUpSuccess'))
-      navigate('/onboarding', { replace: true })
+      setShowVerificationPrompt(true)
+      startCooldown()
       return
     }
 
@@ -90,6 +129,27 @@ export function AuthPage() {
 
   return (
     <Layout title={t('auth.title')}>
+      {showVerificationPrompt ? (
+        <div className="card auth-card">
+          <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={80} height={80} className="auth-logo" />
+          <h2>{t('auth.signUp')}</h2>
+          <p className="message">{t('auth.verificationSent')}</p>
+          <p className="verification-email">{email}</p>
+          <button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resendCooldown > 0}
+          >
+            {resendCooldown > 0
+              ? t('auth.resendCooldown', { seconds: String(resendCooldown) })
+              : t('auth.resendVerification')}
+          </button>
+          <button type="button" onClick={() => { setShowVerificationPrompt(false); setMessage(''); navigate('/auth', { replace: true }) }}>
+            {t('auth.backToSignIn')}
+          </button>
+          {message ? <p className="message">{message}</p> : null}
+        </div>
+      ) : (
       <form className="card auth-card" onSubmit={submit}>
         <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={80} height={80} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
@@ -136,6 +196,7 @@ export function AuthPage() {
         </button>
         {message ? <p className="message">{message}</p> : null}
       </form>
+      )}
     </Layout>
   )
 }
