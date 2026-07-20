@@ -216,7 +216,10 @@ const en = {
     feedbackTitle: 'Feedback Comments',
     noFeedback: 'No feedback comments yet.',
     viewFeedback: 'View Feedback',
+    viewReports: 'View Reports',
     myReports: 'My report details',
+    reportTitle: 'Report Details',
+    noReports: 'No report records yet.',
   },
   onboarding: {
     title: 'Onboarding',

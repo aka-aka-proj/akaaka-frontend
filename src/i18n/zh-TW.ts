@@ -216,7 +216,10 @@ const zhTW = {
     feedbackTitle: '推薦留言',
     noFeedback: '尚無推薦留言。',
     viewFeedback: '查看推薦留言',
+    viewReports: '查看檢舉明細',
     myReports: '我的檢舉記錄',
+    reportTitle: '檢舉明細',
+    noReports: '尚無檢舉記錄。',
   },
   onboarding: {
     title: '新手導覽',

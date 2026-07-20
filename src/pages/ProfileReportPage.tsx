@@ -4,37 +4,52 @@ import { Layout } from '../components/Layout'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import type { ReportItem } from '../types'
 
 export function ProfileReportPage() {
   const { id } = useParams()
   const { t } = useT()
   const { user } = useAuth()
-  const [reports, setReports] = useState<any[]>([])
+  const [reports, setReports] = useState<ReportItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
+  const isAdmin = user?.app_metadata?.role === 'admin'
+
   useEffect(() => {
     const fetchReports = async () => {
-      if (!id || !user) return
+      if (!targetProfileId || !user) return
       setLoading(true)
-      // Only fetch reports where the current user is the reporter, for the target profile
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('reports')
-        .select('id, category, details, status, created_at')
-        .eq('target_profile_id', id)
-        .eq('reporter_id', user.id)
+        .select('*')
+        .eq('target_profile_id', targetProfileId)
         .order('created_at', { ascending: false })
+
+      if (!isAdmin) {
+        // Non-admin can only see their own reports for this profile
+        query = query.eq('reporter_id', user.id)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         setError(error.message)
       } else {
-        setReports(data || [])
+        setReports((data as ReportItem[]) || [])
       }
       setLoading(false)
     }
 
     void fetchReports()
-  }, [id, user])
+  }, [targetProfileId, user, isAdmin])
+
+  const getCategoryLabel = (category: string) => {
+    const key = category.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
+    return t(`report.${key}` as any) || category
+  }
 
   return (
     <Layout title={t('profile.reportTitle')}>
@@ -47,12 +62,25 @@ export function ProfileReportPage() {
           <ul className="report-list" style={{ listStyle: 'none', padding: 0 }}>
             {reports.map((report) => (
               <li key={report.id} className="report-item" style={{ borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>{report.category}</p>
-                <p style={{ margin: '0 0 0.5rem 0' }}>{report.details}</p>
-                <p style={{ margin: '0 0 0.5rem 0' }}>Status: {report.status}</p>
-                <time style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                  {new Date(report.created_at).toLocaleDateString()}
-                </time>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <p style={{ margin: 0, fontWeight: 'bold' }}>
+                    {getCategoryLabel(report.category)}
+                  </p>
+                  <span className={`status status-${report.status}`} style={{ fontSize: '0.75rem' }}>
+                    {report.status}
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 0.5rem 0', whiteSpace: 'pre-wrap' }}>{report.details}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                  {isAdmin ? (
+                    <span>{t('admin.moderation.reporter')}: {report.reporter_id}</span>
+                  ) : (
+                    <span />
+                  )}
+                  <time>
+                    {new Date(report.created_at).toLocaleDateString()}
+                  </time>
+                </div>
               </li>
             ))}
           </ul>
