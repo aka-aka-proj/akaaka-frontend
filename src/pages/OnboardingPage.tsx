@@ -21,7 +21,7 @@ export function OnboardingPage() {
     navigate('/events', { replace: true })
     return null
   }
-  const [compactOpen, setCompactOpen] = useState(false)
+  const [compactOpen, setCompactOpen] = useState(true)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
@@ -93,158 +93,150 @@ export function OnboardingPage() {
 
   return (
     <Layout title={t('onboarding.title')}>
-      <img src="/illustration-welcome.svg" alt="" width={480} height={240} className="illustration" />
       <SafetyCompactModal
         open={compactOpen}
-        onClose={() => setCompactOpen(false)}
+        onClose={() => navigate('/auth', { replace: true })}
         onAgree={() => {
           setAgreed(true)
           setCompactOpen(false)
         }}
       />
-      <form className="card" onSubmit={submit}>
-        <label className={`checkbox${agreed ? ' checkbox-locked' : ''}`}>
-          <input
-            aria-label={t('onboarding.agreeAria')}
-            type="checkbox"
-            checked={agreed}
-            disabled={agreed}
-            onChange={() => {
-              if (!agreed) setCompactOpen(true)
-            }}
-          />
-          {t('onboarding.agreeLabel')}
-        </label>
-        <label>
-          {t('onboarding.displayNameLabel')}
-          <input
-            aria-label={t('onboarding.displayNameLabel')}
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-          />
-        </label>
-        <label>
-          {t('onboarding.bioLabel')}
-          <textarea
-            aria-label={t('onboarding.bioLabel')}
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-          />
-        </label>
-          <label>
-            {t('onboarding.bioVisibilityLabel')}
-            <select
-              aria-label={t('onboarding.bioVisibilityLabel')}
-              value={visibility}
-              onChange={(event) => setVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('onboarding.public')}</option>
-              <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
-              <option value="private">{t('onboarding.private')}</option>
-            </select>
-          </label>
-          <label>
-            {t('onboarding.genderIdentityLabel')}
-            <select
-              aria-label={t('onboarding.genderIdentityLabel')}
-              value={genderIdentity}
-              onChange={(event) => setGenderIdentity(event.target.value as GenderIdentity | '')}
-            >
-              <option value="">{t('onboarding.genderIdentityLabel')}</option>
-              <option value="man">{t('onboarding.genderIdentityMan')}</option>
-              <option value="woman">{t('onboarding.genderIdentityWoman')}</option>
-              <option value="non_binary">{t('onboarding.genderIdentityNonBinary')}</option>
-              <option value="genderqueer">{t('onboarding.genderIdentityGenderqueer')}</option>
-              <option value="agender">{t('onboarding.genderIdentityAgender')}</option>
-              <option value="bigender">{t('onboarding.genderIdentityBigender')}</option>
-              <option value="demiboy">{t('onboarding.genderIdentityDemiboy')}</option>
-              <option value="demigirl">{t('onboarding.genderIdentityDemigirl')}</option>
-              <option value="genderfluid">{t('onboarding.genderIdentityGenderfluid')}</option>
-              <option value="two_spirit">{t('onboarding.genderIdentityTwoSpirit')}</option>
-              <option value="questioning">{t('onboarding.genderIdentityQuestioning')}</option>
-              <option value="other">{t('onboarding.genderIdentityOther')}</option>
-            </select>
-          </label>
-          <label>
-            {t('onboarding.genderIdentityVisibilityLabel')}
-            <select
-              aria-label={t('onboarding.genderIdentityVisibilityLabel')}
-              value={genderIdentityVisibility}
-              onChange={(event) => setGenderIdentityVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('onboarding.public')}</option>
-              <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
-              <option value="private">{t('onboarding.private')}</option>
-            </select>
-          </label>
-          <fieldset>
-            <legend>{t('onboarding.bdsmRolesLabel')}</legend>
-            {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rope_bunny', 'rigging'] as BdsmRole[]).map((role) => (
-              <label key={role} className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={bdsmRoles.includes(role)}
-                  onChange={(event) => {
-                    setBdsmRoles((prev) =>
-                      event.target.checked
-                        ? [...prev, role]
-                        : prev.filter((r) => r !== role),
-                    )
-                  }}
-                />
-                {t(`onboarding.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
-              </label>
-            ))}
-          </fieldset>
-          <label>
-            {t('onboarding.bdsmRolesVisibilityLabel')}
-            <select
-              aria-label={t('onboarding.bdsmRolesVisibilityLabel')}
-              value={bdsmRolesVisibility}
-              onChange={(event) => setBdsmRolesVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('onboarding.public')}</option>
-              <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
-              <option value="private">{t('onboarding.private')}</option>
-            </select>
-          </label>
-          <section>
-          <h3>{t('onboarding.externalSocialLinks')}</h3>
-          {socialLinks.map((link, index) => (
-            <div key={`social-link-${index}`} className="row">
-              <select
-                aria-label={t('onboarding.socialPlatform', { index: index + 1 })}
-                value={link.platform}
-                onChange={(event) =>
-                  updateLink(index, {
-                    platform: event.target.value as SocialLink['platform'],
-                  })
-                }
-              >
-                <option value="facebook">facebook</option>
-                <option value="instagram">instagram</option>
-                <option value="x">x</option>
-              </select>
+      {agreed && (
+        <>
+          <img src="/illustration-welcome.svg" alt="" width={480} height={240} className="illustration" />
+          <form className="card" onSubmit={submit}>
+            <label>
+              {t('onboarding.displayNameLabel')}
               <input
-                aria-label={t('onboarding.socialUrl', { index: index + 1 })}
-                placeholder="https://..."
-                value={link.url}
-                onChange={(event) => updateLink(index, { url: event.target.value })}
+                aria-label={t('onboarding.displayNameLabel')}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
               />
-              <button type="button" onClick={() => removeLink(index)}>
-                <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('common.remove')}
+            </label>
+            <label>
+              {t('onboarding.bioLabel')}
+              <textarea
+                aria-label={t('onboarding.bioLabel')}
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+              />
+            </label>
+              <label>
+                {t('onboarding.bioVisibilityLabel')}
+                <select
+                  aria-label={t('onboarding.bioVisibilityLabel')}
+                  value={visibility}
+                  onChange={(event) => setVisibility(event.target.value as Visibility)}
+                >
+                  <option value="public">{t('onboarding.public')}</option>
+                  <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
+                  <option value="private">{t('onboarding.private')}</option>
+                </select>
+              </label>
+              <label>
+                {t('onboarding.genderIdentityLabel')}
+                <select
+                  aria-label={t('onboarding.genderIdentityLabel')}
+                  value={genderIdentity}
+                  onChange={(event) => setGenderIdentity(event.target.value as GenderIdentity | '')}
+                >
+                  <option value="">{t('onboarding.genderIdentityLabel')}</option>
+                  <option value="man">{t('onboarding.genderIdentityMan')}</option>
+                  <option value="woman">{t('onboarding.genderIdentityWoman')}</option>
+                  <option value="non_binary">{t('onboarding.genderIdentityNonBinary')}</option>
+                  <option value="genderqueer">{t('onboarding.genderIdentityGenderqueer')}</option>
+                  <option value="agender">{t('onboarding.genderIdentityAgender')}</option>
+                  <option value="bigender">{t('onboarding.genderIdentityBigender')}</option>
+                  <option value="demiboy">{t('onboarding.genderIdentityDemiboy')}</option>
+                  <option value="demigirl">{t('onboarding.genderIdentityDemigirl')}</option>
+                  <option value="genderfluid">{t('onboarding.genderIdentityGenderfluid')}</option>
+                  <option value="two_spirit">{t('onboarding.genderIdentityTwoSpirit')}</option>
+                  <option value="questioning">{t('onboarding.genderIdentityQuestioning')}</option>
+                  <option value="other">{t('onboarding.genderIdentityOther')}</option>
+                </select>
+              </label>
+              <label>
+                {t('onboarding.genderIdentityVisibilityLabel')}
+                <select
+                  aria-label={t('onboarding.genderIdentityVisibilityLabel')}
+                  value={genderIdentityVisibility}
+                  onChange={(event) => setGenderIdentityVisibility(event.target.value as Visibility)}
+                >
+                  <option value="public">{t('onboarding.public')}</option>
+                  <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
+                  <option value="private">{t('onboarding.private')}</option>
+                </select>
+              </label>
+              <fieldset>
+                <legend>{t('onboarding.bdsmRolesLabel')}</legend>
+                {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rope_bunny', 'rigging'] as BdsmRole[]).map((role) => (
+                  <label key={role} className="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={bdsmRoles.includes(role)}
+                      onChange={(event) => {
+                        setBdsmRoles((prev) =>
+                          event.target.checked
+                            ? [...prev, role]
+                            : prev.filter((r) => r !== role),
+                        )
+                      }}
+                    />
+                    {t(`onboarding.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
+                  </label>
+                ))}
+              </fieldset>
+              <label>
+                {t('onboarding.bdsmRolesVisibilityLabel')}
+                <select
+                  aria-label={t('onboarding.bdsmRolesVisibilityLabel')}
+                  value={bdsmRolesVisibility}
+                  onChange={(event) => setBdsmRolesVisibility(event.target.value as Visibility)}
+                >
+                  <option value="public">{t('onboarding.public')}</option>
+                  <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
+                  <option value="private">{t('onboarding.private')}</option>
+                </select>
+              </label>
+              <section>
+              <h3>{t('onboarding.externalSocialLinks')}</h3>
+              {socialLinks.map((link, index) => (
+                <div key={`social-link-${index}`} className="row">
+                  <select
+                    aria-label={t('onboarding.socialPlatform', { index: index + 1 })}
+                    value={link.platform}
+                    onChange={(event) =>
+                      updateLink(index, {
+                        platform: event.target.value as SocialLink['platform'],
+                      })
+                    }
+                  >
+                    <option value="facebook">facebook</option>
+                    <option value="instagram">instagram</option>
+                    <option value="x">x</option>
+                  </select>
+                  <input
+                    aria-label={t('onboarding.socialUrl', { index: index + 1 })}
+                    placeholder="https://..."
+                    value={link.url}
+                    onChange={(event) => updateLink(index, { url: event.target.value })}
+                  />
+                  <button type="button" onClick={() => removeLink(index)}>
+                    <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('common.remove')}
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={addLink}>
+                <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('onboarding.addSocialLink')}
               </button>
-            </div>
-          ))}
-          <button type="button" onClick={addLink}>
-            <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('onboarding.addSocialLink')}
-          </button>
-        </section>
-        <button type="submit" disabled={submitting}>
-          {t('onboarding.completeOnboarding')}
-        </button>
-        {message ? <p className="message">{message}</p> : null}
-      </form>
+            </section>
+            <button type="submit" disabled={submitting}>
+              {t('onboarding.completeOnboarding')}
+            </button>
+            {message ? <p className="message">{message}</p> : null}
+          </form>
+        </>
+      )}
     </Layout>
   )
 }

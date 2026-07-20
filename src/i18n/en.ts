@@ -170,8 +170,7 @@ const en = {
   },
   onboarding: {
     title: 'Onboarding',
-    agreeLabel: 'I agree to the AkaAka safety compact.',
-    agreeAria: 'Agree to safety compact',
+
     displayNameLabel: 'Display name',
     bioLabel: 'Bio',
     bioVisibilityLabel: 'Bio visibility',
@@ -224,7 +223,7 @@ const en = {
     compactOfflineBody: 'When attending offline meetups, respect venue rules and fellow participants. Do not touch anyone without explicit consent. Photography or recording at events requires the consent of everyone present. If you feel uncomfortable, leave immediately and contact venue staff.',
     compactZeroToleranceTitle: '5. Zero-Tolerance Policy',
     compactZeroToleranceBody: 'This community has a zero-tolerance policy for: harassment, threats, violence, voyeurism, drugging, non-consensual outing, and any form of discrimination. Violations will result in warnings, suspension, or permanent ban. In case of emergency, contact law enforcement and reach out to us immediately.',
-    compactClose: 'Close',
+    compactDisagree: 'Disagree & Leave',
     compactAgree: 'I Agree',
   },
   issues: {

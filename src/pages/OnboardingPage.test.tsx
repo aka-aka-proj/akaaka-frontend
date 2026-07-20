@@ -50,6 +50,18 @@ describe('OnboardingPage', () => {
     HTMLDialogElement.prototype.close = origClose
   })
 
+  it('shows safety compact modal automatically on mount', () => {
+    render(
+      <MemoryRouter>
+        <OnboardingPage />
+      </MemoryRouter>,
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.getAttribute('open')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: '完成導覽' })).toBeNull()
+  })
+
   it('allows completion without any social links', async () => {
     const user = userEvent.setup()
     render(
@@ -58,7 +70,6 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByLabelText('同意安全公約'))
     await user.click(screen.getByRole('button', { name: '我同意' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
@@ -73,7 +84,6 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByLabelText('同意安全公約'))
     await user.click(screen.getByRole('button', { name: '我同意' }))
     await user.click(screen.getByRole('button', { name: '新增社群連結' }))
     await user.type(screen.getByLabelText('社群網址 1'), 'https://instagram.com/user')
@@ -82,7 +92,7 @@ describe('OnboardingPage', () => {
     expect(upsert).toHaveBeenCalled()
   })
 
-  it('does not agree when modal is closed without clicking agree', async () => {
+  it('does not submit when disagreeing with safety compact', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter>
@@ -90,25 +100,19 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByLabelText('同意安全公約'))
-    await user.click(screen.getByRole('button', { name: '關閉' }))
-    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    await user.click(screen.getByRole('button', { name: '不同意，離開' }))
 
     expect(upsert).not.toHaveBeenCalled()
   })
 
-  it('disables checkbox after agreeing', async () => {
-    const user = userEvent.setup()
+  it('hides form until safety compact is agreed', () => {
     render(
       <MemoryRouter>
         <OnboardingPage />
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByLabelText('同意安全公約'))
-    await user.click(screen.getByRole('button', { name: '我同意' }))
-
-    const checkbox = screen.getByLabelText('同意安全公約')
-    expect(checkbox).toHaveProperty('disabled', true)
+    expect(screen.queryByRole('button', { name: '完成導覽' })).toBeNull()
+    expect(screen.queryByLabelText('顯示名稱')).toBeNull()
   })
 })

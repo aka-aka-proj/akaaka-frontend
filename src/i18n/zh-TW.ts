@@ -170,8 +170,7 @@ const zhTW = {
   },
   onboarding: {
     title: '新手導覽',
-    agreeLabel: '我同意 AkaAka 安全公約。',
-    agreeAria: '同意安全公約',
+
     displayNameLabel: '顯示名稱',
     bioLabel: '簡介',
     bioVisibilityLabel: '簡介可見度',
@@ -224,7 +223,7 @@ const zhTW = {
     compactOfflineBody: '參加線下聚會時，請尊重場地規則與其他參與者。未經明確同意，不得觸碰他人。聚會中攝影或錄音須取得所有在場者的同意。如有不適，應立即離場並聯繫場地工作人員。',
     compactZeroToleranceTitle: '五、零容忍政策',
     compactZeroToleranceBody: '本社群對以下行為採取零容忍立場：騷擾、威脅、暴力、偷拍、下藥、未經同意的資訊公開（outting）、以及任何形式的歧視。違反者將受到警告、停權或永久封禁處分。如遇緊急情況，請立即報警並聯繫我們。',
-    compactClose: '關閉',
+    compactDisagree: '不同意，離開',
     compactAgree: '我同意',
   },
   issues: {
