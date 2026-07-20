@@ -8,6 +8,7 @@ import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
+import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
@@ -59,6 +60,14 @@ function App() {
         element={
           <ProtectedRoute>
             <CreateEventPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditEventPage />
           </ProtectedRoute>
         }
       />

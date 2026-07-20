@@ -30,6 +30,7 @@ export function EventDetailPage() {
   const [myRegistration, setMyRegistration] = useState<Registration | null>(null)
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
@@ -100,24 +101,31 @@ export function EventDetailPage() {
       .from('event_registrations')
       .select('*')
       .eq('event_id', id)
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: true })
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
-    // Load attendees (approved only)
-    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved')
-    if (approvedRegs.length > 0) {
-      const profileIds = approvedRegs.map((r) => r.profile_id)
+    // Load profile names for all registrants
+    if (allRegs && allRegs.length > 0) {
+      const profileIds = [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))]
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, display_name')
         .in('id', profileIds)
 
-      const profileMap = new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
+      setProfileNameMap(new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name])))
+    } else {
+      setProfileNameMap(new Map())
+    }
+
+    // Load attendees (approved only)
+    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved')
+    if (approvedRegs.length > 0) {
       setAttendees(
         approvedRegs.map((r) => ({
           profile_id: r.profile_id,
-          display_name: profileMap.get(r.profile_id) ?? null,
+          display_name: profileNameMap.get(r.profile_id) ?? null,
           joined_at: r.created_at,
         })),
       )
@@ -173,7 +181,27 @@ export function EventDetailPage() {
     await load()
   }
 
-  const handleReview = async (registrationId: string, action: 'approve' | 'reject') => {
+  const handleForceCancel = async (registrationId: string) => {
+    if (!confirm(t('eventDetail.forceCancelConfirm'))) {
+      return
+    }
+    setSubmitting(true)
+    setMessage('')
+
+    const { error } = await supabase
+      .from('event_registrations')
+      .update({ status: 'cancelled' })
+      .eq('id', registrationId)
+
+    setSubmitting(false)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    await load()
+  }
     if (!id || !user) {
       return
     }
@@ -276,6 +304,13 @@ export function EventDetailPage() {
                 {t('events.googleCalendar')}
               </a>
             </div>
+            {isHost ? (
+              <p>
+                <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
+                  <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+                </Link>
+              </p>
+            ) : null}
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>
@@ -307,31 +342,62 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {/* Host Review Section */}
-      {isHost && pendingRegistrations.length > 0 ? (
+      {/* Host Review Section - All Registrations */}
+      {isHost && registrations.length > 0 ? (
         <section className="card">
-          <h3>{t('eventDetail.pendingRegistrations')} ({pendingRegistrations.length})</h3>
-          <ul>
-            {pendingRegistrations.map((reg) => (
-              <li key={reg.id} className="thread-item">
-                <div className="thread-header">
-                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
-                  <div>
-                    <p><Link to={`/profile/${reg.profile_id}`}>{reg.profile_id}</Link></p>
-                    <small>{new Date(reg.created_at).toLocaleString()}</small>
-                  </div>
-                </div>
-                <div>
-                  <button type="button" onClick={() => void handleReview(reg.id, 'approve')} disabled={submitting}>
-                    {t('eventDetail.approve')}
-                  </button>
-                  <button type="button" onClick={() => void handleReview(reg.id, 'reject')} disabled={submitting}>
-                    {t('eventDetail.reject')}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
+          {(['pending', 'approved', 'waitlisted', 'rejected'] as const).map((status) => {
+            const filtered = registrations.filter((r) => r.status === status)
+            if (filtered.length === 0) {
+              return null
+            }
+            const sectionTitle =
+              status === 'pending' ? t('eventDetail.sectionPending')
+              : status === 'approved' ? t('eventDetail.sectionApproved')
+              : status === 'waitlisted' ? t('eventDetail.sectionWaitlisted')
+              : t('eventDetail.sectionRejected')
+            return (
+              <div key={status} className="registration-section">
+                <h4>{sectionTitle} ({filtered.length})</h4>
+                <ul>
+                  {filtered.map((reg) => (
+                    <li key={reg.id} className="thread-item">
+                      <div className="thread-header">
+                        <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
+                        <div>
+                          <p><Link to={`/profile/${reg.profile_id}`}>{profileNameMap.get(reg.profile_id) || reg.profile_id}</Link></p>
+                          <small>{new Date(reg.created_at).toLocaleString()}</small>
+                          {status === 'waitlisted' && reg.waitlist_position ? (
+                            <small> — {t('eventDetail.waitlistPosition', { position: reg.waitlist_position })}</small>
+                          ) : null}
+                          {reg.reviewed_at ? (
+                            <small> — {new Date(reg.reviewed_at).toLocaleString()}</small>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div>
+                        {status === 'pending' ? (
+                          <>
+                            <button type="button" onClick={() => void handleReview(reg.id, 'approve')} disabled={submitting}>
+                              {t('eventDetail.approve')}
+                            </button>
+                            <button type="button" onClick={() => void handleReview(reg.id, 'reject')} disabled={submitting}>
+                              {t('eventDetail.reject')}
+                            </button>
+                          </>
+                        ) : null}
+                        {status === 'approved' ? (
+                          <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
+                            {t('eventDetail.forceCancel')}
+                          </button>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </section>
       ) : null}
 
