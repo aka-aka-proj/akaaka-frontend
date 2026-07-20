@@ -120,6 +120,14 @@ export function ProfilePage() {
       return
     }
 
+    const { data: currentRow } = await supabase
+      .from('profiles')
+      .select('metadata')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const existingMeta = (currentRow?.metadata as Record<string, unknown>) ?? {}
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -127,13 +135,14 @@ export function ProfilePage() {
         bio: bio.trim() || null,
         external_social_links: socialLinksForView,
         metadata: {
+          ...existingMeta,
           visibility: {
             bio: visibility || 'public',
             gender_identity: genderIdentityVisibility || 'public',
             bdsm_roles: bdsmRolesVisibility || 'public',
           },
-          gender_identity: genderIdentity || undefined,
-          bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : undefined,
+          gender_identity: genderIdentity || null,
+          bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : null,
           icon_theme: iconTheme,
         },
       })

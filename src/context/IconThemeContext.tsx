@@ -40,8 +40,16 @@ export function IconThemeProvider({ children }: { children: ReactNode }) {
         if (!uid) return
         void supabase
           .from('profiles')
-          .update({ metadata: { icon_theme: newTheme } })
+          .select('metadata')
           .eq('id', uid)
+          .maybeSingle()
+          .then(({ data: row }) => {
+            const existing = (row?.metadata as Record<string, unknown>) ?? {}
+            void supabase
+              .from('profiles')
+              .update({ metadata: { ...existing, icon_theme: newTheme } })
+              .eq('id', uid)
+          })
       })
     }
   }
