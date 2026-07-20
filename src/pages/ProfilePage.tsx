@@ -9,7 +9,7 @@ import { useIconTheme } from '../context/IconThemeContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
-import type { BdsmRole, GenderIdentity, MyReport, Profile, Recommendation, SocialLink, Visibility } from '../types'
+import type { BdsmRole, GenderIdentity, Profile, SocialLink, Visibility } from '../types'
 
 const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
 
@@ -46,8 +46,6 @@ export function ProfilePage() {
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
   const [reportCount, setReportCount] = useState(0)
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
-  const [myReports, setMyReports] = useState<MyReport[]>([])
   const [message, setMessage] = useState('')
 
   const bioVisibility = getBioVisibility(profile)
@@ -112,47 +110,6 @@ export function ProfilePage() {
         setIsBlocked(Boolean(blockData))
       }
     }
-
-    void loadRecommendations()
-    void loadMyReports()
-  }
-
-  const loadRecommendations = async () => {
-    if (!targetProfileId) {
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('recommendations')
-      .select('id, from_profile_id, to_profile_id, score_increment, comment, created_at, from_profile:profiles!from_profile_id(display_name)')
-      .eq('to_profile_id', targetProfileId)
-      .not('comment', 'is', null)
-      .not('comment', 'eq', '')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      return
-    }
-
-    setRecommendations((data as Recommendation[]) ?? [])
-  }
-
-  const loadMyReports = async () => {
-    if (!user || !targetProfileId || isOwner) {
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('reports')
-      .select('id, reporter_id, target_profile_id, target_event_id, category, details, status, created_at')
-      .eq('reporter_id', user.id)
-      .eq('target_profile_id', targetProfileId)
-
-    if (error) {
-      return
-    }
-
-    setMyReports((data as MyReport[]) ?? [])
   }
 
   useEffect(() => {
