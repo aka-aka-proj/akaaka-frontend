@@ -5,7 +5,6 @@ import { Icon } from '../components/Icon'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { canSeeEvent } from '../lib/event-visibility'
 import type { EventItem } from '../types'
 
@@ -96,27 +95,31 @@ export function EventsPage() {
         />
 
         {eventTypes.length > 0 && (
-          <div className="chip-group">
-            <button
-              type="button"
-              className={`chip${selectedType === null ? ' chip-active' : ''}`}
-              onClick={() => setSelectedType(null)}
-            >
-              {t('events.allTypes')}
-            </button>
-            {eventTypes.map((type) => (
+          <>
+            <h3>{t('events.activityTypeLabel')}</h3>
+            <div className="chip-group">
               <button
-                key={type}
                 type="button"
-                className={`chip${selectedType === type ? ' chip-active' : ''}`}
-                onClick={() => setSelectedType(type)}
+                className={`chip${selectedType === null ? ' chip-active' : ''}`}
+                onClick={() => setSelectedType(null)}
               >
-                {type}
+                {t('events.allTypes')}
               </button>
-            ))}
-          </div>
+              {eventTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`chip${selectedType === type ? ' chip-active' : ''}`}
+                  onClick={() => setSelectedType(type)}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
+        <h3>{t('events.timeLabel')}</h3>
         <div className="chip-group">
           <button
             type="button"
@@ -169,23 +172,6 @@ export function EventsPage() {
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
                 <p>{event.description ?? t('events.noDescription')}</p>
                 <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(event.start_time).toLocaleString()}</p>
-                <div className="calendar-actions">
-                  <button
-                    type="button"
-                    className="calendar-btn"
-                    onClick={() => downloadIcs(event)}
-                  >
-                    {t('events.downloadIcs')}
-                  </button>
-                  <a
-                    href={getGoogleCalendarUrl(event)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="calendar-btn"
-                  >
-                    {t('events.googleCalendar')}
-                  </a>
-                </div>
               </li>
             ))}
           </ul>
