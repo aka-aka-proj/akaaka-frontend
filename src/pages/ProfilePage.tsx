@@ -159,7 +159,7 @@ export function ProfilePage() {
       return
     }
 
-    const { error } = await supabase.functions.invoke('create-recommendation', {
+    const { error, response } = await supabase.functions.invoke('create-recommendation', {
       body: {
         to_profile_id: targetProfileId,
         comment: recommendComment.trim() || undefined,
@@ -167,11 +167,10 @@ export function ProfilePage() {
     })
 
     if (error) {
-      const status = (error as { status?: number }).status
-      if (status === 429) {
+      if (response?.status === 429) {
         setMessage(t('profile.recommendRateLimit'))
       } else {
-        setMessage((error as { message?: string }).message ?? t('profile.errorOccurred'))
+        setMessage(t('profile.errorOccurred'))
       }
       return
     }

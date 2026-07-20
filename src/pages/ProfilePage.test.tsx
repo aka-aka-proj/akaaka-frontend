@@ -12,6 +12,10 @@ vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
+vi.mock('../context/LanguageContext', () => ({
+  useLanguage: () => ({ locale: 'en', setLocale: () => {} }),
+}))
+
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
@@ -146,7 +150,11 @@ describe('ProfilePage', () => {
       return queryBuilder({ data: null, error: null })
     })
 
-    functionsInvoke.mockResolvedValue({ data: null, error: { status: 429, message: 'rate_limited' } })
+    functionsInvoke.mockResolvedValue({
+      data: null,
+      error: new Error('Edge Function returned a non-2xx status code'),
+      response: { status: 429 },
+    })
 
     render(
       <MemoryRouter initialEntries={['/profile/target-user']}>
