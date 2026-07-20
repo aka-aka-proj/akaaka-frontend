@@ -54,7 +54,10 @@ export function SafetyCompactModal({ open, onClose, onAgree }: SafetyCompactModa
           <p>{t('onboarding.compactZeroToleranceBody')}</p>
         </div>
         <div className="modal-actions">
-          <button type="button" className="danger" onClick={onClose}>
+          <button type="button" className="danger" onClick={() => {
+            dialogRef.current?.close()
+            onClose()
+          }}>
             {t('onboarding.compactDisagree')}
           </button>
           <button type="button" className="primary" onClick={onAgree}>
