@@ -120,6 +120,14 @@ export function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) {
+      if (error.message === 'invalid_login_credentials') {
+        const { error: resendError } = await supabase.auth.resend({ type: 'signup', email })
+        if (!resendError) {
+          setMessage(t('auth.emailNotConfirmed'))
+          startCooldown()
+          return
+        }
+      }
       setMessage(AUTH_ERROR_MESSAGES[error.message] ?? error.message)
       return
     }

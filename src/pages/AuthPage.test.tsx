@@ -117,4 +117,42 @@ describe('AuthPage', () => {
 
     expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'test@example.com' })
   })
+
+  it('shows email not confirmed message when signIn returns invalid_login_credentials and resend succeeds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    signInWithPassword.mockResolvedValue({ error: { message: 'invalid_login_credentials' } })
+    resend.mockResolvedValue({ error: null })
+
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'test@example.com' })
+    expect(screen.getByText('您的電子郵件尚未驗證，驗證信已重新發送，請至信箱點擊確認連結後再登入。')).toBeTruthy()
+  })
+
+  it('shows generic error when signIn returns invalid_login_credentials and resend also fails', async () => {
+    const user = userEvent.setup()
+    signInWithPassword.mockResolvedValue({ error: { message: 'invalid_login_credentials' } })
+    resend.mockResolvedValue({ error: { message: 'User not found' } })
+
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('電子郵件'), 'unknown@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(screen.getByText('電子郵件或密碼不正確')).toBeTruthy()
+  })
 })
