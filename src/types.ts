@@ -60,7 +60,7 @@ export interface EventItem {
   description: string | null
   event_type: string | null
   is_venue_hosted: boolean
-  visibility_settings: { type?: string } | null
+  visibility_settings: { type?: Visibility } | null
   start_time: string
   max_capacity: number | null
   registration_deadline: string | null

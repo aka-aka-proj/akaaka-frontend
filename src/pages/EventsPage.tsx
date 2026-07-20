@@ -6,6 +6,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
+import { canSeeEvent } from '../lib/event-visibility'
 import type { EventItem } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
@@ -53,6 +54,8 @@ export function EventsPage() {
     const q = search.toLowerCase()
 
     return events.filter((event) => {
+      if (!canSeeEvent(event, user?.id)) return false
+
       if (q) {
         const titleMatch = event.title.toLowerCase().includes(q)
         const descMatch = (event.description ?? '').toLowerCase().includes(q)
