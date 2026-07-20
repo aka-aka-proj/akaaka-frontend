@@ -293,6 +293,21 @@ button {
   gap: 0.35rem;
 }
 
+.event-creator-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.creator-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
 .create-event-link {
   display: inline-flex;
   align-items: center;
