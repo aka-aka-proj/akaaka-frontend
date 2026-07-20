@@ -77,6 +77,29 @@ button {
   color: #b42318;
 }
 
+.login-info-private {
+  color: #656d76;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+dt {
+  font-weight: 600;
+  color: #656d76;
+}
+
+dd {
+  margin: 0;
+  word-break: break-all;
+}
+
 .status {
   padding: 0.125rem 0.5rem;
   border-radius: 999px;

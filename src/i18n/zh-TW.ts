@@ -167,6 +167,10 @@ const zhTW = {
     iconThemeLabel: '選擇圖示主題',
     iconThemePurple: '紫色（AkaAka）',
     iconThemeRed: '紅色（赤赤）',
+    loginInfo: '登入資訊',
+    loginInfoUserId: 'User ID',
+    loginInfoEmail: '電子信箱',
+    loginInfoPrivate: '僅供自己查看，其他人無法看見',
   },
   onboarding: {
     title: '新手導覽',

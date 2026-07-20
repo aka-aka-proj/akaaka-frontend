@@ -302,6 +302,17 @@ export function ProfilePage() {
 
       {isOwner ? (
         <>
+        <section className="card">
+          <h3>{t('profile.loginInfo')}</h3>
+          <p className="login-info-private">{t('profile.loginInfoPrivate')}</p>
+          <dl>
+            <dt>{t('profile.loginInfoUserId')}</dt>
+            <dd>{user?.id}</dd>
+            <dt>{t('profile.loginInfoEmail')}</dt>
+            <dd>{user?.email}</dd>
+          </dl>
+        </section>
+
         <form className="card" onSubmit={saveProfile}>
           <h3>{t('profile.editProfile')}</h3>
           <label>

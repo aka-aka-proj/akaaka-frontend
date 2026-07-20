@@ -167,6 +167,10 @@ const en = {
     iconThemeLabel: 'Choose icon theme',
     iconThemePurple: 'Purple (AkaAka)',
     iconThemeRed: 'Red (赤赤)',
+    loginInfo: 'Login Info',
+    loginInfoUserId: 'User ID',
+    loginInfoEmail: 'Email',
+    loginInfoPrivate: 'Visible only to you — others cannot see this',
   },
   onboarding: {
     title: 'Onboarding',
