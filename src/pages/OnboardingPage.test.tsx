@@ -15,6 +15,7 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    auth: { signOut: vi.fn().mockResolvedValue({ error: null }) },
   },
 }))
 

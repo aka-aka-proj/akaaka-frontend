@@ -95,7 +95,10 @@ export function OnboardingPage() {
     <Layout title={t('onboarding.title')}>
       <SafetyCompactModal
         open={compactOpen}
-        onClose={() => navigate('/auth', { replace: true })}
+        onClose={async () => {
+          await supabase.auth.signOut()
+          navigate('/auth', { replace: true })
+        }}
         onAgree={() => {
           setAgreed(true)
           setCompactOpen(false)
