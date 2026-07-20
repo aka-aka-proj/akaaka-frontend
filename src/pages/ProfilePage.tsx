@@ -282,12 +282,14 @@ export function ProfilePage() {
                 <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
                   ({t('profile.viewFeedback')})
                 </Link>
+                {' '}
+                <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
+                  ({t('profile.viewReports')})
+                </Link>
               </p>
               <p className="profile-reports">
-                <Link to={`/profile/${targetProfileId}/reputation`}>
-                  <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
-                  {' '}{t('profile.reports')}: {reportCount}
-                </Link>
+                <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+                {' '}{t('profile.reports')}: {reportCount}
               </p>
               {profile.metadata?.gender_identity ? (
                 <p>

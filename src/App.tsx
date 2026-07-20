@@ -17,8 +17,8 @@ import { MyReportsPage } from './pages/MyReportsPage'
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { ProfileReputationPage } from './pages/ProfileReputationPage'
 import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
+import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
 
 function RootRedirect() {
@@ -90,10 +90,18 @@ function App() {
         }
       />
       <Route
-        path="/profile/me/reputation"
+        path="/profile/me/feedback"
         element={
           <ProtectedRoute>
-            <ProfileReputationPage />
+            <ProfileFeedbackPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/me/reports"
+        element={
+          <ProtectedRoute>
+            <ProfileReportPage />
           </ProtectedRoute>
         }
       />
@@ -114,10 +122,10 @@ function App() {
         }
       />
       <Route
-        path="/profile/:id/reputation"
+        path="/profile/:id/reports"
         element={
           <ProtectedRoute>
-            <ProfileReputationPage />
+            <ProfileReportPage />
           </ProtectedRoute>
         }
       />
