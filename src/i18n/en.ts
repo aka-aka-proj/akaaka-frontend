@@ -60,6 +60,7 @@ const en = {
     titleLabel: 'Title',
     descriptionLabel: 'Description',
     eventTypeLabel: 'Event type',
+    selectEventType: 'Select event type',
     eventTypePlaceholder: 'Type and press Enter',
     removeType: 'Remove type',
     startTimeLabel: 'Start time',

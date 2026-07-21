@@ -60,6 +60,7 @@ const zhTW = {
     titleLabel: '標題',
     descriptionLabel: '描述',
     eventTypeLabel: '活動類型',
+    selectEventType: '請選擇活動類型',
     eventTypePlaceholder: '輸入後按 Enter',
     removeType: '移除類型',
     startTimeLabel: '開始時間',
