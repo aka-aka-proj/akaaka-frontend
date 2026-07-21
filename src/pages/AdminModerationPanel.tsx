@@ -18,6 +18,7 @@ const DEFAULT_FORM: ActionFormState = { action_type: 'warn', payload: '{}' }
 
 export function AdminModerationPanel() {
   const { user, profile, loading } = useAuth()
+  console.log('Current Profile:', profile);
   const { t } = useT()
   const [reports, setReports] = useState<ReportItem[]>([])
   const [forms, setForms] = useState<Record<string, ActionFormState>>({})

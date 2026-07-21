@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -17,8 +17,13 @@ export function OnboardingPage() {
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
 
+  useEffect(() => {
+    if (profile) {
+      navigate('/events', { replace: true })
+    }
+  }, [profile, navigate])
+
   if (profile) {
-    navigate('/events', { replace: true })
     return null
   }
   const [compactOpen, setCompactOpen] = useState(true)

@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
 
-  if (request.method !== 'GET') {
+  if (request.method !== 'GET' || !request.url.startsWith('http')) {
     return
   }
 
