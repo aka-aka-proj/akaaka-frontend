@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { ShareButton } from '../components/ShareButton'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
@@ -314,6 +315,11 @@ export function EventDetailPage() {
               >
                 {t('events.googleCalendar')}
               </a>
+              <ShareButton
+                title={eventItem.title}
+                text={eventItem.description ?? ''}
+                url={window.location.href}
+              />
             </div>
             {isHost ? (
               <p>

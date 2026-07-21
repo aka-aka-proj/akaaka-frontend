@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { ShareButton } from '../components/ShareButton'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -172,6 +173,11 @@ export function EventsPage() {
             {filtered.map((event) => (
               <li key={event.id} className="event-list-item">
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
+                <ShareButton
+                  title={event.title}
+                  text={event.description ?? ''}
+                  url={`${window.location.origin}/events/${event.id}`}
+                />
                 <p>{event.description ?? t('events.noDescription')}</p>
                 <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(event.start_time).toLocaleString()}</p>
               </li>
