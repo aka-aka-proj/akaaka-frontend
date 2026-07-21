@@ -83,10 +83,19 @@ export function AuthPage() {
 
   const signInWithSocial = async (provider: SocialProvider) => {
     setMessage('')
+    const params = new URLSearchParams(location.search)
+    const fromQuery = params.get('from')
+    const fromState = (location.state as { from?: string } | null)?.from
+    const from = fromQuery ?? fromState
+
+    const redirectTo = from
+      ? `${window.location.origin}/onboarding?from=${encodeURIComponent(from)}`
+      : `${window.location.origin}/onboarding`
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/onboarding`,
+        redirectTo,
       },
     })
     if (error) {
