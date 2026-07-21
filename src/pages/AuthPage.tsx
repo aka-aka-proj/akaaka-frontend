@@ -134,7 +134,7 @@ export function AuthPage() {
       return
     }
 
-    navigate('/events', { replace: true })
+    navigate(from ?? '/events', { replace: true })
   }
 
   return (
