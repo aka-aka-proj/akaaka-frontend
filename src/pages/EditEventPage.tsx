@@ -18,7 +18,6 @@ export function EditEventPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState<string[]>([])
-  const [currentType, setCurrentType] = useState('')
   const [startTime, setStartTime] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
