@@ -111,7 +111,9 @@ const en = {
   eventDetail: {
     title: 'Event Detail',
     sectionCancellationPending: 'Pending Cancellation ',
+    sectionCancellationRejected: 'Cancellation Rejected',
     regCancellationPending: 'Cancellation pending...',
+    regCancellationRejected: 'Cancellation rejected',
     noDescription: 'No description',
     createdBy: 'Created by:',
     notFound: 'Event not found.',

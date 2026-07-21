@@ -261,6 +261,7 @@ export function EventDetailPage() {
       case 'rejected': return t('eventDetail.regRejected')
       case 'waitlisted': return t('eventDetail.regWaitlisted')
       case 'cancellation_pending': return t('eventDetail.regCancellationPending')
+      case 'cancellation_rejected': return t('eventDetail.regCancellationRejected')
       default: return status
     }
   }
@@ -366,7 +367,7 @@ export function EventDetailPage() {
       {isHost && registrations.length > 0 ? (
         <section className="card">
           <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
-          {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending'] as const).map((status) => {
+          {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending', 'cancellation_rejected'] as const).map((status) => {
             const filtered = registrations.filter((r) => r.status === status)
             if (filtered.length === 0) {
               return null
@@ -376,6 +377,7 @@ export function EventDetailPage() {
               : status === 'approved' ? t('eventDetail.sectionApproved')
               : status === 'waitlisted' ? t('eventDetail.sectionWaitlisted')
               : status === 'cancellation_pending' ? t('eventDetail.sectionCancellationPending')
+              : status === 'cancellation_rejected' ? t('eventDetail.sectionCancellationRejected')
               : t('eventDetail.sectionRejected')
             return (
               <div key={status} className="registration-section">

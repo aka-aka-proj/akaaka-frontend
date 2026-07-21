@@ -111,7 +111,9 @@ const zhTW = {
   eventDetail: {
     title: '活動詳情',
     sectionCancellationPending: '取消參加申請',
+    sectionCancellationRejected: '取消申請已被拒絕',
     regCancellationPending: '取消參加申請審核中...',
+    regCancellationRejected: '取消申請已被拒絕',
     noDescription: '沒有描述',
     createdBy: '建立者：',
     notFound: '找不到活動。',
