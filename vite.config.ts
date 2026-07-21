@@ -10,11 +10,11 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: enableProfiler
-        ? {
-            'react-dom': 'react-dom/profiling',
-            'scheduler/tracing': 'scheduler/tracing-profiling',
-          }
-        : {},
+        ? [
+            { find: 'react-dom', replacement: 'react-dom/profiling' },
+            { find: 'scheduler/tracing', replacement: 'scheduler/tracing-profiling' },
+          ]
+        : [],
     },
     optimizeDeps: {
       include: ['@supabase/supabase-js', '@supabase/auth-js', '@supabase/realtime-js']
