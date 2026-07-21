@@ -93,13 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    // 只有在 session 載入後才執行 Profile 同步
+    if (isAuthLoading) return
+
     if (!session?.user.id) {
       setProfile(null)
+      setIsInitialProfileLoad(false)
       return
     }
 
     void refreshProfile()
-  }, [session?.user.id])
+  }, [session?.user.id, isAuthLoading])
 
   const hasOnboarded = profile !== null
 
