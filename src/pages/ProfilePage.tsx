@@ -301,13 +301,9 @@ export function ProfilePage() {
                   <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
                   {' '}{t('profile.reputation')}: {profile.reputation_score}
                 </Link>
-                {' '}
-                <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
-                  ({t('profile.viewReports')})
-                </Link>
               </p>
               <p className="profile-reports">
-                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
+                <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
                   <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
                   {' '}{t('profile.reports')}: {reportCount}
                 </Link>
