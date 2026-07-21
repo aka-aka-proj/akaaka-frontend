@@ -52,8 +52,11 @@ const en = {
     googleCalendar: 'Google Calendar',
     noResults: 'No events match your filters.',
     myEvents: 'My Events',
-    activityTypeLabel: 'Activity type',
+    activityTypeLabel: 'Activity Type',
     timeLabel: 'Time',
+    share: 'Share',
+    shareLinkCopied: 'Link copied',
+    shareFailed: 'Failed to share, please copy the link manually',
   },
   createEvent: {
     title: 'Create Event',

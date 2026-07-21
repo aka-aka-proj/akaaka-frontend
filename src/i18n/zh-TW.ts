@@ -54,6 +54,9 @@ const zhTW = {
     myEvents: '我的活動',
     activityTypeLabel: '活動類型',
     timeLabel: '時間',
+    share: '分享',
+    shareLinkCopied: '已複製連結',
+    shareFailed: '分享失敗，請手動複製網址',
   },
   createEvent: {
     title: '建立活動',
