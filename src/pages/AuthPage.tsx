@@ -79,11 +79,6 @@ export function AuthPage() {
     startCooldown()
   }
 
-  if (user) {
-    const from = (location.state as { from?: string } | null)?.from
-    return <Navigate to={from ?? '/events'} replace />
-  }
-
   const signInWithSocial = async (provider: SocialProvider) => {
     setMessage('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -96,6 +91,13 @@ export function AuthPage() {
       setMessage(t('auth.socialLoginError'))
     }
   }
+
+  useEffect(() => {
+    if (user) {
+      const from = (location.state as { from?: string } | null)?.from
+      navigate(from ?? '/events', { replace: true })
+    }
+  }, [user, navigate, location.state])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -133,9 +135,6 @@ export function AuthPage() {
       setMessage(AUTH_ERROR_MESSAGES[error.message] ?? error.message)
       return
     }
-
-    const from = (location.state as { from?: string } | null)?.from
-    navigate(from ?? '/events', { replace: true })
   }
 
   return (
