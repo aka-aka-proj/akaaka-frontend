@@ -6,6 +6,8 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { EVENT_TYPES } from '../lib/event-types'
+import { stringifyEventTypes } from '../lib/event-utils'
 
 export function CreateEventPage() {
   const { user, profile } = useAuth()
@@ -14,13 +16,18 @@ export function CreateEventPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState<string[]>([])
-  const [currentType, setCurrentType] = useState('')
   const [startTime, setStartTime] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [visibilityType, setVisibilityType] = useState('public')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const addType = (type: string) => {
+    if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
+      setEventType([...eventType, type])
+    }
+  }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -43,7 +50,7 @@ export function CreateEventPage() {
           creator_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
-          event_type: eventType.length > 0 ? eventType : null,
+          event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
           start_time: new Date(startTime).toISOString(),
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },
@@ -90,6 +97,16 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
           </span>
+          <select 
+            onChange={(e) => addType(e.target.value)}
+            defaultValue=""
+            style={{ marginBottom: '8px', width: '100%' }}
+          >
+            <option value="" disabled>{t('createEvent.selectEventType') || 'Select event type'}</option>
+            {EVENT_TYPES.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
           <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--border-color, #ccc)', borderRadius: '4px', background: 'var(--bg-primary, #fff)' }}>
             {eventType.map(type => (
               <span key={type} className="tag" style={{ background: 'var(--bg-secondary, #eee)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
@@ -104,23 +121,6 @@ export function CreateEventPage() {
                 </button>
               </span>
             ))}
-            <input
-              aria-label={t('createEvent.eventTypeLabel')}
-              value={currentType}
-              onChange={(event) => setCurrentType(event.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  const newType = currentType.trim()
-                  if (newType && !eventType.includes(newType)) {
-                    setEventType([...eventType, newType])
-                  }
-                  setCurrentType('')
-                }
-              }}
-              placeholder={t('createEvent.eventTypePlaceholder') || 'Type and press Enter'}
-              style={{ border: 'none', outline: 'none', flex: 1, minWidth: '120px', background: 'transparent', padding: '4px 0' }}
-            />
           </div>
         </label>
         <label className="form-field">

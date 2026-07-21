@@ -7,6 +7,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { canSeeEvent } from '../lib/event-visibility'
+import { parseEventTypes } from '../lib/event-utils'
 import type { EventItem } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
@@ -42,8 +43,9 @@ export function EventsPage() {
   const eventTypes = useMemo(() => {
     const types = new Set<string>()
     for (const event of events) {
-      if (event.event_type) {
-        types.add(event.event_type)
+      const parsedTypes = parseEventTypes(event.event_type)
+      for (const t of parsedTypes) {
+        types.add(t)
       }
     }
     return Array.from(types).sort()
@@ -63,8 +65,8 @@ export function EventsPage() {
       }
 
       if (selectedType !== null) {
-        const eventType = event.event_type ?? ''
-        if (eventType !== selectedType) return false
+        const eventTypes = parseEventTypes(event.event_type)
+        if (!eventTypes.includes(selectedType)) return false
       }
 
       if (timeFilter === 'upcoming') {
