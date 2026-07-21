@@ -155,7 +155,7 @@ const zhTW = {
     rejectRegistration: '拒絕報名',
     confirmCancellation: '執行取消',
     rejectCancellation: '拒絕取消',
-    reopen: '重新申請',
+    reopen: '重開申請',
     attendees: '出席者',
 
     editEvent: '編輯活動',
