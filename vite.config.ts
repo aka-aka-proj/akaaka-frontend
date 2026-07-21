@@ -7,7 +7,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@supabase/supabase-js', '@supabase/auth-js', '@supabase/realtime-js']
   },
-  // 若要隱藏 dev server 中 missing source map 的大量警告，可以把 logLevel 設為 'error'.
-  // 若你希望保留其他警告，改為 'info' 或移除此選項。
   logLevel: 'error',
 })

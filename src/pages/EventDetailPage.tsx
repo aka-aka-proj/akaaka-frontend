@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
+import { parseEventTypes } from '../lib/event-utils'
 import type { EventItem, EventThread, Registration } from '../types'
 
 interface Attendee {
@@ -152,7 +153,8 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      setMessage(error.message)
+      const errorMessage = (error as any).context?.message || error.message
+      setMessage(errorMessage)
       return
     }
 
@@ -265,6 +267,15 @@ export function EventDetailPage() {
         {eventItem ? (
           <>
             <h2>{eventItem.title}</h2>
+            {eventItem.event_type && (
+              <div className="chip-group" style={{ marginBottom: '1rem' }}>
+                {parseEventTypes(eventItem.event_type).map((type) => (
+                  <span key={type} className="chip">
+                    {type}
+                  </span>
+                ))}
+              </div>
+            )}
             <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
             <p className="event-meta">
               <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
@@ -280,12 +291,12 @@ export function EventDetailPage() {
                 {creatorReportCount} {t('eventDetail.reports')}
               </span>
             </p>
-            <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(eventItem.start_time).toLocaleString()}</p>
+            <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.startTimeLabel')}: {new Date(eventItem.start_time).toLocaleString()}</p>
             {eventItem.max_capacity ? (
               <p>{t('eventDetail.capacity', { count: eventItem.max_capacity, current: attendees.length })}</p>
             ) : null}
             {eventItem.registration_deadline ? (
-              <p>{t('eventDetail.registrationDeadline', { time: new Date(eventItem.registration_deadline).toLocaleString() })}</p>
+              <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
             ) : null}
             <div className="calendar-actions">
               <button

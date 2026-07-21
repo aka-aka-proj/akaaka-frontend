@@ -49,7 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    setProfile(data ? mapProfileRow(data) : null)
+    const newProfile = data ? mapProfileRow(data) : null
+    
+    setProfile((prevProfile) => {
+      if (JSON.stringify(prevProfile) === JSON.stringify(newProfile)) {
+        return prevProfile
+      }
+      return newProfile
+    })
   }
 
   useEffect(() => {

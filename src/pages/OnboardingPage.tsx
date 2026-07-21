@@ -16,16 +16,6 @@ export function OnboardingPage() {
   const navigate = useNavigate()
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
-
-  useEffect(() => {
-    if (profile) {
-      navigate('/events', { replace: true })
-    }
-  }, [profile, navigate])
-
-  if (profile) {
-    return null
-  }
   const [compactOpen, setCompactOpen] = useState(true)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
@@ -37,6 +27,16 @@ export function OnboardingPage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (profile) {
+      navigate('/events', { replace: true })
+    }
+  }, [profile, navigate])
+
+  if (profile) {
+    return null
+  }
 
   const updateLink = (index: number, patch: Partial<SocialLink>) => {
     setSocialLinks((links) =>
