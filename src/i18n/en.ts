@@ -121,6 +121,8 @@ const en = {
     replyTo: '(reply to {id})',
     reports: 'Reports',
     capacity: 'Capacity: {current} / {max}',
+    startTimeLabel: 'Start time',
+    registrationDeadlineLabel: 'Registration deadline',
     registrationDeadline: 'Registration deadline: {time}',
     registration: 'Registration',
     register: 'Register',
