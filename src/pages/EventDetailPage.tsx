@@ -152,7 +152,8 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      setMessage(error.message)
+      const errorMessage = (error as any).context?.message || error.message
+      setMessage(errorMessage)
       return
     }
 
