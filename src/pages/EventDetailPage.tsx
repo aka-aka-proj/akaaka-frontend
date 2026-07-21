@@ -123,8 +123,8 @@ export function EventDetailPage() {
       setProfileNameMap(new Map())
     }
 
-    // Load attendees (approved only)
-    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved')
+    // Load attendees (approved or cancellation_rejected)
+    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved' || r.status === 'cancellation_rejected')
     if (approvedRegs.length > 0) {
       setAttendees(
         approvedRegs.map((r) => ({
@@ -349,11 +349,15 @@ export function EventDetailPage() {
               {myRegistration.status === 'waitlisted' && myRegistration.waitlist_position ? (
                 <p>{t('eventDetail.waitlistPosition', { position: myRegistration.waitlist_position })}</p>
               ) : null}
-              {(myRegistration.status === 'pending' || myRegistration.status === 'approved' || myRegistration.status === 'waitlisted') ? (
-                <button type="button" onClick={() => void handleCancelRegistration()} disabled={submitting}>
-                  {t('eventDetail.cancelRegistration')}
-                </button>
-              ) : null}
+            {myRegistration.status === 'cancellation_rejected' && (
+              <p>{t('eventDetail.regCancellationRejected')}</p>
+            )}
+            {(myRegistration.status === 'pending' || myRegistration.status === 'approved' || myRegistration.status === 'waitlisted') ? (
+              <button type="button" onClick={() => void handleCancelRegistration()} disabled={submitting}>
+                {t('eventDetail.cancelRegistration')}
+              </button>
+            ) : null}
+
             </div>
           ) : (
             <button type="button" onClick={() => void handleRegister()} disabled={submitting}>
