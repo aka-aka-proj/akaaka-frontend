@@ -118,6 +118,8 @@ const zhTW = {
     replyTo: '回覆 {id}',
     reports: '檢舉',
     capacity: '名額：{current} / {max}',
+    startTimeLabel: '開始時間',
+    registrationDeadlineLabel: '報名截止時間',
     registrationDeadline: '報名截止：{time}',
     registration: '報名',
     register: '報名參加',
