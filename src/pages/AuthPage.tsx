@@ -187,6 +187,7 @@ export function AuthPage() {
             aria-label={t('common.email')}
             type="email"
             value={email}
+            autoComplete="email"
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
@@ -198,6 +199,7 @@ export function AuthPage() {
             aria-label={t('common.password')}
             type="password"
             value={password}
+            autoComplete="current-password"
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
