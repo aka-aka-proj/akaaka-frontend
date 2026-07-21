@@ -40,7 +40,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
       <header className="topbar">
         <div className="topbar-brand">
           <Link to="/">
-            <img src={getIconSrc(iconTheme, 'logo')} alt="AkaAka" width={120} height={40} />
+            <img src={getIconSrc(iconTheme, 'logo')} alt="AkaAka" width={120} height={80} />
           </Link>
           <span className="topbar-title">{title}</span>
         </div>
