@@ -1,4 +1,4 @@
-export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved'
+export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin'
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 export type IconTheme = 'purple' | 'red'

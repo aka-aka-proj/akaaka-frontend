@@ -17,7 +17,7 @@ interface ActionFormState {
 const DEFAULT_FORM: ActionFormState = { action_type: 'warn', payload: '{}' }
 
 export function AdminModerationPanel() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const { t } = useT()
   const [reports, setReports] = useState<ReportItem[]>([])
   const [forms, setForms] = useState<Record<string, ActionFormState>>({})
@@ -25,7 +25,7 @@ export function AdminModerationPanel() {
   const [pageMessage, setPageMessage] = useState('')
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({})
 
-  const isAdmin = (user?.app_metadata as Record<string, unknown> | undefined)?.role === 'admin'
+  const isAdmin = profile?.role_status === 'admin'
 
   const ACTION_OPTIONS: { value: ActionType; label: string }[] = [
     { value: 'warn', label: t('admin.moderation.warn') },
