@@ -68,7 +68,7 @@ export interface EventItem {
   creator?: Profile | null
 }
 
-export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlisted'
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlisted' | 'cancellation_pending' | 'cancellation_rejected'
 
 export interface Registration {
   id: string
