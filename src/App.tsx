@@ -26,6 +26,8 @@ function RootRedirect() {
   const { t } = useT()
   const location = useLocation()
 
+  console.log('RootRedirect: loading=', loading, 'hasOnboarded=', hasOnboarded);
+
   if (loading) {
     return <p>{t('common.loading')}</p>
   }

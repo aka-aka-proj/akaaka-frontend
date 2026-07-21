@@ -96,11 +96,15 @@ export function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      const from = (location.state as { from?: string } | null)?.from
+      const params = new URLSearchParams(location.search)
+      const fromQuery = params.get('from')
+      const fromState = (location.state as { from?: string } | null)?.from
+      const from = fromQuery ?? fromState
+      
       console.log("登入成功，導向來源：", from);
       navigate(from ?? '/events', { replace: true })
     }
-  }, [user, navigate, location.state])
+  }, [user, navigate, location.search, location.state])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
