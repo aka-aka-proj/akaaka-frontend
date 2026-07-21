@@ -175,11 +175,6 @@ export function EventsPage() {
             {filtered.map((event) => (
               <li key={event.id} className="event-list-item">
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
-                <ShareButton
-                  title={event.title}
-                  text={event.description ?? ''}
-                  url={`${window.location.origin}/events/${event.id}`}
-                />
                 <p>{event.description ?? t('events.noDescription')}</p>
                 <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(event.start_time).toLocaleString()}</p>
               </li>
