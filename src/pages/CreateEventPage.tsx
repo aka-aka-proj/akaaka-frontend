@@ -24,7 +24,7 @@ export function CreateEventPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const addType = (type: string) => {
-    if (type && !eventType.includes(type)) {
+    if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
       setEventType([...eventType, type])
     }
   }
@@ -121,21 +121,6 @@ export function CreateEventPage() {
                 </button>
               </span>
             ))}
-            <input
-              aria-label={t('createEvent.eventTypeLabel')}
-              value={currentType}
-              onChange={(event) => setCurrentType(event.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  const newType = currentType.trim()
-                  addType(newType)
-                  setCurrentType('')
-                }
-              }}
-              placeholder={t('createEvent.eventTypePlaceholder') || 'Type and press Enter'}
-              style={{ border: 'none', outline: 'none', flex: 1, minWidth: '120px', background: 'transparent', padding: '4px 0' }}
-            />
           </div>
         </label>
         <label className="form-field">
