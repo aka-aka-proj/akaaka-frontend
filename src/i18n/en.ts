@@ -110,6 +110,7 @@ const en = {
   },
   eventDetail: {
     title: 'Event Detail',
+    regCancellationPending: 'Cancellation pending...',
     noDescription: 'No description',
     createdBy: 'Created by:',
     notFound: 'Event not found.',
