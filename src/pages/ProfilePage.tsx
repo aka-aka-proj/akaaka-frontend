@@ -29,7 +29,7 @@ function mapProfileRow(row: unknown): Profile {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, refreshProfile } = useAuth()
+  const { user, profile: currentUserProfile, refreshProfile } = useAuth()
   const { iconTheme, setIconTheme, syncFromProfile } = useIconTheme()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
@@ -281,36 +281,36 @@ export function ProfilePage() {
                     </button>
                   </div>
                 )}
-                <h2>{profile.display_name || profile.id}</h2>
+                <h2>
+                  {profile.display_name || profile.id}
+                  {currentUserProfile?.role_status === 'admin' && (
+                    <>
+                      {' '}
+                      <Link to="/admin/moderation" className="link-small">
+                        ({t('admin.moderation.title')})
+                      </Link>
+                    </>
+                  )}
+                </h2>
               <p className="profile-role">
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
                 {' '}{t('profile.role')}: {profile.role_status}
               </p>
               <p className="profile-reputation">
-                <Link to={`/profile/${targetProfileId}/reputation`}>
+                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
                   <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
                   {' '}{t('profile.reputation')}: {profile.reputation_score}
-                </Link>
-                {' '}
-                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
-                  ({t('profile.viewFeedback')})
                 </Link>
                 {' '}
                 <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
                   ({t('profile.viewReports')})
                 </Link>
-                {profile?.role_status === 'admin' && (
-                  <>
-                    {' '}
-                    <Link to="/admin/moderation" className="link-small">
-                      ({t('admin.moderation.title')})
-                    </Link>
-                  </>
-                )}
               </p>
               <p className="profile-reports">
-                <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
-                {' '}{t('profile.reports')}: {reportCount}
+                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
+                  <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+                  {' '}{t('profile.reports')}: {reportCount}
+                </Link>
               </p>
               {profile.metadata?.gender_identity ? (
                 <p>
