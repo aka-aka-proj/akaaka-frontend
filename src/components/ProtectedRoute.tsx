@@ -13,11 +13,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace state={{ from: location.pathname }} />
+    return <Navigate to={`/auth?from=${encodeURIComponent(location.pathname)}`} replace state={{ from: location.pathname }} />
   }
 
   if (!hasOnboarded && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
+    return <Navigate to={`/onboarding?from=${encodeURIComponent(location.pathname)}`} replace state={{ from: location.pathname }} />
   }
 
   return <>{children}</>

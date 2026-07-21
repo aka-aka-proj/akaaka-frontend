@@ -36,10 +36,15 @@ export function OnboardingPage() {
 
   useEffect(() => {
     if (profile) {
-      const from = (location.state as { from?: string } | null)?.from
+      const params = new URLSearchParams(location.search)
+      const fromQuery = params.get('from')
+      const fromState = (location.state as { from?: string } | null)?.from
+      const from = fromQuery ?? fromState
+      
+      console.log('OnboardingPage loaded, resolved from:', from);
       navigate(from ?? '/events', { replace: true })
     }
-  }, [profile, navigate, location.state])
+  }, [profile, navigate, location.search, location.state])
 
   if (profile) {
     return null
