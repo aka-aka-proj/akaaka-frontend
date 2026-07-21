@@ -89,6 +89,8 @@ export function EventsPage() {
         <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
 
         <input
+          id="search-activities"
+          name="search"
           className="search-input"
           type="search"
           placeholder={t('events.searchPlaceholder')}

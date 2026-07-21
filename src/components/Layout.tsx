@@ -55,6 +55,8 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             <label className="lang-switch">
               <Icon href="/nav-icons.svg" name="nav-language" size={16} />
               <select
+                id="language-select-desktop"
+                name="language"
                 aria-label="Language"
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as Locale)}
@@ -74,6 +76,8 @@ export function Layout({ title, children }: { title: string; children: ReactNode
           <label className="lang-switch desktop-only">
             <Icon href="/nav-icons.svg" name="nav-language" size={16} />
             <select
+              id="language-select-mobile"
+              name="language"
               aria-label="Language"
               value={locale}
               onChange={(e) => setLocale(e.target.value as Locale)}
