@@ -294,7 +294,7 @@ export function EventDetailPage() {
             </p>
             <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.startTimeLabel')}: {new Date(eventItem.start_time).toLocaleString()}</p>
             {eventItem.max_capacity ? (
-              <p>{t('eventDetail.capacity', { count: eventItem.max_capacity, current: attendees.length })}</p>
+              <p>{t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</p>
             ) : null}
             {eventItem.registration_deadline ? (
               <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
