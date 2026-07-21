@@ -35,6 +35,7 @@ export function EventDetailPage() {
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
 
@@ -82,7 +83,7 @@ export function EventDetailPage() {
         .eq('blocker_id', user.id)
 
       if (blocksError) {
-        setMessage(blocksError.message)
+        showError(blocksError.message, blocksError)
       } else {
         setBlockedUserIds(((blocksData as { blocked_id: string }[] | null) ?? []).map((item) => item.blocked_id))
       }
