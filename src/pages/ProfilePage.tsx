@@ -256,6 +256,17 @@ export function ProfilePage() {
     navigate('/auth', { replace: true })
   }
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch {
+      // session 可能已失效，強制清除本地狀態並導向登入頁
+    }
+    setMessage(t('profile.signOutSuccess'))
+    navigate('/auth', { replace: true })
+  }
+
   return (
     <Layout title={t('profile.title')}>
       <section className="card">
@@ -347,6 +358,9 @@ export function ProfilePage() {
             <dt>{t('profile.loginInfoEmail')}</dt>
             <dd>{user?.email}</dd>
           </dl>
+          <button type="button" onClick={() => void handleSignOut()}>
+            {t('nav.signOut')}
+          </button>
         </section>
 
         <form className="card" onSubmit={saveProfile}>
