@@ -200,7 +200,7 @@ export function EditEventPage() {
             defaultValue=""
             style={{ marginBottom: '8px', width: '100%' }}
           >
-            <option value="" disabled>{t('editEvent.selectEventType') || 'Select event type'}</option>
+            <option value="" disabled>{t('editEvent.selectEventType')}</option>
             {EVENT_TYPES.map(type => (
               <option key={type} value={type}>{type}</option>
             ))}
@@ -213,7 +213,7 @@ export function EditEventPage() {
                   type="button" 
                   onClick={() => setEventType(eventType.filter(t => t !== type))} 
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--text-secondary, #666)' }}
-                  aria-label={t('editEvent.removeType') || 'Remove type'}
+                  aria-label={t('editEvent.removeType')}
                 >
                   &times;
                 </button>
@@ -230,7 +230,7 @@ export function EditEventPage() {
                   setCurrentType('')
                 }
               }}
-              placeholder={t('editEvent.eventTypePlaceholder') || 'Type and press Enter'}
+              placeholder={t('editEvent.eventTypePlaceholder')}
               style={{ border: 'none', outline: 'none', flex: 1, minWidth: '120px', background: 'transparent', padding: '4px 0' }}
             />
           </div>
