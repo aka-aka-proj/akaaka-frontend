@@ -16,8 +16,8 @@ const IconThemeContext = createContext<IconThemeContextValue>({
 })
 
 const ICON_MAP: Record<IconTheme, { logo: string; logoLogin: string; favicon: string }> = {
-  purple: { logo: '/logo.svg', logoLogin: '/logo-login.svg', favicon: '/favicon.svg' },
-  red: { logo: '/logo-red.svg', logoLogin: '/logo-login-red.svg', favicon: '/favicon-red.svg' },
+  purple: { logo: '/icons/icon-whole.png', logoLogin: '/logo-login.svg', favicon: '/favicon.svg' },
+  red: { logo: '/icons/icon-whole.png', logoLogin: '/logo-login-red.svg', favicon: '/favicon-red.svg' },
 }
 
 export function IconThemeProvider({ children }: { children: ReactNode }) {

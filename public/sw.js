@@ -2,7 +2,7 @@ const CACHE_NAME = 'akaaka-v1'
 const STATIC_ASSETS = [
   '/',
   '/events',
-  '/logo.svg',
+  '/icons/icon-whole.png',
   '/favicon.svg',
   '/default-avatar.svg',
 ]
