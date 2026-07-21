@@ -34,8 +34,9 @@ function mapProfileRow(row: unknown): Profile {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const loading = isAuthLoading || (session !== null && isProfileLoading)
 
   const refreshProfile = async () => {
     const userId = session?.user.id
@@ -67,12 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initAuth = async () => {
       const { data, error } = await supabase.auth.getSession()
       if (error) {
-        setLoading(false)
+        setIsAuthLoading(false)
         return
       }
 
       setSession(data.session)
-      setLoading(false)
+      setIsAuthLoading(false)
     }
 
     void initAuth()
