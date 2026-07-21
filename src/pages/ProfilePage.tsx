@@ -273,13 +273,15 @@ export function ProfilePage() {
         {profile ? (
           <div className="profile-header" style={{position: 'relative'}}>
             <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
-            <div className="profile-info">
-              <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
-                <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
-                  <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
-                </button>
-              </div>
-              <h2>{profile.display_name || profile.id}</h2>
+              <div className="profile-info">
+                {!isOwner && (
+                  <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
+                    <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
+                      <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
+                    </button>
+                  </div>
+                )}
+                <h2>{profile.display_name || profile.id}</h2>
               <p className="profile-role">
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
                 {' '}{t('profile.role')}: {profile.role_status}
