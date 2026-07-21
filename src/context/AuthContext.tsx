@@ -36,18 +36,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
-  const loading = isAuthLoading || (session !== null && isProfileLoading)
+  const [isInitialProfileLoad, setIsInitialProfileLoad] = useState(true)
+  
+  // 當有 session 時，初始載入包含 Auth 與 Profile
+  const loading = isAuthLoading || (session !== null && isInitialProfileLoad)
 
   const refreshProfile = async () => {
     const userId = session?.user.id
     if (!userId) {
       setProfile(null)
+      setIsInitialProfileLoad(false)
       return
     }
 
     setIsProfileLoading(true)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
     setIsProfileLoading(false)
+    setIsInitialProfileLoad(false)
 
     if (error) {
       setProfile(null)

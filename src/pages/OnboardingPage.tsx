@@ -15,6 +15,11 @@ export function OnboardingPage() {
   const { user, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  
+  useEffect(() => {
+    console.log('OnboardingPage loaded, state:', location.state);
+  }, [location.state]);
+  
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
   const [compactOpen, setCompactOpen] = useState(true)
@@ -31,9 +36,10 @@ export function OnboardingPage() {
 
   useEffect(() => {
     if (profile) {
-      navigate('/events', { replace: true })
+      const from = (location.state as { from?: string } | null)?.from
+      navigate(from ?? '/events', { replace: true })
     }
-  }, [profile, navigate])
+  }, [profile, navigate, location.state])
 
   if (profile) {
     return null
