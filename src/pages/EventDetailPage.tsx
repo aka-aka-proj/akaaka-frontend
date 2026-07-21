@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { ShareButton } from '../components/ShareButton'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
+import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
@@ -22,11 +23,11 @@ export function EventDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { t } = useT()
+  const { showError } = useError()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
   const [replyParentId, setReplyParentId] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([])
   const [creatorReportCount, setCreatorReportCount] = useState<number>(0)
   const [myRegistration, setMyRegistration] = useState<Registration | null>(null)
@@ -58,7 +59,7 @@ export function EventDetailPage() {
       ])
 
     if (eventError || threadError) {
-      setMessage(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'))
+      showError(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'), eventError || threadError)
       return
     }
 
@@ -403,13 +404,22 @@ export function EventDetailPage() {
                         </div>
                       </div>
                       <div>
-                        {(status === 'pending' || status === 'cancellation_pending') ? (
+                        {status === 'cancellation_pending' ? (
                           <>
                             <button type="button" onClick={() => void handleReview(reg.id, 'approve')} disabled={submitting}>
-                              {t('eventDetail.approve')}
+                              {t('eventDetail.confirmCancellation')}
                             </button>
                             <button type="button" onClick={() => void handleReview(reg.id, 'reject')} disabled={submitting}>
-                              {t('eventDetail.reject')}
+                              {t('eventDetail.rejectCancellation')}
+                            </button>
+                          </>
+                        ) : status === 'pending' ? (
+                          <>
+                            <button type="button" onClick={() => void handleReview(reg.id, 'approve')} disabled={submitting}>
+                              {t('eventDetail.approveRegistration')}
+                            </button>
+                            <button type="button" onClick={() => void handleReview(reg.id, 'reject')} disabled={submitting}>
+                              {t('eventDetail.rejectRegistration')}
                             </button>
                           </>
                         ) : null}
