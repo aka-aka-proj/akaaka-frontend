@@ -95,6 +95,7 @@ export function AuthPage() {
   useEffect(() => {
     if (user) {
       const from = (location.state as { from?: string } | null)?.from
+      console.log("登入成功，導向來源：", from);
       navigate(from ?? '/events', { replace: true })
     }
   }, [user, navigate, location.state])
