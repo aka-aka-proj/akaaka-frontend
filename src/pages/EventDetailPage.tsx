@@ -109,6 +109,7 @@ export function EventDetailPage() {
     setRegistrations((allRegs as Registration[]) ?? [])
 
     // Load profile names for all registrants
+    let tempMap = new Map<string, string | null>()
     if (allRegs && allRegs.length > 0) {
       const profileIds = [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))]
       const { data: profiles } = await supabase
@@ -116,7 +117,8 @@ export function EventDetailPage() {
         .select('id, display_name')
         .in('id', profileIds)
 
-      setProfileNameMap(new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name])))
+      tempMap = new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
+      setProfileNameMap(tempMap)
     } else {
       setProfileNameMap(new Map())
     }
@@ -127,7 +129,7 @@ export function EventDetailPage() {
       setAttendees(
         approvedRegs.map((r) => ({
           profile_id: r.profile_id,
-          display_name: profileNameMap.get(r.profile_id) ?? null,
+          display_name: tempMap.get(r.profile_id) ?? null,
           joined_at: r.created_at,
         })),
       )
@@ -419,7 +421,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Attendees Section */}
-      {attendees.length > 0 ? (
+      {isHost && attendees.length > 0 ? (
         <section className="card">
           <h3>{t('eventDetail.attendees')} ({attendees.length})</h3>
           <ul>
