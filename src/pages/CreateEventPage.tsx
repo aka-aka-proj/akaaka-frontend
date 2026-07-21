@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { EVENT_TYPES } from '../lib/event-types'
+import { stringifyEventTypes } from '../lib/event-utils'
 
 export function CreateEventPage() {
   const { user, profile } = useAuth()
@@ -49,7 +50,7 @@ export function CreateEventPage() {
           creator_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
-          event_type: eventType.length > 0 ? eventType : [],
+          event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
           start_time: new Date(startTime).toISOString(),
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },

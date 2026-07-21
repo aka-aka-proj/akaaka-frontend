@@ -8,6 +8,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem } from '../types'
 import { EVENT_TYPES } from '../lib/event-types'
+import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
 
 export function EditEventPage() {
   const { id } = useParams()
@@ -62,13 +63,7 @@ export function EditEventPage() {
       setTitle(event.title)
       setDescription(event.description ?? '')
       
-      let initialEventType: string[] = []
-      if (Array.isArray(event.event_type)) {
-        initialEventType = event.event_type
-      } else if (typeof event.event_type === 'string' && event.event_type) {
-        initialEventType = [event.event_type]
-      }
-      setEventType(initialEventType)
+      setEventType(parseEventTypes(event.event_type))
 
       setStartTime(event.start_time ? toLocalDatetime(event.start_time) : '')
       setMaxCapacity(event.max_capacity?.toString() ?? '')
@@ -135,7 +130,7 @@ export function EditEventPage() {
       .update({
         title: title.trim(),
         description: description.trim() || null,
-        event_type: eventType.length > 0 ? eventType : [],
+        event_type: stringifyEventTypes(eventType),
         start_time: new Date(startTime).toISOString(),
         is_venue_hosted: isVenueHosted,
         visibility_settings: { type: visibilityType },
