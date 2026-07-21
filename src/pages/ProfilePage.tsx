@@ -299,6 +299,14 @@ export function ProfilePage() {
                 <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
                   ({t('profile.viewReports')})
                 </Link>
+                {profile?.role_status === 'admin' && (
+                  <>
+                    {' '}
+                    <Link to="/admin/moderation" className="link-small">
+                      ({t('admin.moderation.title')})
+                    </Link>
+                  </>
+                )}
               </p>
               <p className="profile-reports">
                 <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
