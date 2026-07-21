@@ -208,7 +208,7 @@ export function EventDetailPage() {
     await load()
   }
 
-  const handleReview = async (registrationId: string, action: 'approve' | 'reject') => {
+  const handleReview = async (registrationId: string, action: 'approve' | 'reject' | 'reopen') => {
     if (!id || !user) {
       return
     }
