@@ -8,7 +8,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { t } = useT()
   const location = useLocation()
 
-  if (loading || isProfileLoading) {
+  if (loading || isProfileLoading || isInitialProfileLoad) {
     return <p>{t('common.loading')}</p>
   }
 

@@ -11,6 +11,7 @@ interface AuthContextValue {
   profile: Profile | null
   loading: boolean
   isProfileLoading: boolean
+  isInitialProfileLoad: boolean
   hasOnboarded: boolean
   refreshProfile: () => Promise<void>
 }
@@ -38,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isInitialProfileLoad, setIsInitialProfileLoad] = useState(true)
   
-  // 當有 session 時，初始載入包含 Auth 與 Profile
-  const loading = isAuthLoading || (session !== null && isInitialProfileLoad)
+  // 修改 loading 定義：在完成第一次 Profile 載入前，一律視為 loading
+  const loading = isAuthLoading || isInitialProfileLoad
 
   const refreshProfile = async () => {
     const userId = session?.user.id
@@ -109,10 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       isProfileLoading,
+      isInitialProfileLoad,
       hasOnboarded,
       refreshProfile,
     }),
-    [loading, isProfileLoading, profile, session, hasOnboarded],
+    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
