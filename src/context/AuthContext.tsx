@@ -10,6 +10,7 @@ interface AuthContextValue {
   session: Session | null
   profile: Profile | null
   loading: boolean
+  isProfileLoading: boolean
   hasOnboarded: boolean
   refreshProfile: () => Promise<void>
 }
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
 
   const refreshProfile = async () => {
     const userId = session?.user.id
@@ -42,7 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    setIsProfileLoading(true)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+    setIsProfileLoading(false)
 
     if (error) {
       setProfile(null)
@@ -98,10 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       loading,
+      isProfileLoading,
       hasOnboarded,
       refreshProfile,
     }),
-    [loading, profile, session, hasOnboarded],
+    [loading, isProfileLoading, profile, session, hasOnboarded],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

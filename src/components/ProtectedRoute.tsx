@@ -4,11 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, loading, hasOnboarded } = useAuth()
+  const { user, loading, isProfileLoading, hasOnboarded } = useAuth()
   const { t } = useT()
   const location = useLocation()
 
-  if (loading) {
+  if (loading || isProfileLoading) {
     return <p>{t('common.loading')}</p>
   }
 
