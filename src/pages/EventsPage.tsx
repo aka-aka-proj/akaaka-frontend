@@ -175,7 +175,7 @@ export function EventsPage() {
               <li key={event.id} className="event-list-item">
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
                 <p>{event.description ?? t('events.noDescription')}</p>
-                <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {new Date(event.start_time).toLocaleString()}</p>
+                <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('events.startTimeLabel')} {new Date(event.start_time).toLocaleString()}</p>
               </li>
             ))}
           </ul>

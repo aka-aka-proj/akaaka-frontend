@@ -38,6 +38,7 @@ const en = {
     emailAlreadyRegistered: 'This email is already registered. Please sign in with the social login you originally used (Google, Facebook, or Apple).',
   },
   events: {
+    startTimeLabel: 'Start time',
     title: 'Events',
     createEvent: 'Create event',
     noDescription: 'No description',

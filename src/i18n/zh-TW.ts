@@ -46,6 +46,7 @@ const zhTW = {
     uncategorized: '未分類',
     timeAll: '全部',
     upcoming: '即將到來',
+    startTimeLabel: '開始時間',
     past: '已結束',
     addToCalendar: '加入行事曆',
     downloadIcs: '下載 ICS',
