@@ -110,6 +110,7 @@ const zhTW = {
   },
   eventDetail: {
     title: '活動詳情',
+    sectionCancellationPending: '取消參加申請',
     regCancellationPending: '取消參加申請審核中...',
     noDescription: '沒有描述',
     createdBy: '建立者：',
