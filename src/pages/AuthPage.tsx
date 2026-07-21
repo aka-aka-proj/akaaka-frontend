@@ -26,6 +26,8 @@ export function AuthPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useT()
+
+  console.log('Current state:', location.state);
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
