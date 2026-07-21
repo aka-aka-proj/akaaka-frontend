@@ -17,7 +17,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!hasOnboarded && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />
+    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
   }
 
   return <>{children}</>

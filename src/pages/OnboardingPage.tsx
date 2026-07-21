@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { SafetyCompactModal } from '../components/SafetyCompactModal'
@@ -14,6 +14,7 @@ const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
 export function OnboardingPage() {
   const { user, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
   const [compactOpen, setCompactOpen] = useState(true)
@@ -93,7 +94,8 @@ export function OnboardingPage() {
     }
 
     await refreshProfile()
-    navigate('/events', { replace: true })
+    const from = (location.state as { from?: string } | null)?.from
+    navigate(from ?? '/events', { replace: true })
   }
 
   return (

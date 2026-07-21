@@ -24,16 +24,17 @@ import { ReportIssuePage } from './pages/ReportIssuePage'
 function RootRedirect() {
   const { user, loading, hasOnboarded } = useAuth()
   const { t } = useT()
+  const location = useLocation()
 
   if (loading) {
     return <p>{t('common.loading')}</p>
   }
 
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user) return <Navigate to="/auth" replace state={{ from: location.pathname }} />
 
   if (hasOnboarded) return <Navigate to="/events" replace />
 
-  return <Navigate to="/onboarding" replace />
+  return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
 }
 
 function App() {
