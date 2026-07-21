@@ -151,7 +151,7 @@ const zhTW = {
     pendingRegistrations: '待審核報名',
     approve: '核准',
     reject: '拒絕',
-    reopen: '重新申請',
+    reopen: '重開申請',
     attendees: '出席者',
     editEvent: '編輯活動',
     allRegistrations: '所有報名',
