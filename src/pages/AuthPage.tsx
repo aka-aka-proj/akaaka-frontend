@@ -134,6 +134,7 @@ export function AuthPage() {
       return
     }
 
+    const from = (location.state as { from?: string } | null)?.from
     navigate(from ?? '/events', { replace: true })
   }
 
