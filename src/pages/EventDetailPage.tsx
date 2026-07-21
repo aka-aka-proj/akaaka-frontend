@@ -413,6 +413,11 @@ export function EventDetailPage() {
                             </button>
                           </>
                         ) : null}
+                        {status === 'cancellation_rejected' ? (
+                          <button type="button" onClick={() => void handleReview(reg.id, 'reopen')} disabled={submitting}>
+                            {t('eventDetail.reopen')}
+                          </button>
+                        ) : null}
                         {status === 'approved' ? (
                           <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
                             {t('eventDetail.forceCancel')}
