@@ -35,7 +35,6 @@ export function EventDetailPage() {
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState('')
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
 
@@ -149,7 +148,6 @@ export function EventDetailPage() {
       return
     }
     setSubmitting(true)
-    setMessage('')
 
     const { error } = await supabase.functions.invoke('create-registration', {
       body: { event_id: id },
@@ -159,7 +157,7 @@ export function EventDetailPage() {
 
     if (error) {
       const errorMessage = (error as any).context?.message || error.message
-      setMessage(errorMessage)
+      showError(errorMessage, error)
       return
     }
 
@@ -171,7 +169,6 @@ export function EventDetailPage() {
       return
     }
     setSubmitting(true)
-    setMessage('')
 
     const { error } = await supabase.functions.invoke('cancel-registration', {
       body: { event_id: id },
@@ -180,7 +177,7 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      setMessage(error.message)
+      showError(error.message, error)
       return
     }
 
@@ -193,7 +190,6 @@ export function EventDetailPage() {
       return
     }
     setSubmitting(true)
-    setMessage('')
 
     const { error } = await supabase
       .from('event_registrations')
@@ -203,7 +199,7 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      setMessage(error.message)
+      showError(error.message, error)
       return
     }
 
@@ -215,7 +211,6 @@ export function EventDetailPage() {
       return
     }
     setSubmitting(true)
-    setMessage('')
 
     const { error } = await supabase.functions.invoke('review-registration', {
       body: { event_id: id, registration_id: registrationId, action },
@@ -224,7 +219,7 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      setMessage(error.message)
+      showError(error.message, error)
       return
     }
 
@@ -247,7 +242,7 @@ export function EventDetailPage() {
     ])
 
     if (error) {
-      setMessage(error.message)
+      showError(error.message, error)
       return
     }
 
@@ -338,7 +333,6 @@ export function EventDetailPage() {
         ) : (
           <p>{t('eventDetail.notFound')}</p>
         )}
-        {message ? <p className="message">{message}</p> : null}
       </section>
 
       {/* Registration Section */}
