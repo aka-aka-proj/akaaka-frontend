@@ -35,17 +35,6 @@ export function ProfilePage() {
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
 
-  const xProfileUrl = useMemo(() => {
-    if (isOwner && identities) {
-      const twitterIdentity = identities.find(i => i.provider === 'twitter')
-      return twitterIdentity?.identity_data?.user_name 
-        ? `https://x.com/${twitterIdentity.identity_data.user_name}` 
-        : null
-    }
-    
-    const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
-    return externalLink?.url ?? null
-  }, [isOwner, identities, profile])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
@@ -59,6 +48,18 @@ export function ProfilePage() {
   const [isBlocked, setIsBlocked] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [message, setMessage] = useState('')
+
+  const xProfileUrl = useMemo(() => {
+    if (isOwner && identities) {
+      const twitterIdentity = identities.find(i => i.provider === 'twitter')
+      return twitterIdentity?.identity_data?.user_name 
+        ? `https://x.com/${twitterIdentity.identity_data.user_name}` 
+        : null
+    }
+    
+    const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
+    return externalLink?.url ?? null
+  }, [isOwner, identities, profile])
 
   const bioVisibility = getBioVisibility(profile)
   const showBio = profile
