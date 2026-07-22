@@ -132,6 +132,12 @@ dd {
   display: block;
 }
 
+.logo-img {
+  width: 200px;
+  height: 160px;
+  object-fit: contain;
+}
+
 .topbar-title {
   font-size: 0.875rem;
   color: #6b7280;
@@ -518,6 +524,11 @@ dd {
 
   .desktop-only {
     display: none;
+  }
+
+  .logo-img {
+    width: 120px;
+    height: 96px;
   }
 
   .bottom-nav {
