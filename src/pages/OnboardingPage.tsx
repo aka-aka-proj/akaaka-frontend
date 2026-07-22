@@ -124,7 +124,6 @@ export function OnboardingPage() {
       />
       {agreed && (
         <>
-          <img src="/illustration-welcome.svg" alt="" width={480} height={240} className="illustration" />
           <form className="card" onSubmit={submit}>
             <label>
               {t('onboarding.displayNameLabel')}
