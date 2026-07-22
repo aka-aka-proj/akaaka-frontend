@@ -190,7 +190,7 @@ export function OnboardingPage() {
               </label>
               <fieldset>
                 <legend>{t('onboarding.bdsmRolesLabel')}</legend>
-                {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rope_bunny', 'rigging'] as BdsmRole[]).map((role) => (
+                {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging'] as BdsmRole[]).map((role) => (
                   <label key={role} className="checkbox">
                     <input
                       type="checkbox"

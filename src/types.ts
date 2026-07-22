@@ -26,7 +26,6 @@ export type BdsmRole =
   | 'owner'
   | 'pet'
   | 'brat'
-  | 'rope_bunny'
   | 'rigging'
 
 export interface SocialLink {
