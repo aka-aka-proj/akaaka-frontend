@@ -385,7 +385,9 @@ export function ProfilePage() {
             <dd>{user?.email}</dd>
             <dt>{t('profile.connectedAccounts')}</dt>
             <dd>
-              {identities?.map(i => i.provider).join(', ') ?? t('profile.noConnectedAccounts')}
+              {identities && identities.length > 0 
+                ? identities.map(i => i.provider).join(', ') 
+                : t('profile.noConnectedAccounts')}
             </dd>
           </dl>
           <button type="button" onClick={() => void handleSignOut()}>

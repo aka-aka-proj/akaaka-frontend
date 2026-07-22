@@ -36,40 +36,32 @@ function mapProfileRow(row: unknown): Profile {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [identities, setIdentities] = useState<UserIdentity[] | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isInitialProfileLoad, setIsInitialProfileLoad] = useState(true)
   
-  // 修改 loading 定義：在完成第一次 Profile 載入前，一律視為 loading
   const loading = isAuthLoading || isInitialProfileLoad
 
   const refreshProfile = async () => {
     const userId = session?.user.id
     if (!userId) {
       setProfile(null)
-      setIdentities(null)
       setIsInitialProfileLoad(false)
       return
     }
 
     setIsProfileLoading(true)
-    const [profileResult, userResult] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-      supabase.auth.getUser()
-    ])
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
     
     setIsProfileLoading(false)
     setIsInitialProfileLoad(false)
 
-    if (profileResult.error) {
+    if (error) {
       setProfile(null)
       return
     }
-    
-    setIdentities(userResult.data.user?.identities ?? null)
 
-    const newProfile = profileResult.data ? mapProfileRow(profileResult.data) : null
+    const newProfile = data ? mapProfileRow(data) : null
     
     setProfile((prevProfile) => {
       if (JSON.stringify(prevProfile) === JSON.stringify(newProfile)) {
@@ -107,13 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!session?.user.id) {
       setProfile(null)
-      setIdentities(null)
       setIsInitialProfileLoad(false)
       return
     }
 
     // 自動同步 OAuth 資訊至 external_social_links (若適用)
     const syncSocialConnections = async () => {
+      const identities = session.user.identities
       if (!identities) return
       
       const twitter = identities.find(i => i.provider === 'x')
@@ -136,14 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void syncSocialConnections()
   }, [session?.user.id, isAuthLoading])
 
-
   const hasOnboarded = profile !== null
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
-      identities,
+      identities: session?.user?.identities ?? null,
       profile,
       loading,
       isProfileLoading,
@@ -151,8 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasOnboarded,
       refreshProfile,
     }),
-    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded, identities],
+    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded],
   )
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
