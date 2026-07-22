@@ -18,7 +18,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'A user with this email address has already been registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google 或 Facebook）登入。',
 }
 
-type SocialProvider = 'google' | 'facebook' | 'twitter'
+type SocialProvider = 'google' | 'facebook' | 'x'
 
 export function AuthPage() {
   const { user } = useAuth()
@@ -178,18 +178,17 @@ export function AuthPage() {
       ) : (
       <form className="card auth-card" onSubmit={submit}>
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
-        <button type="button" className="social-btn" onClick={() => signInWithSocial('google')}>
-          <Icon href="/social-icons.svg" name="social-google" size={20} />
-          {t('auth.continueWithGoogle')}
-        </button>
-        <button type="button" className="social-btn" onClick={() => signInWithSocial('facebook')}>
-          <Icon href="/social-icons.svg" name="social-facebook" size={20} />
-          {t('auth.continueWithFacebook')}
-        </button>
-        <button type="button" className="social-btn" onClick={() => signInWithSocial('twitter')}>
-          <Icon href="/social-icons.svg" name="social-twitter" size={20} />
-          {t('auth.continueWithTwitter')}
-        </button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px' }}>
+          <button type="button" className="social-btn" onClick={() => signInWithSocial('google')} aria-label={t('auth.continueWithGoogle')}>
+            <Icon href="/social-icons.svg" name="social-google" size={24} />
+          </button>
+          <button type="button" className="social-btn" onClick={() => signInWithSocial('facebook')} aria-label={t('auth.continueWithFacebook')}>
+            <Icon href="/social-icons.svg" name="social-facebook" size={24} />
+          </button>
+          <button type="button" className="social-btn" onClick={() => signInWithSocial('x')} aria-label={t('auth.continueWithTwitter')}>
+            <Icon href="/social-icons.svg" name="social-x" size={24} />
+          </button>
+        </div>
         <div className="social-divider">{t('auth.orContinueWith')}</div>
         <label className="form-field">
           <span className="form-label-row">

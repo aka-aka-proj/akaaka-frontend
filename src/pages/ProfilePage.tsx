@@ -29,11 +29,23 @@ function mapProfileRow(row: unknown): Profile {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, profile: currentUserProfile, refreshProfile } = useAuth()
+  const { user, profile: currentUserProfile, refreshProfile, identities } = useAuth()
   const { iconTheme, setIconTheme, syncFromProfile } = useIconTheme()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
+
+  const xProfileUrl = useMemo(() => {
+    if (isOwner && identities) {
+      const twitterIdentity = identities.find(i => i.provider === 'twitter')
+      return twitterIdentity?.identity_data?.user_name 
+        ? `https://x.com/${twitterIdentity.identity_data.user_name}` 
+        : null
+    }
+    
+    const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
+    return externalLink?.url ?? null
+  }, [isOwner, identities, profile])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
@@ -334,6 +346,13 @@ export function ProfilePage() {
                     </a>
                   </li>
                 ))}
+                {xProfileUrl && (
+                  <li className="social-link-item">
+                    <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label="X">
+                      <Icon href="/social-icons.svg" name="social-x" size={32} />
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -363,6 +382,10 @@ export function ProfilePage() {
             <dd>{user?.id}</dd>
             <dt>{t('profile.loginInfoEmail')}</dt>
             <dd>{user?.email}</dd>
+            <dt>{t('profile.connectedAccounts')}</dt>
+            <dd>
+              {identities?.map(i => i.provider).join(', ') ?? t('profile.noConnectedAccounts')}
+            </dd>
           </dl>
           <button type="button" onClick={() => void handleSignOut()}>
             {t('nav.signOut')}

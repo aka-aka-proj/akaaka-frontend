@@ -31,6 +31,7 @@ export type BdsmRole =
 export interface SocialLink {
   platform: SocialPlatform
   url: string
+  is_connected?: boolean
 }
 
 export interface Profile {
@@ -48,6 +49,7 @@ export interface Profile {
     gender_identity?: GenderIdentity
     bdsm_roles?: BdsmRole[]
     icon_theme?: IconTheme
+    twitter_handle?: string
   } | null
   reputation_score: number
 }

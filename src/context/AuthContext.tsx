@@ -1,4 +1,4 @@
-import type { Session, User } from '@supabase/supabase-js'
+import type { Session, User, UserIdentity } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { supabase } from '../supabaseClient'
@@ -8,6 +8,7 @@ import { normalizeSocialLinks } from '../lib/profile'
 interface AuthContextValue {
   user: User | null
   session: Session | null
+  identities: UserIdentity[] | null
   profile: Profile | null
   loading: boolean
   isProfileLoading: boolean
@@ -35,6 +36,7 @@ function mapProfileRow(row: unknown): Profile {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [identities, setIdentities] = useState<UserIdentity[] | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isInitialProfileLoad, setIsInitialProfileLoad] = useState(true)
@@ -46,21 +48,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = session?.user.id
     if (!userId) {
       setProfile(null)
+      setIdentities(null)
       setIsInitialProfileLoad(false)
       return
     }
 
     setIsProfileLoading(true)
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+    const [profileResult, userResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      supabase.auth.getUser()
+    ])
+    
     setIsProfileLoading(false)
     setIsInitialProfileLoad(false)
 
-    if (error) {
+    if (profileResult.error) {
       setProfile(null)
       return
     }
+    
+    setIdentities(userResult.data.user?.identities ?? null)
 
-    const newProfile = data ? mapProfileRow(data) : null
+    const newProfile = profileResult.data ? mapProfileRow(profileResult.data) : null
     
     setProfile((prevProfile) => {
       if (JSON.stringify(prevProfile) === JSON.stringify(newProfile)) {
@@ -98,12 +107,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!session?.user.id) {
       setProfile(null)
+      setIdentities(null)
       setIsInitialProfileLoad(false)
       return
     }
 
+    // 自動同步 OAuth 資訊至 external_social_links (若適用)
+    const syncSocialConnections = async () => {
+      if (!identities) return
+      
+    const twitter = identities.find(i => i.provider === 'x')
+    if (twitter && twitter.identity_data?.user_name) {
+      const twitterUrl = `https://x.com/${twitter.identity_data.user_name}`
+      const currentLinks = profile?.external_social_links ?? []
+      
+      if (!currentLinks.find(l => l.platform === 'x')) {
+        const newLinks = [...currentLinks, { platform: 'x' as const, url: twitterUrl, is_connected: true }]
+        await supabase
+          .from('profiles')
+          .update({ external_social_links: newLinks })
+          .eq('id', session.user.id)
+        await refreshProfile()
+      }
+    }
+
+    }
+
     void refreshProfile()
-  }, [session?.user.id, isAuthLoading])
+    void syncSocialConnections()
+  }, [session?.user.id, isAuthLoading, identities])
 
   const hasOnboarded = profile !== null
 
@@ -111,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: session?.user ?? null,
       session,
+      identities,
       profile,
       loading,
       isProfileLoading,
@@ -118,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasOnboarded,
       refreshProfile,
     }),
-    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded],
+    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded, identities],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
