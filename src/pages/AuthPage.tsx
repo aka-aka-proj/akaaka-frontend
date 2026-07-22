@@ -177,7 +177,6 @@ export function AuthPage() {
         </div>
       ) : (
       <form className="card auth-card" onSubmit={submit}>
-        <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={140} height={140} className="auth-logo" />
         <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
         <button type="button" className="social-btn" onClick={() => signInWithSocial('google')}>
           <Icon href="/social-icons.svg" name="social-google" size={20} />

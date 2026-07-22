@@ -253,16 +253,18 @@ export function EditEventPage() {
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label>
-        <label className="checkbox">
-          <input
-            aria-label={t('editEvent.venueHostedLabel')}
-            type="checkbox"
-            checked={isVenueHosted}
-            onChange={(event) => setIsVenueHosted(event.target.checked)}
-          />
-          <Icon href="/form-icons.svg" name="form-location" size={16} />
-          {t('editEvent.venueHostedLabel')}
-        </label>
+        {profile?.role_status === 'venue_approved' && (
+          <label className="checkbox">
+            <input
+              aria-label={t('editEvent.venueHostedLabel')}
+              type="checkbox"
+              checked={isVenueHosted}
+              onChange={(event) => setIsVenueHosted(event.target.checked)}
+            />
+            <Icon href="/form-icons.svg" name="form-location" size={16} />
+            {t('editEvent.venueHostedLabel')}
+          </label>
+        )}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.visibilityLabel')}
