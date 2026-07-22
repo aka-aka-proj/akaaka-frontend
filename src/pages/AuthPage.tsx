@@ -18,7 +18,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'A user with this email address has already been registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google 或 Facebook）登入。',
 }
 
-type SocialProvider = 'google' | 'facebook'
+type SocialProvider = 'google' | 'facebook' | 'twitter'
 
 export function AuthPage() {
   const { user } = useAuth()
@@ -185,6 +185,10 @@ export function AuthPage() {
         <button type="button" className="social-btn" onClick={() => signInWithSocial('facebook')}>
           <Icon href="/social-icons.svg" name="social-facebook" size={20} />
           {t('auth.continueWithFacebook')}
+        </button>
+        <button type="button" className="social-btn" onClick={() => signInWithSocial('twitter')}>
+          <Icon href="/social-icons.svg" name="social-twitter" size={20} />
+          {t('auth.continueWithTwitter')}
         </button>
         <div className="social-divider">{t('auth.orContinueWith')}</div>
         <label className="form-field">
