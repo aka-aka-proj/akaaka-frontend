@@ -41,6 +41,7 @@ export function VirtualLoverChatPage() {
   const [usedModel, setUsedModel] = useState('')
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   console.log('[chat] render, usedModel:', JSON.stringify(usedModel))
@@ -86,17 +87,37 @@ export function VirtualLoverChatPage() {
         }
       }
 
-      // Load the latest conversation from DB
-      const { data: latestChat } = await supabase
-        .from('ai_chats')
-        .select('messages')
+      // Load the latest conversation and its messages
+      const { data: latestConv } = await supabase
+        .from('ai_conversations')
+        .select('id')
         .eq('character_id', data.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (latestChat) {
-        setMessages(latestChat.messages as ChatMessage[])
+      if (latestConv) {
+        setConversationId(latestConv.id)
+        const { data: msgs } = await supabase
+          .from('ai_messages')
+          .select('role, content')
+          .eq('conversation_id', latestConv.id)
+          .order('created_at', { ascending: true })
+
+        if (msgs && msgs.length > 0) {
+          setMessages(msgs as ChatMessage[])
+        }
+      } else {
+        // Auto-create first conversation if none exists
+        const { data: newConv } = await supabase
+          .from('ai_conversations')
+          .insert({ character_id: data.id })
+          .select('id')
+          .single()
+
+        if (newConv) {
+          setConversationId(newConv.id)
+        }
       }
 
       setLoading(false)
@@ -128,6 +149,15 @@ export function VirtualLoverChatPage() {
     setMessages(updatedMessages)
     setInput('')
     setStreaming(true)
+
+    // Save user message to DB immediately
+    if (conversationId) {
+      await supabase.from('ai_messages').insert({
+        conversation_id: conversationId,
+        role: 'user',
+        content: userMessage.content,
+      }).select().maybeSingle()
+    }
 
     let assistantContent = ''
 
@@ -221,24 +251,28 @@ export function VirtualLoverChatPage() {
       setMessage(err instanceof Error ? err.message : 'Error during chat')
     } finally {
       setStreaming(false)
-      // Save full conversation after streaming completes
-      if (character?.id && assistantContent) {
-        const finalMessages: ChatMessage[] = [
-          ...messages.filter(m => m.content),
-          { role: 'user', content: userMessage.content },
-          { role: 'assistant', content: assistantContent },
-        ]
-        await supabase.from('ai_chats').insert({
-          character_id: character.id,
-          messages: finalMessages,
+      // Save assistant message to DB after streaming completes
+      if (conversationId && assistantContent) {
+        await supabase.from('ai_messages').insert({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantContent,
         }).select().maybeSingle()
       }
     }
   }
 
-  const startNewConversation = () => {
-    setMessages([])
-    setMessage('')
+  const startNewConversation = async () => {
+    if (!character) return
+    const { data } = await supabase.from('ai_conversations').insert({
+      character_id: character.id,
+    }).select('id').single()
+
+    if (data) {
+      setConversationId(data.id)
+      setMessages([])
+      setMessage('')
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
