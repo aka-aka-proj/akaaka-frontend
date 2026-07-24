@@ -41,8 +41,13 @@ export function VirtualLoverChatPage() {
   const [usedModel, setUsedModel] = useState('')
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
-  const [sessionId, setSessionId] = useState<string>(crypto.randomUUID())
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  console.log('[chat] render, usedModel:', JSON.stringify(usedModel))
+
+  useEffect(() => {
+    console.log('[chat] usedModel state changed:', usedModel)
+  }, [usedModel])
 
   const scrollToBottom = useCallback(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -81,21 +86,17 @@ export function VirtualLoverChatPage() {
         }
       }
 
-      // Load the latest conversation session
+      // Load the latest conversation from DB
       const { data: latestChat } = await supabase
         .from('ai_chats')
-        .select('session_id, messages')
+        .select('messages')
         .eq('character_id', data.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (latestChat) {
-        setSessionId(latestChat.session_id)
         setMessages(latestChat.messages as ChatMessage[])
-      } else {
-        setSessionId(crypto.randomUUID())
-        setMessages([])
       }
 
       setLoading(false)
@@ -230,14 +231,12 @@ export function VirtualLoverChatPage() {
         await supabase.from('ai_chats').insert({
           character_id: character.id,
           messages: finalMessages,
-          session_id: sessionId,
         }).select().maybeSingle()
       }
     }
   }
 
   const startNewConversation = () => {
-    setSessionId(crypto.randomUUID())
     setMessages([])
     setMessage('')
   }
