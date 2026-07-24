@@ -266,7 +266,7 @@ export function VirtualLoverChatPage() {
             messages.map((msg, i) => (
               <div key={i} className={`chat-msg ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-assistant'}`}>
                 <div className="chat-msg-role">
-                  {msg.role === 'user' ? user?.email ?? 'You' : character.name}
+                  {msg.role === 'user' ? userProfile?.display_name ?? user?.email ?? 'You' : character.name}
                 </div>
                 <div className="chat-msg-content">{msg.content}</div>
               </div>
