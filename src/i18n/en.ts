@@ -355,6 +355,7 @@ const en = {
     submittedSuccess: 'Report submitted successfully.',
   },
   virtualLover: {
+    characterName: '',
     title: 'Virtual Lover',
     createNew: 'Create New Character',
     nameLabel: 'Character Name',
