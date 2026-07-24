@@ -124,6 +124,8 @@ export function VirtualLoverChatPage() {
         .select('model_name, feedback')
         .eq('character_id', id)
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
       if (fb) {
         setUsedModel(fb.model_name)
@@ -307,30 +309,19 @@ export function VirtualLoverChatPage() {
   const handleFeedback = async (type: 'like' | 'dislike') => {
     if (!character || !user || !usedModel || feedbackSaving) return
 
-    const newValue = feedback === type ? null : type
-    const prev = feedback
-    setFeedback(newValue)
+    setFeedback(type)
     setFeedbackSaving(true)
 
     try {
-      if (newValue) {
-        const { error } = await supabase.from('ai_chat_feedback').upsert({
-          character_id: character.id,
-          user_id: user.id,
-          model_name: usedModel,
-          feedback: newValue,
-        }, { onConflict: 'character_id, user_id' })
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('ai_chat_feedback')
-          .delete()
-          .eq('character_id', character.id)
-          .eq('user_id', user.id)
-        if (error) throw error
-      }
+      const { error } = await supabase.from('ai_chat_feedback').insert({
+        character_id: character.id,
+        user_id: user.id,
+        model_name: usedModel,
+        feedback: type,
+      })
+      if (error) throw error
     } catch {
-      setFeedback(prev)
+      // silently fail, don't revert UI
     } finally {
       setFeedbackSaving(false)
     }
