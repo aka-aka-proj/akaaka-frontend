@@ -137,9 +137,9 @@ export function VirtualLoversPage() {
               <div key={char.id} className="card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate(`/virtual-lovers/${char.id}/chat`)}>
                   <strong>{char.name}</strong>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '400px' }}>
-                    {char.persona}
-                  </p>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '400px' }}>
+                      {char.persona}
+                    </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <button type="button" onClick={() => navigate(`/virtual-lovers/${char.id}/chat`)}>
