@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
-import { Icon } from '../components/Icon'
+import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useIconTheme } from '../context/IconThemeContext'
@@ -243,15 +243,9 @@ export function ProfilePage() {
     setMessage(t('profile.userBlocked'))
   }
 
-  const deleteAccount = async () => {
-    if (!user) {
-      return
-    }
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
-    if (!window.confirm(t('profile.deleteAccountConfirm'))) {
-      return
-    }
-
+  const performDeleteAccount = async () => {
     const { error } = await supabase.functions.invoke('delete-account')
 
     if (error) {
@@ -539,10 +533,20 @@ export function ProfilePage() {
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>
-          <button type="button" className="btn-danger" onClick={() => void deleteAccount()}>
+          <button type="button" className="btn-danger" onClick={() => setIsDeleteModalOpen(true)}>
             <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('profile.deleteAccount')}
           </button>
         </section>
+        <DeleteConfirmationDialog
+          isOpen={isDeleteModalOpen}
+          title={t('profile.deleteAccount')}
+          description={t('profile.deleteAccountConfirm')}
+          onConfirm={() => {
+            setIsDeleteModalOpen(false)
+            void performDeleteAccount()
+          }}
+          onCancel={() => setIsDeleteModalOpen(false)}
+        />
         </>
       ) : (
         <section className="card">
