@@ -20,6 +20,8 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
 import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
+import { VirtualLoversPage } from './pages/VirtualLoversPage'
+import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
 
 function RootRedirect() {
   const { user, loading, hasOnboarded } = useAuth()
@@ -186,6 +188,22 @@ function App() {
           <AdminRoute>
             <AdminRoleUpgrade />
           </AdminRoute>
+        }
+      />
+      <Route
+        path="/virtual-lovers"
+        element={
+          <ProtectedRoute>
+            <VirtualLoversPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-lovers/:id/chat"
+        element={
+          <ProtectedRoute>
+            <VirtualLoverChatPage />
+          </ProtectedRoute>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

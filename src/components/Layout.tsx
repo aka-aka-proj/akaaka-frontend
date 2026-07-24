@@ -10,6 +10,7 @@ import { Icon } from './Icon'
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events' },
   { to: '/events/new', icon: 'nav-create', labelKey: 'nav.createEvent' },
+  { to: '/virtual-lovers', icon: 'nav-profile', labelKey: 'virtualLover.title' },
   { to: '/registrations/me', icon: 'nav-events', labelKey: 'nav.myRegistrations' },
   { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile' },
   { to: '/reports/me', icon: 'nav-reports', labelKey: 'nav.myReports' },
@@ -46,6 +47,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
           <nav className="nav desktop-nav">
             <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
             <Link to="/events/new"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
+            <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('virtualLover.title')}</Link>
             <Link to="/registrations/me"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.myRegistrations')}</Link>
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
             <Link to="/reports/me"><Icon href="/nav-icons.svg" name="nav-reports" size={16} /> {t('nav.myReports')}</Link>
