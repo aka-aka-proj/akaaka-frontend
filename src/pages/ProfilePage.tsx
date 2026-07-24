@@ -9,9 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
-import type { BdsmRole, GenderIdentity, Profile, SocialLink, Visibility } from '../types'
-
-const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
+import type { BdsmRole, GenderIdentity, Profile, Visibility } from '../types'
 
 function mapProfileRow(row: unknown): Profile {
   const source = (row ?? {}) as Record<string, unknown>
@@ -37,8 +35,6 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
-  const [visibility, setVisibility] = useState<Visibility>('public')
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
   const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
@@ -331,7 +327,7 @@ export function ProfilePage() {
                 {profile.external_social_links.map((link) => (
                   <li key={`${link.platform}-${link.url}`} className="social-link-item">
                     <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.platform}>
-                      <Icon href="/icons.svg" name={`${link.platform}-icon`} size={32} />
+                      <Icon href="/social-icons.svg" name={`social-${link.platform}`} size={32} />
                     </a>
                   </li>
                 ))}
