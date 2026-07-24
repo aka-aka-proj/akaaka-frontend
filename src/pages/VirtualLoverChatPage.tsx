@@ -253,8 +253,11 @@ export function VirtualLoverChatPage() {
         </button>
       </div>
       <div>
-        {t('virtualLover.nameLabel')}: <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.name}</span> |
-        {t('virtualLover.personaLabel')}: <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.persona}</span>
+        {t('virtualLover.nameLabel')}: <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.name}</span>
+        <br />
+        {t('virtualLover.personaLabel')}:
+        <br /> 
+        <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.persona}</span>
       </div>
       <div className="chat-container">
         <div className="chat-messages">
