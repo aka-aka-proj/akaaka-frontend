@@ -41,6 +41,7 @@ export function VirtualLoverChatPage() {
   const [usedModel, setUsedModel] = useState('')
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
+  const [sessionId, setSessionId] = useState<string>(crypto.randomUUID())
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -80,29 +81,21 @@ export function VirtualLoverChatPage() {
         }
       }
 
-      // Load all chat history for this character (cross-platform)
-      const { data: chatRows } = await supabase
+      // Load the latest conversation session
+      const { data: latestChat } = await supabase
         .from('ai_chats')
-        .select('messages')
+        .select('session_id, messages')
         .eq('character_id', data.id)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (chatRows && chatRows.length > 0) {
-        const allMessages: ChatMessage[] = []
-        const seen = new Set<string>()
-        for (const row of chatRows) {
-          const msgs = row.messages as ChatMessage[]
-          if (Array.isArray(msgs)) {
-            for (const msg of msgs) {
-              const key = `${msg.role}|${msg.content}`
-              if (!seen.has(key)) {
-                seen.add(key)
-                allMessages.push(msg)
-              }
-            }
-          }
-        }
-        setMessages(allMessages)
+      if (latestChat) {
+        setSessionId(latestChat.session_id)
+        setMessages(latestChat.messages as ChatMessage[])
+      } else {
+        setSessionId(crypto.randomUUID())
+        setMessages([])
       }
 
       setLoading(false)
@@ -233,12 +226,14 @@ export function VirtualLoverChatPage() {
         await supabase.from('ai_chats').insert({
           character_id: character.id,
           messages: finalMessages,
+          session_id: sessionId,
         }).select().maybeSingle()
       }
     }
   }
 
   const startNewConversation = () => {
+    setSessionId(crypto.randomUUID())
     setMessages([])
     setMessage('')
   }
