@@ -35,6 +35,7 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
+  const [visibility, setVisibility] = useState<Visibility>('public')
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
   const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
@@ -61,11 +62,6 @@ export function ProfilePage() {
     ? canViewBio(user?.id, profile.id, bioVisibility)
     : false
 
-  const socialLinksForView = useMemo(
-    () => socialLinks.filter((item) => item.url.trim().length > 0),
-    [socialLinks],
-  )
-
   const loadProfile = async () => {
     if (!targetProfileId) {
       return
@@ -87,7 +83,6 @@ export function ProfilePage() {
     setDisplayName(mapped?.display_name ?? '')
     setBio(mapped?.bio ?? '')
     setVisibility(getBioVisibility(mapped))
-    setSocialLinks(mapped?.external_social_links ?? [createSocialLink()])
     setGenderIdentity(mapped?.metadata?.gender_identity ?? '')
     setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
     setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
@@ -120,12 +115,6 @@ export function ProfilePage() {
     void loadProfile()
   }, [targetProfileId, user?.id])
 
-  const updateLink = (index: number, patch: Partial<SocialLink>) => {
-    setSocialLinks((links) =>
-      links.map((link, current) => (current === index ? { ...link, ...patch } : link)),
-    )
-  }
-
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!isOwner || !user) {
@@ -145,7 +134,6 @@ export function ProfilePage() {
       .update({
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
-        external_social_links: socialLinksForView,
         metadata: {
           ...existingMeta,
           visibility: {
@@ -474,35 +462,6 @@ export function ProfilePage() {
               <option value="private">{t('profile.private')}</option>
             </select>
           </label>
-          <section>
-            <h4>{t('profile.socialLinks')}</h4>
-            {socialLinks.map((link, index) => (
-              <div className="row" key={`owner-social-${index}`}>
-                <select
-                  aria-label={t('profile.socialPlatform', { index: index + 1 })}
-                  value={link.platform}
-                  onChange={(event) =>
-                    updateLink(index, {
-                      platform: event.target.value as SocialLink['platform'],
-                    })
-                  }
-                >
-                  <option value="facebook">facebook</option>
-                  <option value="instagram">instagram</option>
-                  <option value="x">x</option>
-                </select>
-                <input
-                  aria-label={t('profile.socialUrl', { index: index + 1 })}
-                  value={link.url}
-                  placeholder="https://..."
-                  onChange={(event) => updateLink(index, { url: event.target.value })}
-                />
-              </div>
-            ))}
-            <button type="button" onClick={() => setSocialLinks((links) => [...links, createSocialLink()])}>
-              <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('profile.addSocialLink')}
-            </button>
-          </section>
           <button type="submit">{t('profile.saveProfile')}</button>
         </form>
 
