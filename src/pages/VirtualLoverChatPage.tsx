@@ -38,6 +38,9 @@ export function VirtualLoverChatPage() {
   const [streaming, setStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [usedModel, setUsedModel] = useState('')
+  const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
+  const [feedbackSaving, setFeedbackSaving] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -105,7 +108,22 @@ export function VirtualLoverChatPage() {
       setLoading(false)
     }
 
+    const loadFeedback = async () => {
+      if (!user?.id || !id) return
+      const { data: fb } = await supabase
+        .from('ai_chat_feedback')
+        .select('model_name, feedback')
+        .eq('character_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (fb) {
+        setUsedModel(fb.model_name)
+        setFeedback(fb.feedback as 'like' | 'dislike')
+      }
+    }
+
     void loadCharacter()
+    void loadFeedback()
   }, [id, user?.id])
 
   const sendMessage = async () => {
@@ -145,6 +163,9 @@ export function VirtualLoverChatPage() {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
+
+      const modelName = response.headers.get('X-Model-Used') || ''
+      setUsedModel(modelName)
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No response body')
@@ -222,6 +243,38 @@ export function VirtualLoverChatPage() {
     }
   }
 
+  const handleFeedback = async (type: 'like' | 'dislike') => {
+    if (!character || !user || !usedModel || feedbackSaving) return
+
+    const newValue = feedback === type ? null : type
+    const prev = feedback
+    setFeedback(newValue)
+    setFeedbackSaving(true)
+
+    try {
+      if (newValue) {
+        const { error } = await supabase.from('ai_chat_feedback').upsert({
+          character_id: character.id,
+          user_id: user.id,
+          model_name: usedModel,
+          feedback: newValue,
+        }, { onConflict: 'character_id, user_id' })
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('ai_chat_feedback')
+          .delete()
+          .eq('character_id', character.id)
+          .eq('user_id', user.id)
+        if (error) throw error
+      }
+    } catch {
+      setFeedback(prev)
+    } finally {
+      setFeedbackSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <Layout title={t('common.loading')}>
@@ -286,6 +339,32 @@ export function VirtualLoverChatPage() {
           ) : null}
           <div ref={chatEndRef} />
         </div>
+
+        {usedModel ? (
+          <div className="model-feedback-row">
+            <span className="model-name-label">Model: <strong>{usedModel}</strong></span>
+            <div className="feedback-buttons">
+              <button
+                type="button"
+                className={`feedback-btn ${feedback === 'like' ? 'feedback-btn-active' : ''}`}
+                onClick={() => void handleFeedback('like')}
+                disabled={feedbackSaving}
+                title="Like"
+              >
+                👍
+              </button>
+              <button
+                type="button"
+                className={`feedback-btn ${feedback === 'dislike' ? 'feedback-btn-active' : ''}`}
+                onClick={() => void handleFeedback('dislike')}
+                disabled={feedbackSaving}
+                title="Dislike"
+              >
+                👎
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="chat-input-row">
           <textarea
