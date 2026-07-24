@@ -54,17 +54,29 @@ export function VirtualLoverChatPage() {
 
       setCharacter(data)
 
-      // Load existing chat history
-      const { data: chatData } = await supabase
+      // Load all chat rows, merge messages in chronological order
+      const { data: chatRows } = await supabase
         .from('ai_chats')
         .select('messages')
         .eq('character_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .order('created_at', { ascending: true })
 
-      if (chatData?.messages) {
-        setMessages(chatData.messages as ChatMessage[])
+      if (chatRows && chatRows.length > 0) {
+        const allMessages: ChatMessage[] = []
+        const seen = new Set<string>()
+        for (const row of chatRows) {
+          const msgs = row.messages as ChatMessage[]
+          if (Array.isArray(msgs)) {
+            for (const msg of msgs) {
+              const key = `${msg.role}|${msg.content}`
+              if (!seen.has(key)) {
+                seen.add(key)
+                allMessages.push(msg)
+              }
+            }
+          }
+        }
+        setMessages(allMessages)
       }
 
       setLoading(false)
@@ -157,6 +169,18 @@ export function VirtualLoverChatPage() {
       setMessage(err instanceof Error ? err.message : 'Error during chat')
     } finally {
       setStreaming(false)
+      // Save full conversation after streaming completes
+      if (character?.id && assistantContent) {
+        const finalMessages: ChatMessage[] = [
+          ...messages.filter(m => m.content),
+          { role: 'user', content: userMessage.content },
+          { role: 'assistant', content: assistantContent },
+        ]
+        await supabase.from('ai_chats').insert({
+          character_id: character.id,
+          messages: finalMessages,
+        }).select().maybeSingle()
+      }
     }
   }
 
