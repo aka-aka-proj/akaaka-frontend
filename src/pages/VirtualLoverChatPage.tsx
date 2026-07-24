@@ -164,14 +164,12 @@ export function VirtualLoverChatPage() {
         throw new Error(`HTTP ${response.status}`)
       }
 
-      const modelName = response.headers.get('X-Model-Used') || ''
-      setUsedModel(modelName)
-
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No response body')
 
       const decoder = new TextDecoder()
       let buffer = ''
+      let firstEvent = true
 
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
@@ -194,6 +192,15 @@ export function VirtualLoverChatPage() {
 
           try {
             const parsed = JSON.parse(jsonStr)
+
+            // First event carries model metadata
+            if (firstEvent && parsed.type === 'meta') {
+              if (parsed.model) setUsedModel(parsed.model)
+              firstEvent = false
+              continue
+            }
+            firstEvent = false
+
             const delta = parsed?.choices?.[0]?.delta
             if (!delta) continue
 
