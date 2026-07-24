@@ -9,11 +9,25 @@ interface AiCharacter {
   id: string
   name: string
   persona: string
+  memory: string | null
 }
 
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+}
+
+interface UserProfile {
+  display_name: string | null
+  bio: string | null
+  metadata: {
+    gender_identity?: string | null
+    bdsm_roles?: string[] | null
+  } | null
+}
+
+function generateId(): string {
+  return crypto.randomUUID()
 }
 
 export function VirtualLoverChatPage() {
@@ -22,7 +36,9 @@ export function VirtualLoverChatPage() {
   const { t } = useT()
 
   const [character, setCharacter] = useState<AiCharacter | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [sessionId, setSessionId] = useState(generateId)
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -54,11 +70,33 @@ export function VirtualLoverChatPage() {
 
       setCharacter(data)
 
-      // Load all chat rows, merge messages in chronological order
+      // Load user's own profile for context
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, bio, metadata')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (profile) {
+          setUserProfile(profile as unknown as UserProfile)
+        }
+      }
+
+      setLoading(false)
+    }
+
+    void loadCharacter()
+  }, [id, user?.id])
+
+  // Load messages for current session
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!id || !sessionId) return
       const { data: chatRows } = await supabase
         .from('ai_chats')
         .select('messages')
         .eq('character_id', id)
+        .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
 
       if (chatRows && chatRows.length > 0) {
@@ -77,13 +115,13 @@ export function VirtualLoverChatPage() {
           }
         }
         setMessages(allMessages)
+      } else {
+        setMessages([])
       }
-
-      setLoading(false)
     }
 
-    void loadCharacter()
-  }, [id])
+    void loadMessages()
+  }, [id, sessionId])
 
   const sendMessage = async () => {
     if (!input.trim() || streaming || !character) return
@@ -114,6 +152,8 @@ export function VirtualLoverChatPage() {
             name: character.name,
             bio: character.persona,
           },
+          userProfile,
+          sessionMessageCount: messages.length + 1,
         }),
       })
 
@@ -179,10 +219,17 @@ export function VirtualLoverChatPage() {
         ]
         await supabase.from('ai_chats').insert({
           character_id: character.id,
+          session_id: sessionId,
           messages: finalMessages,
         }).select().maybeSingle()
       }
     }
+  }
+
+  const startNewConversation = () => {
+    setSessionId(crypto.randomUUID())
+    setMessages([])
+    setMessage('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -211,6 +258,17 @@ export function VirtualLoverChatPage() {
   return (
     <Layout title={t('virtualLover.chatTitle', { name: character.name })}>
       {message ? <p className="message">{message}</p> : null}
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+        {character.memory ? (
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic', margin: 0, flex: 1 }}>
+            🧠 {character.memory}
+          </p>
+        ) : null}
+        <button type="button" onClick={startNewConversation} style={{ flexShrink: 0 }}>
+          + {t('virtualLover.newConversation')}
+        </button>
+      </div>
 
       <div className="chat-container">
         <div className="chat-messages">

@@ -373,6 +373,7 @@ const en = {
     saveSuccess: 'Character created successfully!',
     loadError: 'Error loading characters.',
     personaCount: '{count}/250',
+    newConversation: 'New Conversation',
   },
   admin: {
     moderation: {

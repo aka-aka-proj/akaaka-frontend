@@ -374,6 +374,7 @@ const zhTW = {
     saveSuccess: '角色建立成功！',
     loadError: '載入角色時發生錯誤。',
     personaCount: '{count}/250',
+    newConversation: '新對話',
   },
   admin: {
     moderation: {
