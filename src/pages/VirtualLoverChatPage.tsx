@@ -30,6 +30,22 @@ function generateId(): string {
   return crypto.randomUUID()
 }
 
+function getSessionKey(characterId: string): string {
+  return `vl_session_${characterId}`
+}
+
+function loadSessionId(characterId: string): string {
+  const stored = localStorage.getItem(getSessionKey(characterId))
+  if (stored) return stored
+  const fresh = generateId()
+  localStorage.setItem(getSessionKey(characterId), fresh)
+  return fresh
+}
+
+function saveSessionId(characterId: string, sessionId: string) {
+  localStorage.setItem(getSessionKey(characterId), sessionId)
+}
+
 export function VirtualLoverChatPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
@@ -38,7 +54,7 @@ export function VirtualLoverChatPage() {
   const [character, setCharacter] = useState<AiCharacter | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [sessionId, setSessionId] = useState(generateId)
+  const [sessionId, setSessionId] = useState<string>('')
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -69,6 +85,10 @@ export function VirtualLoverChatPage() {
       }
 
       setCharacter(data)
+
+      // Restore or create session ID for this character
+      const sid = loadSessionId(data.id)
+      setSessionId(sid)
 
       // Load user's own profile for context
       if (user?.id) {
@@ -227,9 +247,13 @@ export function VirtualLoverChatPage() {
   }
 
   const startNewConversation = () => {
-    setSessionId(crypto.randomUUID())
+    const newId = crypto.randomUUID()
+    setSessionId(newId)
     setMessages([])
     setMessage('')
+    if (character) {
+      saveSessionId(character.id, newId)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
