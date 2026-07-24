@@ -743,6 +743,21 @@ dd {
   border-color: #0ea5e9;
 }
 
+.shuffle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0 0.25rem;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.shuffle-btn:hover {
+  opacity: 1;
+}
+
 @media (max-width: 639px) {
   .chat-container {
     height: calc(100vh - 12rem);

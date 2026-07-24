@@ -44,12 +44,6 @@ export function VirtualLoverChatPage() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  console.log('[chat] render, usedModel:', JSON.stringify(usedModel))
-
-  useEffect(() => {
-    console.log('[chat] usedModel state changed:', usedModel)
-  }, [usedModel])
-
   const scrollToBottom = useCallback(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
@@ -137,8 +131,24 @@ export function VirtualLoverChatPage() {
       }
     }
 
+    const pickRandomModel = async () => {
+      if (!id) return
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+        const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
+          headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+        })
+        const data = await res.json()
+        if (data.model) setUsedModel(data.model)
+      } catch {
+        // silently fail, model will be set from SSE later
+      }
+    }
+
     void loadCharacter()
     void loadFeedback()
+    void pickRandomModel()
   }, [id, user?.id])
 
   const sendMessage = async () => {
@@ -181,6 +191,7 @@ export function VirtualLoverChatPage() {
           },
           userProfile,
           sessionMessageCount: messages.length + 1,
+          preferredModel: usedModel || undefined,
         }),
       })
 
@@ -218,15 +229,9 @@ export function VirtualLoverChatPage() {
             const parsed = JSON.parse(jsonStr)
 
             // Extract model name from the first SSE event (OpenRouter includes it)
-            if (!modelExtracted) {
-              console.log('[chat] SSE event keys:', Object.keys(parsed), 'model:', parsed.model)
-              if (parsed.model) {
-                console.log('[chat] model extracted:', parsed.model)
-                setUsedModel(parsed.model)
-                modelExtracted = true
-              } else {
-                console.log('[chat] no model field in first event, full:', JSON.stringify(parsed).slice(0, 200))
-              }
+            if (!modelExtracted && parsed.model) {
+              setUsedModel(parsed.model)
+              modelExtracted = true
             }
 
             const delta = parsed?.choices?.[0]?.delta
@@ -279,6 +284,23 @@ export function VirtualLoverChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       void sendMessage()
+    }
+  }
+
+  const handleShuffle = async () => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+      const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
+        headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+      })
+      const data = await res.json()
+      if (data.model) {
+        setUsedModel(data.model)
+        setFeedback(null)
+      }
+    } catch {
+      // silently fail
     }
   }
 
@@ -379,31 +401,38 @@ export function VirtualLoverChatPage() {
           <div ref={chatEndRef} />
         </div>
 
-        {usedModel ? (
-          <div className="model-feedback-row">
-            <span className="model-name-label">Model: <strong>{usedModel}</strong></span>
-            <div className="feedback-buttons">
-              <button
-                type="button"
-                className={`feedback-btn ${feedback === 'like' ? 'feedback-btn-active' : ''}`}
-                onClick={() => void handleFeedback('like')}
-                disabled={feedbackSaving}
-                title="Like"
-              >
-                👍
-              </button>
-              <button
-                type="button"
-                className={`feedback-btn ${feedback === 'dislike' ? 'feedback-btn-active' : ''}`}
-                onClick={() => void handleFeedback('dislike')}
-                disabled={feedbackSaving}
-                title="Dislike"
-              >
-                👎
-              </button>
-            </div>
+        <div className="model-feedback-row">
+          <span className="model-name-label">
+            {usedModel ? (
+              <>
+                Model: <strong>{usedModel}</strong>
+                <button type="button" className="shuffle-btn" onClick={handleShuffle} title="隨機更換模型">🔀</button>
+              </>
+            ) : (
+              <span style={{ color: '#9ca3af' }}>載入模型中...</span>
+            )}
+          </span>
+          <div className="feedback-buttons">
+            <button
+              type="button"
+              className={`feedback-btn ${feedback === 'like' ? 'feedback-btn-active' : ''}`}
+              onClick={() => void handleFeedback('like')}
+              disabled={feedbackSaving || !usedModel}
+              title="Like"
+            >
+              👍
+            </button>
+            <button
+              type="button"
+              className={`feedback-btn ${feedback === 'dislike' ? 'feedback-btn-active' : ''}`}
+              onClick={() => void handleFeedback('dislike')}
+              disabled={feedbackSaving || !usedModel}
+              title="Dislike"
+            >
+              👎
+            </button>
           </div>
-        ) : null}
+        </div>
 
         <div className="chat-input-row">
           <textarea
