@@ -162,7 +162,7 @@ export function VirtualLoverChatPage() {
 
       const decoder = new TextDecoder()
       let buffer = ''
-      let firstEvent = true
+      let modelExtracted = false
 
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
@@ -186,13 +186,17 @@ export function VirtualLoverChatPage() {
           try {
             const parsed = JSON.parse(jsonStr)
 
-            // First event carries model metadata
-            if (firstEvent && parsed.type === 'meta') {
-              if (parsed.model) setUsedModel(parsed.model)
-              firstEvent = false
-              continue
+            // Extract model name from the first SSE event (OpenRouter includes it)
+            if (!modelExtracted) {
+              console.log('[chat] SSE event keys:', Object.keys(parsed), 'model:', parsed.model)
+              if (parsed.model) {
+                console.log('[chat] model extracted:', parsed.model)
+                setUsedModel(parsed.model)
+                modelExtracted = true
+              } else {
+                console.log('[chat] no model field in first event, full:', JSON.stringify(parsed).slice(0, 200))
+              }
             }
-            firstEvent = false
 
             const delta = parsed?.choices?.[0]?.delta
             if (!delta) continue
