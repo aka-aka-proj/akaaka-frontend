@@ -26,26 +26,6 @@ interface UserProfile {
   } | null
 }
 
-function generateId(): string {
-  return crypto.randomUUID()
-}
-
-function getSessionKey(characterId: string): string {
-  return `vl_session_${characterId}`
-}
-
-function loadSessionId(characterId: string): string {
-  const stored = localStorage.getItem(getSessionKey(characterId))
-  if (stored) return stored
-  const fresh = generateId()
-  localStorage.setItem(getSessionKey(characterId), fresh)
-  return fresh
-}
-
-function saveSessionId(characterId: string, sessionId: string) {
-  localStorage.setItem(getSessionKey(characterId), sessionId)
-}
-
 export function VirtualLoverChatPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
@@ -54,7 +34,6 @@ export function VirtualLoverChatPage() {
   const [character, setCharacter] = useState<AiCharacter | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [sessionId, setSessionId] = useState<string>('')
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -86,10 +65,6 @@ export function VirtualLoverChatPage() {
 
       setCharacter(data)
 
-      // Restore or create session ID for this character
-      const sid = loadSessionId(data.id)
-      setSessionId(sid)
-
       // Load user's own profile for context
       if (user?.id) {
         const { data: profile } = await supabase
@@ -102,21 +77,11 @@ export function VirtualLoverChatPage() {
         }
       }
 
-      setLoading(false)
-    }
-
-    void loadCharacter()
-  }, [id, user?.id])
-
-  // Load messages for current session
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!id || !sessionId) return
+      // Load all chat history for this character (cross-platform)
       const { data: chatRows } = await supabase
         .from('ai_chats')
         .select('messages')
-        .eq('character_id', id)
-        .eq('session_id', sessionId)
+        .eq('character_id', data.id)
         .order('created_at', { ascending: true })
 
       if (chatRows && chatRows.length > 0) {
@@ -135,13 +100,13 @@ export function VirtualLoverChatPage() {
           }
         }
         setMessages(allMessages)
-      } else {
-        setMessages([])
       }
+
+      setLoading(false)
     }
 
-    void loadMessages()
-  }, [id, sessionId])
+    void loadCharacter()
+  }, [id, user?.id])
 
   const sendMessage = async () => {
     if (!input.trim() || streaming || !character) return
@@ -239,7 +204,6 @@ export function VirtualLoverChatPage() {
         ]
         await supabase.from('ai_chats').insert({
           character_id: character.id,
-          session_id: sessionId,
           messages: finalMessages,
         }).select().maybeSingle()
       }
@@ -247,13 +211,8 @@ export function VirtualLoverChatPage() {
   }
 
   const startNewConversation = () => {
-    const newId = crypto.randomUUID()
-    setSessionId(newId)
     setMessages([])
     setMessage('')
-    if (character) {
-      saveSessionId(character.id, newId)
-    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -284,11 +243,11 @@ export function VirtualLoverChatPage() {
       {message ? <p className="message">{message}</p> : null}
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
-        {character.memory ? (
+        {/* {character.memory ? (
           <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic', margin: 0, flex: 1 }}>
             🧠 {character.memory}
           </p>
-        ) : null}
+        ) : null} */}
         <button type="button" onClick={startNewConversation} style={{ flexShrink: 0 }}>
           + {t('virtualLover.newConversation')}
         </button>
