@@ -112,6 +112,7 @@ export function VirtualLoverChatPage() {
 
       const decoder = new TextDecoder()
       let assistantContent = ''
+      let buffer = ''
 
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
@@ -119,14 +120,38 @@ export function VirtualLoverChatPage() {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        assistantContent += chunk
+        buffer += decoder.decode(value, { stream: true })
 
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
-          return updated
-        })
+        // Parse SSE events from buffer
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? '' // keep incomplete line in buffer
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.startsWith('data: ')) continue
+
+          const jsonStr = trimmed.slice(6)
+          if (jsonStr === '[DONE]') break
+
+          try {
+            const parsed = JSON.parse(jsonStr)
+            const delta = parsed?.choices?.[0]?.delta
+            if (!delta) continue
+
+            // Prefer 'content', fall back to 'reasoning' text
+            const text = delta.content ?? delta.reasoning ?? ''
+            if (!text) continue
+
+            assistantContent += text
+            setMessages((prev) => {
+              const updated = [...prev]
+              updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
+              return updated
+            })
+          } catch {
+            // skip malformed JSON
+          }
+        }
       }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Error during chat')
