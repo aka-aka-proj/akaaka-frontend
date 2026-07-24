@@ -6,7 +6,6 @@ import { Icon } from '../components/Icon'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
-import { useIconTheme } from '../context/IconThemeContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
@@ -31,7 +30,6 @@ export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, profile: currentUserProfile, refreshProfile, identities } = useAuth()
-  const { iconTheme, setIconTheme, syncFromProfile } = useIconTheme()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -106,10 +104,6 @@ export function ProfilePage() {
       .maybeSingle()
     setReportCount(Number(reportStats?.report_count ?? 0))
 
-    if (mapped && isOwner) {
-      syncFromProfile(mapped)
-    }
-
     if (user && targetProfileId) {
       const { data: blockData, error: blockError } = await supabase
         .from('blocks')
@@ -165,7 +159,6 @@ export function ProfilePage() {
           },
           gender_identity: genderIdentity || null,
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : null,
-          icon_theme: iconTheme,
         },
       })
       .eq('id', user.id)
@@ -516,21 +509,6 @@ export function ProfilePage() {
           </section>
           <button type="submit">{t('profile.saveProfile')}</button>
         </form>
-
-        <section className="card">
-          <h3>{t('profile.iconTheme')}</h3>
-          <label>
-            {t('profile.iconThemeLabel')}
-            <select
-              aria-label={t('profile.iconThemeLabel')}
-              value={iconTheme}
-              onChange={(event) => setIconTheme(event.target.value as 'purple' | 'red')}
-            >
-              <option value="purple">{t('profile.iconThemePurple')}</option>
-              <option value="red">{t('profile.iconThemeRed')}</option>
-            </select>
-          </label>
-        </section>
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>

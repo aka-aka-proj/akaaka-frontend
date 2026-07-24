@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useIconTheme, getIconSrc } from '../context/IconThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { locales, type Locale } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -19,7 +18,6 @@ const BOTTOM_NAV_ITEMS = [
 
 export function Layout({ title, children }: { title: string; children: ReactNode }) {
   const { user } = useAuth()
-  const { iconTheme } = useIconTheme()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
@@ -40,7 +38,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
       <header className="topbar">
         <div className="topbar-brand">
           <Link to="/">
-            <img src={getIconSrc(iconTheme, 'logo')} alt="AkaAka" className="logo-img" />
+            <img src="/icons/icon-whole.png" alt="AkaAka" className="logo-img" />
           </Link>
           <span className="topbar-title">{title}</span>
         </div>

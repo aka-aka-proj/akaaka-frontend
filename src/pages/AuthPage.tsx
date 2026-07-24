@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
-import { useIconTheme, getIconSrc } from '../context/IconThemeContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
@@ -22,7 +21,6 @@ type SocialProvider = 'google' | 'facebook' | 'x'
 
 export function AuthPage() {
   const { user } = useAuth()
-  const { iconTheme } = useIconTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useT()
@@ -157,7 +155,7 @@ export function AuthPage() {
     <Layout title={t('auth.title')}>
       {showVerificationPrompt ? (
         <div className="card auth-card">
-          <img src={getIconSrc(iconTheme, 'logoLogin')} alt="AkaAka" width={140} height={140} className="auth-logo" />
+          <img src="/logo-login.svg" alt="AkaAka" width={140} height={140} className="auth-logo" />
           <h2>{t('auth.signUp')}</h2>
           <p className="message">{t('auth.verificationSent')}</p>
           <p className="verification-email">{email}</p>
