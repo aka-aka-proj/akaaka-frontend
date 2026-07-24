@@ -94,6 +94,8 @@ export function VirtualLoverChatPage() {
     setInput('')
     setStreaming(true)
 
+    let assistantContent = ''
+
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -123,7 +125,6 @@ export function VirtualLoverChatPage() {
       if (!reader) throw new Error('No response body')
 
       const decoder = new TextDecoder()
-      let assistantContent = ''
       let buffer = ''
 
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }])

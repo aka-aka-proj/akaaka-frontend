@@ -691,7 +691,8 @@ dd {
 
 @media (max-width: 639px) {
   .chat-container {
-    height: 60vh;
+    height: calc(100vh - 12rem);
+    height: calc(100dvh - 12rem);
   }
 
   .chat-msg {
