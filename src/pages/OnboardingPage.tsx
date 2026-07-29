@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { SafetyCompactModal } from '../components/SafetyCompactModal'
+import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -152,6 +153,7 @@ export function OnboardingPage() {
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
                 </select>
+                <VisibilityTooltip fieldName="bio" />
               </label>
               <label>
                 {t('onboarding.genderIdentityLabel')}
@@ -186,6 +188,7 @@ export function OnboardingPage() {
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
                 </select>
+                <VisibilityTooltip fieldName="gender_identity" />
               </label>
               <fieldset>
                 <legend>{t('onboarding.bdsmRolesLabel')}</legend>
@@ -217,6 +220,7 @@ export function OnboardingPage() {
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
                 </select>
+                <VisibilityTooltip fieldName="bdsm_roles" />
               </label>
               <section>
               <h3>{t('onboarding.externalSocialLinks')}</h3>

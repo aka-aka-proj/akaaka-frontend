@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { ReportForm } from '../components/ReportForm'
+import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
@@ -396,6 +397,7 @@ export function ProfilePage() {
               <option value="connections_only">{t('profile.connectionsOnly')}</option>
               <option value="private">{t('profile.private')}</option>
             </select>
+            <VisibilityTooltip fieldName="bio" />
           </label>
           <label>
             {t('profile.genderIdentityLabel')}
@@ -430,6 +432,7 @@ export function ProfilePage() {
               <option value="connections_only">{t('profile.connectionsOnly')}</option>
               <option value="private">{t('profile.private')}</option>
             </select>
+            <VisibilityTooltip fieldName="gender_identity" />
           </label>
           <fieldset>
             <legend>{t('profile.bdsmRolesLabel')}</legend>
@@ -461,6 +464,7 @@ export function ProfilePage() {
               <option value="connections_only">{t('profile.connectionsOnly')}</option>
               <option value="private">{t('profile.private')}</option>
             </select>
+            <VisibilityTooltip fieldName="bdsm_roles" />
           </label>
           <button type="submit">{t('profile.saveProfile')}</button>
         </form>

@@ -52,6 +52,14 @@ export function SafetyCompactModal({ open, onClose, onAgree }: SafetyCompactModa
 
           <h3>{t('onboarding.compactZeroToleranceTitle')}</h3>
           <p>{t('onboarding.compactZeroToleranceBody')}</p>
+
+          <h3>{t('onboarding.compactPrivacyTitle')}</h3>
+          <ul className="privacy-pledge-list">
+            <li>{t('onboarding.compactPrivacyNoImages')}</li>
+            <li>{t('onboarding.compactPrivacyVisibility')}</li>
+            <li>{t('onboarding.compactPrivacyRLS')}</li>
+            <li>{t('onboarding.compactPrivacyDeletion')}</li>
+          </ul>
         </div>
         <div className="modal-actions">
           <button type="button" className="danger" onClick={() => {

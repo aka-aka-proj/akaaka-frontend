@@ -15,6 +15,7 @@ const BOTTOM_NAV_ITEMS = [
   { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile' },
   { to: '/reports/me', icon: 'nav-reports', labelKey: 'nav.myReports' },
   { to: '/issues', icon: 'nav-reports', labelKey: 'nav.myIssues' },
+  { to: '/settings/security-privacy', icon: 'nav-profile', labelKey: 'nav.securityPrivacy' },
 ] as const
 
 export function Layout({ title, children }: { title: string; children: ReactNode }) {
@@ -52,6 +53,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
             <Link to="/reports/me"><Icon href="/nav-icons.svg" name="nav-reports" size={16} /> {t('nav.myReports')}</Link>
             <Link to="/issues"><Icon href="/nav-icons.svg" name="nav-reports" size={16} /> {t('nav.myIssues')}</Link>
+            <Link to="/settings/security-privacy"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.securityPrivacy')}</Link>
             <label className="lang-switch">
               <Icon href="/nav-icons.svg" name="nav-language" size={16} />
               <select

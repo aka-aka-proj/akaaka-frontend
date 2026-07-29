@@ -20,6 +20,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
 import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
+import { SecurityPrivacyPage } from './pages/SecurityPrivacyPage'
 import { VirtualLoversPage } from './pages/VirtualLoversPage'
 import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
 
@@ -203,6 +204,14 @@ function App() {
         element={
           <ProtectedRoute>
             <VirtualLoverChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/security-privacy"
+        element={
+          <ProtectedRoute>
+            <SecurityPrivacyPage />
           </ProtectedRoute>
         }
       />
