@@ -9,9 +9,9 @@ import { Icon } from './Icon'
 import { MoreMenuDrawer } from './MoreMenuDrawer'
 
 const BOTTOM_NAV_ITEMS = [
-  { to: '/events', icon: 'nav-events', labelKey: 'nav.events' },
-  { to: '/virtual-lovers', icon: 'nav-heart', labelKey: 'virtualLover.title' },
-  { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile' },
+  { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
+  { to: '/virtual-lovers', icon: 'nav-heart', labelKey: 'virtualLover.title', isMore: false },
+  { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile', isMore: false },
   { to: null, icon: 'nav-more', labelKey: 'nav.more', isMore: true },
 ] as const
 
