@@ -22,7 +22,7 @@ const DESKTOP_MORE_ITEMS = [
   { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
 ] as const
 
-export function Layout({ title, children }: { title: string; children: ReactNode }) {
+export function Layout({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
