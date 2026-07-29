@@ -44,6 +44,9 @@ export function ProfilePage() {
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
   const [reportCount, setReportCount] = useState(0)
+  const [createdEventsCount, setCreatedEventsCount] = useState(0)
+  const [completedEventsCount, setCompletedEventsCount] = useState(0)
+  const [joinedEventsCount, setJoinedEventsCount] = useState(0)
   const [message, setMessage] = useState('')
 
   const xProfileUrl = useMemo(() => {
@@ -95,6 +98,29 @@ export function ProfilePage() {
       .eq('profile_id', targetProfileId)
       .maybeSingle()
     setReportCount(Number(reportStats?.report_count ?? 0))
+
+    // Query created events count
+    const { count: createdCount, error: createdErr } = await supabase
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('creator_id', targetProfileId)
+    if (!createdErr) setCreatedEventsCount(createdCount ?? 0)
+
+    // Query completed events count (created events with start_time in the past)
+    const { count: completedCount, error: completedErr } = await supabase
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('creator_id', targetProfileId)
+      .lt('start_time', new Date().toISOString())
+    if (!completedErr) setCompletedEventsCount(completedCount ?? 0)
+
+    // Query joined events count (approved registrations)
+    const { count: joinedCount, error: joinedErr } = await supabase
+      .from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('profile_id', targetProfileId)
+      .eq('status', 'approved')
+    if (!joinedErr) setJoinedEventsCount(joinedCount ?? 0)
 
     if (user && targetProfileId) {
       const { data: blockData, error: blockError } = await supabase
@@ -293,6 +319,20 @@ export function ProfilePage() {
                   <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
                   {' '}{t('profile.reports')}: {reportCount}
                 </Link>
+              </p>
+              <p className="profile-event-stats">
+                <span className="event-stat">
+                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
+                  {' '}{t('profile.createdEvents')}: {createdEventsCount}
+                </span>
+                <span className="event-stat">
+                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
+                  {' '}{t('profile.completedEvents')}: {completedEventsCount}
+                </span>
+                <span className="event-stat">
+                  <Icon href="/action-icons.svg" name="action-thumbsup" size={14} />
+                  {' '}{t('profile.joinedEvents')}: {joinedEventsCount}
+                </span>
               </p>
               {profile.metadata?.gender_identity ? (
                 <p>
