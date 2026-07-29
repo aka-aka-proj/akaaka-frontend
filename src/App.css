@@ -171,17 +171,6 @@ dd {
   justify-content: flex-end;
 }
 
-/* ── Desktop Nav: Create Event Button ── */
-
-.desktop-nav-create {
-  font-weight: 600;
-  color: #0d6efd !important;
-}
-
-.desktop-nav-create:hover {
-  color: #0b5ed7 !important;
-}
-
 /* ── Desktop Nav: More Dropdown ── */
 
 .desktop-more-wrapper {

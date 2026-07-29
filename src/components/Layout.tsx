@@ -71,7 +71,6 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
             <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
-            <Link to="/events/new" className="desktop-nav-create"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
 
             <div className="desktop-more-wrapper" ref={desktopMoreRef}>
               <button
