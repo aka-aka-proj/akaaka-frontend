@@ -29,20 +29,25 @@ export function VirtualLoverCreatePage() {
   const [name, setName] = useState('')
   const [persona, setPersona] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleTemplateClick = (templateKey: string | null) => {
-    if (persona && selectedTemplate !== null && selectedTemplate !== templateKey) {
+    if (dirty && selectedTemplate !== null && selectedTemplate !== templateKey) {
       if (!window.confirm(t('virtualLover.templateConfirmSwitch'))) return
     }
 
     if (templateKey === null) {
       setPersona('')
+      setName('')
       setSelectedTemplate(null)
+      setDirty(false)
     } else {
       setPersona(t(`virtualLover.templates.${templateKey}Content`))
+      setName(t(`virtualLover.templates.${templateKey}`))
       setSelectedTemplate(templateKey)
+      setDirty(false)
     }
   }
 
@@ -129,7 +134,10 @@ export function VirtualLoverCreatePage() {
           <textarea
             aria-label={t('virtualLover.personaLabel')}
             value={persona}
-            onChange={(e) => setPersona(e.target.value)}
+            onChange={(e) => {
+              setPersona(e.target.value)
+              setDirty(true)
+            }}
             maxLength={250}
             placeholder={t('virtualLover.personaPlaceholder')}
             style={{ minHeight: '6rem' }}
