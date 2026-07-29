@@ -261,6 +261,7 @@ const zhTW = {
     loginInfo: '登入資訊',
     loginInfoUserId: 'User ID',
     loginInfoEmail: '電子信箱',
+    connectedAccounts: '已連結的帳號',
     loginInfoPrivate: '僅供自己查看，其他人無法看見',
     recommendations: '推薦留言',
     feedbackTitle: '推薦留言',

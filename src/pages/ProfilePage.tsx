@@ -325,10 +325,12 @@ export function ProfilePage() {
                   <Icon href="/form-icons.svg" name="form-calendar" size={14} />
                   {' '}{t('profile.createdEvents')}: {createdEventsCount}
                 </span>
+                <br />
                 <span className="event-stat">
                   <Icon href="/form-icons.svg" name="form-calendar" size={14} />
                   {' '}{t('profile.completedEvents')}: {completedEventsCount}
                 </span>
+                <br />
                 <span className="event-stat">
                   <Icon href="/action-icons.svg" name="action-thumbsup" size={14} />
                   {' '}{t('profile.joinedEvents')}: {joinedEventsCount}

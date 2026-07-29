@@ -260,6 +260,7 @@ const en = {
     loginInfo: 'Login Info',
     loginInfoUserId: 'User ID',
     loginInfoEmail: 'Email',
+    connectedAccounts: 'Connected accounts',
     loginInfoPrivate: 'Visible only to you — others cannot see this',
     recommendations: 'Recommendation comments',
     feedbackTitle: 'Feedback Comments',
