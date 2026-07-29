@@ -88,10 +88,10 @@ export function VirtualLoversPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {characters.map((char) => (
-              <div key={char.id} className="card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate(`/virtual-lovers/${char.id}/chat`)}>
+              <div key={char.id} className="card vl-card-row" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/virtual-lovers/${char.id}/chat`)}>
                   <strong>{char.name}</strong>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '400px' }}>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {char.persona}
                     </p>
                 </div>

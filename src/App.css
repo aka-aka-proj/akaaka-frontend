@@ -596,6 +596,16 @@ dd {
     overflow-wrap: break-word;
   }
 
+  /* Virtual Lover cards: stack vertically so chat button sits below text */
+  .vl-card-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .vl-card-row > div:first-child {
+    min-width: 0;
+  }
+
   .illustration {
     max-width: 100%;
   }
