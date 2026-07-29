@@ -6,6 +6,14 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
+const TEMPLATE_KEYS = [
+  'gentleMentor',
+  'playfulCompanion',
+  'firmGuardian',
+  'curiousExplorer',
+  'intellectualController',
+] as const
+
 interface AiCharacter {
   id: string
   name: string
@@ -80,6 +88,13 @@ export function VirtualLoversPage() {
     await loadCharacters()
   }
 
+  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const content = e.target.value
+    if (content) {
+      setPersona(content)
+    }
+  }
+
   return (
     <Layout title={t('virtualLover.title')}>
       <section className="card">
@@ -102,6 +117,21 @@ export function VirtualLoversPage() {
                 onChange={(e) => setName(e.target.value)}
                 maxLength={50}
               />
+            </label>
+            <label>
+              <span>{t('virtualLover.templateLabel')}</span>
+              <select
+                aria-label={t('virtualLover.templateLabel')}
+                value={''}
+                onChange={handleTemplateSelect}
+              >
+                <option value="">{t('virtualLover.templatePlaceholder')}</option>
+                {TEMPLATE_KEYS.map((key) => (
+                  <option key={key} value={t(`virtualLover.templates.${key}Content`)}>
+                    {t(`virtualLover.templates.${key}`)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

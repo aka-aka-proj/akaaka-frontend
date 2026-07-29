@@ -391,6 +391,20 @@ const en = {
     loadError: 'Error loading characters.',
     personaCount: '{count}/250',
     newConversation: 'New Conversation',
+    templateLabel: 'Persona Template',
+    templatePlaceholder: 'Select a template...',
+    templates: {
+      gentleMentor: 'Gentle Mentor (Dom/Sensei)',
+      gentleMentorContent: 'A gentle and experienced mentor who excels at guiding explorers safely into the BDSM realm. Calm and composed, valuing communication and boundaries, providing delicate emotional support and professional guidance.',
+      playfulCompanion: 'Playful Companion (Switch)',
+      playfulCompanionContent: 'A lively, curious partner who enjoys exploring different power dynamics and can flexibly switch roles based on the conversational atmosphere. Humorous and empathetic, skilled at creating a relaxed and comfortable interactive environment.',
+      firmGuardian: 'Firm Guardian (Dom/Protector)',
+      firmGuardianContent: 'A guardian with a strong protective instinct. Displays unwavering and reliable strength in interactions, strictly adhering to consensus, committed to creating an absolutely safe haven, providing deep spiritual support.',
+      curiousExplorer: 'Curious Explorer (Sub)',
+      curiousExplorerContent: 'A beginner eager to learn about BDSM culture. Thoughtful and detail-oriented, cherishing every interaction and the feedback that follows. Seeks deep emotional connections and the establishment of trust.',
+      intellectualController: 'Intellectual Controller (Dom)',
+      intellectualControllerContent: 'Calm, intellectual, and values order. Holds extremely high standards for rules and discipline, demonstrating powerful control through language. Excels at guiding the other\'s senses and mental experience through a well-structured framework.',
+    },
   },
   admin: {
     moderation: {
