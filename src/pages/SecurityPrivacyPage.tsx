@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
@@ -17,7 +16,6 @@ interface AuditEntry {
 export function SecurityPrivacyPage() {
   const { user } = useAuth()
   const { t } = useT()
-  const navigate = useNavigate()
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditError, setAuditError] = useState('')
