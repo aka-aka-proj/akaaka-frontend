@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
 
   if (loading || isProfileLoading || isInitialProfileLoad) {
-    return <p>{t('common.loading')}</p>
+    return <main className="page" role="main"><p>{t('common.loading')}</p></main>
   }
 
   if (!user) {

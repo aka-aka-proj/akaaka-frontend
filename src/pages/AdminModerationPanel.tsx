@@ -68,7 +68,7 @@ export function AdminModerationPanel() {
   }, [loading, isAdmin])
 
   if (loading) {
-    return <p>{t('admin.moderation.loading')}</p>
+    return <main className="page" role="main"><p>{t('admin.moderation.loading')}</p></main>
   }
 
   if (!user) {

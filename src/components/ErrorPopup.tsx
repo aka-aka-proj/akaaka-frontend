@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -74,7 +75,7 @@ export function ErrorPopup() {
     }
   }
 
-  return (
+  return createPortal(
     <dialog ref={dialogRef} className="modal" aria-label={t('errorPopup.title')}>
       <div className="modal-content" style={{ maxWidth: '100%' }}>
         <h2 style={{ color: '#b42318' }}>{t('errorPopup.title')}</h2>
@@ -163,6 +164,7 @@ export function ErrorPopup() {
           )}
         </div>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }

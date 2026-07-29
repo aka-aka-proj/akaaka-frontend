@@ -155,6 +155,14 @@ dd {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  color: #1f2937;
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: #0d6efd;
+  text-decoration: underline;
 }
 
 .auth-card {
@@ -427,6 +435,22 @@ dd {
   display: none;
 }
 
+/* ── FAB (Floating Action Button) ── */
+
+.fab {
+  display: none;
+}
+
+/* ── More Drawer ── */
+
+.more-drawer-overlay {
+  display: none;
+}
+
+.more-drawer {
+  display: none;
+}
+
 /* ── Safety Compact Modal ── */
 
 .modal {
@@ -552,11 +576,16 @@ dd {
     gap: 0.15rem;
     padding: 0.5rem 0.25rem;
     text-decoration: none;
-    color: #6b7280;
+    color: #4b5563;
     font-size: 0.625rem;
     min-height: 44px;
+    min-width: 44px;
     -webkit-tap-highlight-color: transparent;
     transition: color 0.15s;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
   }
 
   .bottom-nav-item.active {
@@ -565,6 +594,151 @@ dd {
 
   .bottom-nav-item span {
     line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* ── FAB ── */
+
+  .fab {
+    display: inline-flex;
+    position: fixed;
+    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    right: 1rem;
+    z-index: 99;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    text-decoration: none;
+  }
+
+  .fab:hover {
+    background: #0b5ed7;
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.5);
+  }
+
+  /* ── More Drawer ── */
+
+  .more-drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .more-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 201;
+    background: #fff;
+    border-radius: 1rem 1rem 0 0;
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    max-height: 70vh;
+    overflow-y: auto;
+    animation: drawer-slide-up 0.25s ease-out;
+  }
+
+  @keyframes drawer-slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .more-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .more-drawer-header h2 {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .more-drawer-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: #6b7280;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .more-drawer-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .more-drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    text-decoration: none;
+    color: #1f2937;
+    font-size: 0.9375rem;
+    min-height: 44px;
+    border-radius: 0.5rem;
+    transition: background 0.15s;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .more-drawer-item:hover,
+  .more-drawer-item:focus-visible {
+    background: #f6f8fa;
+  }
+
+  .more-drawer-lang {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .more-drawer-lang select {
+    margin-left: auto;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d0d7de;
+    border-radius: 0.375rem;
+    background: #fff;
+    min-height: 44px;
+  }
+
+  .more-drawer-signout {
+    color: #b42318;
+  }
+
+  .more-drawer-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0.25rem 0;
   }
 
   .row {

@@ -5,6 +5,7 @@ const en = {
     password: 'Password',
     cancelReply: 'Cancel reply',
     remove: 'Remove',
+    language: 'Language',
   },
   errorPopup: {
     title: 'An Error Occurred',
@@ -25,6 +26,7 @@ const en = {
     myIssues: 'Issues',
     signOut: 'Sign out',
     securityPrivacy: 'Security & Privacy',
+    more: 'More',
   },
   auth: {
     title: 'AkaAka Auth',

@@ -23,6 +23,35 @@
     <path d="M7.5 17.5H4.167a.833.833 0 0 1-.834-.833V3.333c0-.46.373-.833.834-.833H7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M13.333 14.167l4.167-4.167-4.167-4.167M17.5 10H7.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
+  <symbol id="nav-more" viewBox="0 0 20 20">
+    <rect x="2.5" y="10.833" width="15" height="1.667" rx="0.833" fill="#aa3bff"/>
+    <rect x="2.5" y="6.667" width="15" height="1.667" rx="0.833" fill="#aa3bff"/>
+    <rect x="2.5" y="15" width="15" height="1.667" rx="0.833" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="nav-calendar" viewBox="0 0 20 20">
+    <rect x="2.5" y="3.333" width="15" height="13.334" rx="2" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M2.5 7.5h15" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M6.667 1.667v3.333M13.333 1.667v3.333" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <circle cx="6.667" cy="11.667" r="1" fill="#aa3bff"/>
+    <circle cx="10" cy="11.667" r="1" fill="#aa3bff"/>
+    <circle cx="13.333" cy="11.667" r="1" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="nav-flag" viewBox="0 0 20 20">
+    <path d="M3.333 2.5v15" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M3.333 2.5h10l-1.666 4.167L13.333 10.833H3.333" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="nav-shield" viewBox="0 0 20 20">
+    <path d="M10 1.667l6.667 2.5v3.75c0 4.417-2.583 8.083-6.667 9.583-4.083-1.5-6.667-5.166-6.667-9.583v-3.75z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 10l1.667 1.667 3.333-3.334" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="nav-lock" viewBox="0 0 20 20">
+    <rect x="4.167" y="9.167" width="11.666" height="8.333" rx="1.667" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M6.667 9.167V6.667a3.333 3.333 0 0 1 6.666 0v2.5" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+    <circle cx="10" cy="13.333" r="1" fill="#aa3bff"/>
+  </symbol>
+  <symbol id="nav-heart" viewBox="0 0 20 20">
+    <path d="M10 17.5l-1.083-.975C4.417 12.583 2 10.417 2 7.75 2 5.583 3.75 3.833 5.917 3.833c1.333 0 2.616.667 3.416 1.667l.667.833.667-.833c.8-1 2.083-1.667 3.416-1.667C16.25 3.833 18 5.583 18 7.75c0 2.667-2.417 4.833-6.917 8.792z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
   <symbol id="nav-language" viewBox="0 0 20 20">
     <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <ellipse cx="10" cy="10" rx="3.333" ry="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>

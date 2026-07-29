@@ -5,6 +5,7 @@ const zhTW = {
     password: '密碼',
     cancelReply: '取消回覆',
     remove: '移除',
+    language: '語言',
   },
   errorPopup: {
     title: '系統發生錯誤',
@@ -25,6 +26,7 @@ const zhTW = {
     myIssues: '問題回報',
     signOut: '登出',
     securityPrivacy: '安全與隱私',
+    more: '更多',
   },
   auth: {
     title: 'AkaAka 登入',

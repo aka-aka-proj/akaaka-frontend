@@ -91,8 +91,14 @@ export function EventsPage() {
 
   return (
     <Layout title={t('events.title')}>
+      {user ? (
+        <Link to="/events/new" className="fab" aria-label={t('events.createEvent')}>
+          <Icon href="/nav-icons.svg" name="nav-create" size={24} />
+        </Link>
+      ) : null}
+
       <section className="card">
-        <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+        <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
 
         <input
           id="search-activities"

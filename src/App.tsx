@@ -33,7 +33,7 @@ function RootRedirect() {
   console.log('RootRedirect: loading=', loading, 'hasOnboarded=', hasOnboarded);
 
   if (loading) {
-    return <p>{t('common.loading')}</p>
+    return <main className="page" role="main"><p>{t('common.loading')}</p></main>
   }
 
   if (!user) return <Navigate to={`/auth?from=${encodeURIComponent(location.pathname)}`} replace state={{ from: location.pathname }} />
