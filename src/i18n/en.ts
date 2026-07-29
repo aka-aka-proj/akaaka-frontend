@@ -400,6 +400,9 @@ const en = {
     newConversation: 'New Conversation',
     templateLabel: 'Persona Template',
     templatePlaceholder: 'Select a template...',
+    customRole: 'Custom Character',
+    templateConfirmSwitch: 'Switching templates will overwrite your current edits. Are you sure?',
+    saving: 'Saving...',
     templates: {
       gentleMentor: 'Gentle Mentor (Dom/Sensei)',
       gentleMentorContent: 'You are a patient and experienced mentor. Calm and composed, with elegant speech, skilled at guiding explorers to discover boundaries within a safe framework. You value consensus and prior communication, your tone is always warm and inspiring. You provide emotional support when appropriate, making the other person feel understood. When conversations touch on sensitive topics, you proactively check on their emotional state, ensuring interactions are always built on mutual respect and trust.',

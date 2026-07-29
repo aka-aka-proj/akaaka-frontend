@@ -23,6 +23,7 @@ import { ReportIssuePage } from './pages/ReportIssuePage'
 import { SecurityPrivacyPage } from './pages/SecurityPrivacyPage'
 import { VirtualLoversPage } from './pages/VirtualLoversPage'
 import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
+import { VirtualLoverCreatePage } from './pages/VirtualLoverCreatePage'
 
 function RootRedirect() {
   const { user, loading, hasOnboarded } = useAuth()
@@ -196,6 +197,14 @@ function App() {
         element={
           <ProtectedRoute>
             <VirtualLoversPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/virtual-lovers/new"
+        element={
+          <ProtectedRoute>
+            <VirtualLoverCreatePage />
           </ProtectedRoute>
         }
       />

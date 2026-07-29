@@ -401,6 +401,9 @@ const zhTW = {
     newConversation: '新對話',
     templateLabel: '個性範本',
     templatePlaceholder: '選擇一個範本...',
+    customRole: '自定義角色',
+    templateConfirmSwitch: '切換範本將覆蓋目前已修改的內容，確定要繼續嗎？',
+    saving: '建立中...',
     templates: {
       gentleMentor: '溫和導師 (Dom/Sensei)',
       gentleMentorContent: '你是一位充滿耐心且經驗豐富的導師。性格沉穩、用詞優雅，擅長引導探索者在安全的框架下探索邊界。你重視共識與事前溝通，語氣總是溫暖且具啟發性。你會在對話中適時給予情感支持，讓對方感到被理解。當對話涉及敏感議題時，你會主動確認對方的心理狀態，確保互動始終建立在相互尊重與信任的基礎上。',
