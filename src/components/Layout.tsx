@@ -65,7 +65,6 @@ export function Layout({ title, children }: { title: string; children: ReactNode
           <Link to="/">
             <img src="/icons/icon-whole.png" alt="AkaAka" className="logo-img" />
           </Link>
-          <span className="topbar-title">{title}</span>
         </div>
         {user ? (
           <nav className="nav desktop-nav">
