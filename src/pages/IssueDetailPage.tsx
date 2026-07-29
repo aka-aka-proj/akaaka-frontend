@@ -90,7 +90,7 @@ export function IssueDetailPage() {
   }
 
   return (
-    <Layout title={t('issues.detail')}>
+    <Layout>
       <section className="card">
         {issue ? (
           <>

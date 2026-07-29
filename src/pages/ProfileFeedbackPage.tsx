@@ -34,7 +34,7 @@ export function ProfileFeedbackPage() {
   }, [id])
 
   return (
-    <Layout title={t('profile.feedbackTitle')}>
+    <Layout>
       <section className="card">
         {loading ? (
           <p>{t('common.loading')}</p>

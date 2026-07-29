@@ -68,7 +68,7 @@ export function VirtualLoversPage() {
   }
 
   return (
-    <Layout title={t('virtualLover.title')}>
+    <Layout>
       <section className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>{t('virtualLover.myCharacters')}</h2>

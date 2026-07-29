@@ -90,7 +90,7 @@ export function EventsPage() {
   }, [events, search, selectedType, selectedRegion, timeFilter, myEventsOnly, user])
 
   return (
-    <Layout title={t('events.title')}>
+    <Layout>
       {user ? (
         <Link to="/events/new" className="fab" aria-label={t('events.createEvent')}>
           <Icon href="/nav-icons.svg" name="nav-create" size={24} />

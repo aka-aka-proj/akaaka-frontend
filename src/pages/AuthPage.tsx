@@ -152,7 +152,7 @@ export function AuthPage() {
   }
 
   return (
-    <Layout title={t('auth.title')}>
+    <Layout>
       {showVerificationPrompt ? (
         <div className="card auth-card">
           <img src="/logo-login.svg" alt="AkaAka" width={140} height={140} className="auth-logo" />

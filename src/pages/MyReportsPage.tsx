@@ -35,7 +35,7 @@ export function MyReportsPage() {
   }, [user?.id])
 
   return (
-    <Layout title={t('myReports.title')}>
+    <Layout>
       <section className="card">
         {message ? <p className="message">{message}</p> : null}
         {reports.length === 0 ? (

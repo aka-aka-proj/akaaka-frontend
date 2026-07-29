@@ -61,7 +61,7 @@ export function AdminRoleUpgrade() {
   }
 
   return (
-    <Layout title={t('admin.roleUpgrade.title')}>
+    <Layout>
       <section className="card">
         <h2>{t('admin.roleUpgrade.heading')}</h2>
         <p>{t('admin.roleUpgrade.description')}</p>

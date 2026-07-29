@@ -329,7 +329,7 @@ export function VirtualLoverChatPage() {
 
   if (loading) {
     return (
-      <Layout title={t('common.loading')}>
+      <Layout>
         <p>{t('common.loading')}</p>
       </Layout>
     )
@@ -337,14 +337,14 @@ export function VirtualLoverChatPage() {
 
   if (!character) {
     return (
-      <Layout title={t('virtualLover.title')}>
+      <Layout>
         <p className="message">{message}</p>
       </Layout>
     )
   }
 
   return (
-    <Layout title={t('virtualLover.chatTitle', { name: character.name })}>
+    <Layout>
       {message ? <p className="message">{message}</p> : null}
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>

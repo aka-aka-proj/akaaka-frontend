@@ -40,7 +40,7 @@ export function IssuesPage() {
   }, [user?.id])
 
   return (
-    <Layout title={t('issues.title')}>
+    <Layout>
       <section className="card">
         <div className="row">
           <h3>{t('issues.myIssues')}</h3>

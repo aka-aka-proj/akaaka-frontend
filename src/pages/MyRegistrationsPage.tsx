@@ -69,7 +69,7 @@ export function MyRegistrationsPage() {
   }
 
   return (
-    <Layout title={t('myRegistrations.title')}>
+    <Layout>
       <section className="card">
         {message ? <p className="message">{message}</p> : null}
         {registrations.length === 0 ? (

@@ -48,7 +48,7 @@ export function ReportIssuePage() {
   }
 
   return (
-    <Layout title={t('issues.reportIssue')}>
+    <Layout>
       <form className="card" onSubmit={submit}>
         <h3>{t('issues.reportIssue')}</h3>
         <label>

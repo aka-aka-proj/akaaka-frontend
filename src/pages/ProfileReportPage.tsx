@@ -52,7 +52,7 @@ export function ProfileReportPage() {
   }
 
   return (
-    <Layout title={t('profile.reportTitle')}>
+    <Layout>
       <section className="card">
         {loading ? (
           <p>{t('common.loading')}</p>

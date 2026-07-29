@@ -45,7 +45,7 @@ export function SecurityPrivacyPage() {
   }, [user?.id])
 
   return (
-    <Layout title={t('securityPrivacy.title')}>
+    <Layout>
       <section className="card">
         <h2 style={{ fontSize: 20, marginBottom: 8 }}>
           <Icon href="/form-icons.svg" name="form-lock" size={20} /> {t('securityPrivacy.storageTitle')}

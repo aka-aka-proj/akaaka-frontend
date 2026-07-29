@@ -280,7 +280,7 @@ export function ProfilePage() {
   }
 
   return (
-    <Layout title={t('profile.title')}>
+    <Layout>
       <section className="card">
         {profile ? (
           <div className="profile-header" style={{position: 'relative'}}>

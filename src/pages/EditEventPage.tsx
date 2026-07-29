@@ -161,7 +161,7 @@ export function EditEventPage() {
 
   if (loading) {
     return (
-      <Layout title={t('editEvent.title')}>
+<Layout>
         <section className="card">
           <p>{t('editEvent.loading')}</p>
         </section>
@@ -170,7 +170,7 @@ export function EditEventPage() {
   }
 
   return (
-    <Layout title={t('editEvent.title')}>
+    <Layout>
       <form className="card" onSubmit={submit}>
         <label className="form-field">
           <span className="form-label-row">

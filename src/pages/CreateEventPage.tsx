@@ -77,7 +77,7 @@ export function CreateEventPage() {
   }
 
   return (
-    <Layout title={t('createEvent.title')}>
+    <Layout>
       <form className="card" onSubmit={submit}>
         <label className="form-field">
           <span className="form-label-row">

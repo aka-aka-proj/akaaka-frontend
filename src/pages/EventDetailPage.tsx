@@ -264,7 +264,7 @@ export function EventDetailPage() {
   }
 
   return (
-    <Layout title={t('eventDetail.title')}>
+    <Layout>
       <section className="card">
         {eventItem ? (
           <>

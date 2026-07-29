@@ -111,7 +111,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <Layout title={t('onboarding.title')}>
+    <Layout>
       <SafetyCompactModal
         open={compactOpen}
         onClose={async () => {

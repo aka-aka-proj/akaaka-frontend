@@ -77,7 +77,7 @@ export function AdminModerationPanel() {
 
   if (!isAdmin) {
     return (
-      <Layout title={t('admin.moderation.title')}>
+<Layout>
         <section className="card">
           <p className="message">{t('admin.moderation.accessDenied')}</p>
         </section>
@@ -135,7 +135,7 @@ export function AdminModerationPanel() {
   }
 
   return (
-    <Layout title={t('admin.moderation.title')}>
+    <Layout>
       {pageMessage ? <p className="message">{pageMessage}</p> : null}
       {reports.length === 0 ? (
         <section className="card">

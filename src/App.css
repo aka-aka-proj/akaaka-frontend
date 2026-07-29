@@ -165,6 +165,12 @@ dd {
   text-decoration: underline;
 }
 
+/* ── Desktop Nav: Right-Aligned Items ── */
+
+.desktop-nav {
+  justify-content: flex-end;
+}
+
 /* ── Desktop Nav: Create Event Button ── */
 
 .desktop-nav-create {

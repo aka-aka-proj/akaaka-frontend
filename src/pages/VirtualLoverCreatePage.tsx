@@ -75,7 +75,7 @@ export function VirtualLoverCreatePage() {
   const personaLength = persona.length
 
   return (
-    <Layout title={t('virtualLover.title')}>
+    <Layout>
       <section className="card">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <button type="button" onClick={() => navigate('/virtual-lovers')} className="btn-back">
