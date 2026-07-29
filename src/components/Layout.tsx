@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -15,6 +15,13 @@ const BOTTOM_NAV_ITEMS = [
   { to: null, icon: 'nav-more', labelKey: 'nav.more', isMore: true },
 ] as const
 
+const DESKTOP_MORE_ITEMS = [
+  { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
+  { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
+  { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
+  { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
+] as const
+
 export function Layout({ title, children }: { title: string; children: ReactNode }) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
@@ -22,6 +29,18 @@ export function Layout({ title, children }: { title: string; children: ReactNode
   const navigate = useNavigate()
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
+  const desktopMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (desktopMoreRef.current && !desktopMoreRef.current.contains(e.target as Node)) {
+        setDesktopMoreOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSignOut = async () => {
     try {
@@ -51,32 +70,62 @@ export function Layout({ title, children }: { title: string; children: ReactNode
         {user ? (
           <nav className="nav desktop-nav">
             <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
-            <Link to="/events/new"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
             <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
-            <Link to="/registrations/me"><Icon href="/nav-icons.svg" name="nav-calendar" size={16} /> {t('nav.myRegistrations')}</Link>
             <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
-            <Link to="/reports/me"><Icon href="/nav-icons.svg" name="nav-shield" size={16} /> {t('nav.myReports')}</Link>
-            <Link to="/issues"><Icon href="/nav-icons.svg" name="nav-flag" size={16} /> {t('nav.myIssues')}</Link>
-            <Link to="/settings/security-privacy"><Icon href="/nav-icons.svg" name="nav-lock" size={16} /> {t('nav.securityPrivacy')}</Link>
-            <label className="lang-switch">
-              <Icon href="/nav-icons.svg" name="nav-language" size={16} />
-              <select
-                id="language-select-desktop"
-                name="language"
-                aria-label="Language"
-                value={locale}
-                onChange={(e) => setLocale(e.target.value as Locale)}
+            <Link to="/events/new" className="desktop-nav-create"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('nav.createEvent')}</Link>
+
+            <div className="desktop-more-wrapper" ref={desktopMoreRef}>
+              <button
+                type="button"
+                className={`desktop-nav-more-btn${desktopMoreOpen ? ' active' : ''}`}
+                onClick={() => setDesktopMoreOpen((v) => !v)}
+                aria-haspopup="true"
+                aria-expanded={desktopMoreOpen}
               >
-                {locales.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" onClick={() => void handleSignOut()}>
-              <Icon href="/nav-icons.svg" name="nav-logout" size={16} /> {t('nav.signOut')}
-            </button>
+                <Icon href="/nav-icons.svg" name="nav-more" size={16} /> {t('nav.more')}
+              </button>
+              {desktopMoreOpen && (
+                <div className="desktop-more-dropdown" role="menu">
+                  {DESKTOP_MORE_ITEMS.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="desktop-more-dropdown-item"
+                      role="menuitem"
+                      onClick={() => setDesktopMoreOpen(false)}
+                    >
+                      <Icon href="/nav-icons.svg" name={item.icon} size={16} />
+                      <span>{t(item.labelKey)}</span>
+                    </Link>
+                  ))}
+                  <div className="desktop-more-divider" />
+                  <div className="desktop-more-dropdown-item desktop-more-lang">
+                    <Icon href="/nav-icons.svg" name="nav-language" size={16} />
+                    <select
+                      value={locale}
+                      onChange={(e) => setLocale(e.target.value as Locale)}
+                      aria-label="Language"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {locales.map((l) => (
+                        <option key={l.value} value={l.value}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="desktop-more-dropdown-item desktop-more-signout"
+                    role="menuitem"
+                    onClick={() => { void handleSignOut(); setDesktopMoreOpen(false) }}
+                  >
+                    <Icon href="/nav-icons.svg" name="nav-logout" size={16} />
+                    <span>{t('nav.signOut')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
         ) : (
           <label className="lang-switch desktop-only">
