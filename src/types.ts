@@ -2,6 +2,10 @@ export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 
+export type TaiwanRegion = 'North' | 'Central' | 'South' | 'East' | 'Islands' | 'Online'
+
+export const TAIWAN_REGIONS: TaiwanRegion[] = ['North', 'Central', 'South', 'East', 'Islands', 'Online']
+
 export type GenderIdentity =
   | 'man'
   | 'woman'
@@ -61,6 +65,8 @@ export interface EventItem {
   is_venue_hosted: boolean
   visibility_settings: { type?: Visibility } | null
   start_time: string
+  location_region: TaiwanRegion | null
+  location_detail: string | null
   max_capacity: number | null
   registration_deadline: string | null
   created_at: string

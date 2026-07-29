@@ -6,7 +6,8 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem } from '../types'
+import type { EventItem, TaiwanRegion } from '../types'
+import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
 
@@ -20,6 +21,8 @@ export function EditEventPage() {
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState<string[]>([])
   const [startTime, setStartTime] = useState('')
+  const [locationRegion, setLocationRegion] = useState<TaiwanRegion | ''>('')
+  const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
@@ -66,6 +69,8 @@ export function EditEventPage() {
       setEventType(parseEventTypes(event.event_type))
 
       setStartTime(event.start_time ? toLocalDatetime(event.start_time) : '')
+      setLocationRegion((event.location_region ?? '') as TaiwanRegion | '')
+      setLocationDetail(event.location_detail ?? '')
       setMaxCapacity(event.max_capacity?.toString() ?? '')
       setRegistrationDeadline(event.registration_deadline ? toLocalDatetime(event.registration_deadline) : '')
       setIsVenueHosted(event.is_venue_hosted)
@@ -112,7 +117,7 @@ export function EditEventPage() {
       return
     }
 
-    if (!title.trim() || !startTime) {
+    if (!title.trim() || !startTime || !locationRegion) {
       setMessage(t('editEvent.titleRequired'))
       return
     }
@@ -132,6 +137,8 @@ export function EditEventPage() {
         description: description.trim() || null,
         event_type: stringifyEventTypes(eventType),
         start_time: new Date(startTime).toISOString(),
+        location_region: locationRegion,
+        location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,
         visibility_settings: { type: visibilityType },
         max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
@@ -226,6 +233,36 @@ export function EditEventPage() {
             onChange={(event) => setStartTime(event.target.value)}
           />
         </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('editEvent.locationRegionLabel')}
+          </span>
+          <select
+            aria-label={t('editEvent.locationRegionLabel')}
+            value={locationRegion}
+            onChange={(event) => setLocationRegion(event.target.value as TaiwanRegion | '')}
+          >
+            <option value="" disabled>{t('editEvent.locationRegionPlaceholder')}</option>
+            {TAIWAN_REGIONS.map((region) => (
+              <option key={region} value={region}>
+                {t(`events.region${region}` as any)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {locationRegion && locationRegion !== 'Online' && (
+          <label className="form-field">
+            <span className="form-label-row">
+              <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('editEvent.locationDetailLabel')}
+            </span>
+            <input
+              aria-label={t('editEvent.locationDetailLabel')}
+              placeholder={t('editEvent.locationDetailPlaceholder')}
+              value={locationDetail}
+              onChange={(event) => setLocationDetail(event.target.value)}
+            />
+          </label>
+        )}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.maxCapacityLabel')}

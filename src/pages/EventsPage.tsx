@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import { useAuth } from '../context/AuthContext'
 import { canSeeEvent } from '../lib/event-visibility'
 import { parseEventTypes } from '../lib/event-utils'
-import type { EventItem } from '../types'
+import type { EventItem, TaiwanRegion } from '../types'
+import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
 
@@ -18,6 +19,7 @@ export function EventsPage() {
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [selectedRegion, setSelectedRegion] = useState<TaiwanRegion | null>(null)
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [myEventsOnly, setMyEventsOnly] = useState(false)
 
@@ -60,12 +62,17 @@ export function EventsPage() {
       if (q) {
         const titleMatch = event.title.toLowerCase().includes(q)
         const descMatch = (event.description ?? '').toLowerCase().includes(q)
-        if (!titleMatch && !descMatch) return false
+        const locDetailMatch = (event.location_detail ?? '').toLowerCase().includes(q)
+        if (!titleMatch && !descMatch && !locDetailMatch) return false
       }
 
       if (selectedType !== null) {
         const eventTypes = parseEventTypes(event.event_type)
         if (!eventTypes.includes(selectedType)) return false
+      }
+
+      if (selectedRegion !== null) {
+        if (event.location_region !== selectedRegion) return false
       }
 
       if (timeFilter === 'upcoming') {
@@ -80,7 +87,7 @@ export function EventsPage() {
 
       return true
     })
-  }, [events, search, selectedType, timeFilter, myEventsOnly, user])
+  }, [events, search, selectedType, selectedRegion, timeFilter, myEventsOnly, user])
 
   return (
     <Layout title={t('events.title')}>
@@ -122,6 +129,27 @@ export function EventsPage() {
             </div>
           </>
         )}
+
+        <h3>{t('events.regionLabel')}</h3>
+        <div className="chip-group">
+          <button
+            type="button"
+            className={`chip${selectedRegion === null ? ' chip-active' : ''}`}
+            onClick={() => setSelectedRegion(null)}
+          >
+            {t('events.allRegions')}
+          </button>
+          {TAIWAN_REGIONS.map((region) => (
+            <button
+              key={region}
+              type="button"
+              className={`chip${selectedRegion === region ? ' chip-active' : ''}`}
+              onClick={() => setSelectedRegion(selectedRegion === region ? null : region)}
+            >
+              {t(`events.region${region}` as any)}
+            </button>
+          ))}
+        </div>
 
         <h3>{t('events.timeLabel')}</h3>
         <div className="chip-group">
@@ -176,6 +204,9 @@ export function EventsPage() {
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
                 <p>{event.description ?? t('events.noDescription')}</p>
                 <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('events.startTimeLabel')} {new Date(event.start_time).toLocaleString()}</p>
+                {event.location_region ? (
+                  <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</p>
+                ) : null}
               </li>
             ))}
           </ul>

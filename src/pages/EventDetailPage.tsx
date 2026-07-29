@@ -294,6 +294,9 @@ export function EventDetailPage() {
               </span>
             </p>
             <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.startTimeLabel')}: {new Date(eventItem.start_time).toLocaleString()}</p>
+            {eventItem.location_region ? (
+              <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</p>
+            ) : null}
             {eventItem.max_capacity ? (
               <p>{t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</p>
             ) : null}

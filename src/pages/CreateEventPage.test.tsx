@@ -48,12 +48,14 @@ describe('CreateEventPage', () => {
 
     await user.type(screen.getByLabelText('標題'), 'My Event')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('button', { name: '儲存活動' }))
 
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
         title: 'My Event',
         is_venue_hosted: false,
+        location_region: 'North',
       }),
     ])
   })
@@ -73,12 +75,15 @@ describe('CreateEventPage', () => {
 
     await user.type(screen.getByLabelText('標題'), 'Approved Event')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByLabelText('場地主辦'))
     await user.click(screen.getByRole('button', { name: '儲存活動' }))
 
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
         title: 'Approved Event',
         is_venue_hosted: true,
+        location_region: 'North',
       }),
     ])
   })

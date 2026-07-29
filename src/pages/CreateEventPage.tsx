@@ -8,6 +8,8 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { EVENT_TYPES } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
+import { TAIWAN_REGIONS } from '../types'
+import type { TaiwanRegion } from '../types'
 
 export function CreateEventPage() {
   const { user, profile } = useAuth()
@@ -17,6 +19,8 @@ export function CreateEventPage() {
   const [description, setDescription] = useState('')
   const [eventType, setEventType] = useState<string[]>([])
   const [startTime, setStartTime] = useState('')
+  const [locationRegion, setLocationRegion] = useState<TaiwanRegion | ''>('')
+  const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
@@ -37,7 +41,7 @@ export function CreateEventPage() {
       return
     }
 
-    if (!title.trim() || !startTime) {
+    if (!title.trim() || !startTime || !locationRegion) {
       setMessage(t('createEvent.titleRequired'))
       return
     }
@@ -52,6 +56,8 @@ export function CreateEventPage() {
           description: description.trim() || null,
           event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
           start_time: new Date(startTime).toISOString(),
+          location_region: locationRegion,
+          location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },
           max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
@@ -134,6 +140,36 @@ export function CreateEventPage() {
             onChange={(event) => setStartTime(event.target.value)}
           />
         </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationRegionLabel')}
+          </span>
+          <select
+            aria-label={t('createEvent.locationRegionLabel')}
+            value={locationRegion}
+            onChange={(event) => setLocationRegion(event.target.value as TaiwanRegion | '')}
+          >
+            <option value="" disabled>{t('createEvent.locationRegionPlaceholder')}</option>
+            {TAIWAN_REGIONS.map((region) => (
+              <option key={region} value={region}>
+                {t(`events.region${region}` as any)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {locationRegion && locationRegion !== 'Online' && (
+          <label className="form-field">
+            <span className="form-label-row">
+              <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationDetailLabel')}
+            </span>
+            <input
+              aria-label={t('createEvent.locationDetailLabel')}
+              placeholder={t('createEvent.locationDetailPlaceholder')}
+              value={locationDetail}
+              onChange={(event) => setLocationDetail(event.target.value)}
+            />
+          </label>
+        )}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.maxCapacityLabel')}
