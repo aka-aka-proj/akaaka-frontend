@@ -266,6 +266,7 @@ export function EditEventPage() {
             <option value="Practice">{t('createEvent.categoryPractice')}</option>
           </select>
         </label>
+        {locationRegion && locationRegion !== 'Online' && (
         <label className="form-field">
             <span className="form-label-row">
               <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('editEvent.locationDetailLabel')}

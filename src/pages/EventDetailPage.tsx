@@ -10,7 +10,8 @@ import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
-import { parseEventTypes, hasPracticeTag } from '../lib/event-utils'
+import { parseEventTypes } from '../lib/event-utils'
+import { hasPracticeTag } from '../lib/event-types'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
 interface Attendee {
