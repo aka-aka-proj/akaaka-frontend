@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
@@ -9,14 +9,17 @@ import { supabase } from '../supabaseClient'
 import { EVENT_TYPES } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
 import { TAIWAN_REGIONS } from '../types'
-import type { TaiwanRegion } from '../types'
+import type { TaiwanRegion, EventCategory, RegistrationFormField } from '../types'
 
 export function CreateEventPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const { t } = useT()
+  const [searchParams] = useSearchParams()
+  const fromEventId = searchParams.get('from_event_id')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState<EventCategory>('Social')
   const [eventType, setEventType] = useState<string[]>([])
   const [startTime, setStartTime] = useState('')
   const [locationRegion, setLocationRegion] = useState<TaiwanRegion | ''>('')
@@ -25,8 +28,39 @@ export function CreateEventPage() {
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
+  const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false)
+  const [recurrenceFreq, setRecurrenceFreq] = useState<'weekly' | 'monthly'>('weekly')
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+  const [recurrenceDays, setRecurrenceDays] = useState<string[]>([])
+  const [recurrenceCount, setRecurrenceCount] = useState(4)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (fromEventId) {
+      supabase.from('events').select('*').eq('id', fromEventId).single().then(({ data, error }) => {
+        if (!error && data) {
+          setTitle(data.title)
+          setDescription(data.description ?? '')
+          setCategory(data.category || 'Social')
+          if (data.event_type) {
+            try {
+              const parsed = JSON.parse(data.event_type)
+              if (Array.isArray(parsed)) setEventType(parsed)
+            } catch { /* ignore */ }
+          }
+          setLocationRegion((data.location_region ?? '') as TaiwanRegion | '')
+          setLocationDetail(data.location_detail ?? '')
+          setMaxCapacity(data.max_capacity?.toString() ?? '')
+          setRegistrationDeadline(data.registration_deadline ? data.registration_deadline.slice(0, 16) : '')
+          setVisibilityType(data.visibility_settings?.type ?? 'public')
+          setIsVenueHosted(data.is_venue_hosted ?? false)
+          if (data.registration_form_config) setFormFields(data.registration_form_config)
+        }
+      })
+    }
+  }, [fromEventId])
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -54,6 +88,7 @@ export function CreateEventPage() {
           creator_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
+          category,
           event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
           start_time: new Date(startTime).toISOString(),
           location_region: locationRegion,
@@ -62,6 +97,13 @@ export function CreateEventPage() {
           visibility_settings: { type: visibilityType },
           max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
           registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+          registration_form_config: formFields.length > 0 ? formFields : null,
+          recurrence_rule: recurrenceEnabled ? {
+            frequency: recurrenceFreq,
+            interval: recurrenceInterval,
+            days: recurrenceFreq === 'weekly' ? recurrenceDays : undefined,
+            count: recurrenceCount,
+          } : null,
         },
       ])
       .select('id')
@@ -73,12 +115,30 @@ export function CreateEventPage() {
       return
     }
 
+    if (recurrenceEnabled && data) {
+      await supabase.functions.invoke('create-recurring-events', {
+        body: {
+          parent_event_id: data.id,
+          recurrence_rule: {
+            frequency: recurrenceFreq,
+            interval: recurrenceInterval,
+            days: recurrenceFreq === 'weekly' ? recurrenceDays : undefined,
+            count: recurrenceCount,
+          },
+          start_time: new Date(startTime).toISOString(),
+        },
+      })
+    }
+
     navigate(`/events/${data.id}`, { replace: true })
   }
 
   return (
     <Layout>
       <form className="card" onSubmit={submit}>
+        {fromEventId && (
+          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t('createEvent.copyFrom')}</p>
+        )}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
@@ -101,6 +161,20 @@ export function CreateEventPage() {
         </label>
         <label className="form-field">
           <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.categoryLabel')}
+          </span>
+          <select value={category} onChange={(e) => setCategory(e.target.value as EventCategory)}>
+            <option value="Social">{t('createEvent.categorySocial')}</option>
+            <option value="Practice">{t('createEvent.categoryPractice')}</option>
+          </select>
+        </label>
+        {category === 'Practice' && (
+          <p style={{ fontSize: '0.875rem', color: '#92400e', background: '#fffbeb', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+            {t('eventDetail.safetyProtocolDesc')}
+          </p>
+        )}
+        <label className="form-field">
+          <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
           </span>
           <select 
@@ -108,7 +182,7 @@ export function CreateEventPage() {
             defaultValue=""
             style={{ marginBottom: '8px', width: '100%' }}
           >
-            <option value="" disabled>{t('createEvent.selectEventType') || 'Select event type'}</option>
+            <option value="" disabled>{t('createEvent.selectEventType')}</option>
             {EVENT_TYPES.map(type => (
               <option key={type} value={type}>{type}</option>
             ))}
@@ -121,7 +195,7 @@ export function CreateEventPage() {
                   type="button" 
                   onClick={() => setEventType(eventType.filter(t => t !== type))} 
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--text-secondary, #666)' }}
-                  aria-label={t('createEvent.removeType') || 'Remove type'}
+                  aria-label={t('createEvent.removeType')}
                 >
                   &times;
                 </button>
@@ -220,6 +294,70 @@ export function CreateEventPage() {
             <option value="private">{t('createEvent.private')}</option>
           </select>
         </label>
+
+        {/* FormBuilder */}
+        <fieldset className="card" style={{ border: '1px solid #d0d7de' }}>
+          <legend>{t('createEvent.formBuilderLabel')}</legend>
+          {formFields.map((field, idx) => (
+            <div key={field.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>{field.label}</strong>
+                <button type="button" onClick={() => setFormFields(formFields.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}>&times;</button>
+              </div>
+              <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '0.25rem 0' }}>
+                {t(`createEvent.formBuilder${field.type.charAt(0).toUpperCase() + field.type.slice(1)}`)}{field.required ? ` (${t('createEvent.formBuilderFieldRequired')})` : ''}
+              </p>
+            </div>
+          ))}
+          <button type="button" onClick={() => {
+            const label = prompt(t('createEvent.formBuilderFieldLabel'))
+            if (!label) return
+            const typeInput = prompt(t('createEvent.formBuilderFieldType') + ' (text/textarea/select/checkbox/radio)') || 'text'
+            const type = typeInput as RegistrationFormField['type']
+            const required = confirm(t('createEvent.formBuilderFieldRequired'))
+            let options: string[] | undefined
+            if (type === 'select' || type === 'radio') {
+              const opts = prompt(t('createEvent.formBuilderFieldOptions'))
+              if (opts) options = opts.split(',').map(s => s.trim())
+            }
+            setFormFields([...formFields, { id: crypto.randomUUID(), type, label, required, options }])
+          }}>
+            + {t('createEvent.formBuilderAddField')}
+          </button>
+        </fieldset>
+
+        {/* Recurrence */}
+        <label className="checkbox">
+          <input type="checkbox" checked={recurrenceEnabled} onChange={(e) => setRecurrenceEnabled(e.target.checked)} />
+          {t('createEvent.recurrenceLabel')}
+        </label>
+        {recurrenceEnabled && (
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label>
+              {t('createEvent.recurrenceEvery')}
+              <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />
+              <select value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')} style={{ marginLeft: '0.5rem' }}>
+                <option value="weekly">{t('createEvent.recurrenceWeeks')}</option>
+                <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
+              </select>
+            </label>
+            {recurrenceFreq === 'weekly' && (
+              <div className="chip-group">
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
+                  <button key={day} type="button"
+                    className={`chip${recurrenceDays.includes(day) ? ' chip-active' : ''}`}
+                    onClick={() => setRecurrenceDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])}>
+                    {t(`createEvent.recurrence${day}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <label>
+              {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+            </label>
+          </div>
+        )}
+
         <button type="submit" disabled={submitting}>
           <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveEvent')}
         </button>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ShareButton } from '../components/ShareButton'
@@ -10,8 +10,8 @@ import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
-import { parseEventTypes } from '../lib/event-utils'
-import type { EventItem, EventThread, Registration } from '../types'
+import { parseEventTypes, hasPracticeTag } from '../lib/event-utils'
+import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
 interface Attendee {
   profile_id: string
@@ -24,6 +24,7 @@ export function EventDetailPage() {
   const { user } = useAuth()
   const { t } = useT()
   const { showError } = useError()
+  const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
@@ -35,6 +36,9 @@ export function EventDetailPage() {
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
+  const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState<Record<string, unknown>>({})
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
 
@@ -279,6 +283,20 @@ export function EventDetailPage() {
               </div>
             )}
             <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
+            {eventItem && hasPracticeTag(parseEventTypes(eventItem.event_type)) && (
+              <div className="safety-banner">
+                <div className="safety-banner-title">
+                  <Icon href="/action-icons.svg" name="action-shield" size={16} /> {t('eventDetail.safetyProtocolTitle')}
+                </div>
+                <div className="safety-banner-body">
+                  <p>{t('eventDetail.safetyProtocolDesc')}</p>
+                </div>
+                <div className="safety-banner-protocol">
+                  <span className="safety-banner-tag">SSC</span>
+                  <span className="safety-banner-tag">RACK</span>
+                </div>
+              </div>
+            )}
             <p className="event-meta">
               <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
@@ -330,6 +348,25 @@ export function EventDetailPage() {
                 <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
                   <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
                 </Link>
+                {' | '}
+                <button type="button" className="edit-event-link" style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: '#0d6efd', padding: 0 }} onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
+                  <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
+                </button>
+                {eventItem.registration_form_config && (
+                  <>
+                    {' | '}
+                    <button type="button" className="edit-event-link" style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: '#0d6efd', padding: 0 }}
+                      onClick={async () => {
+                        const { data } = await supabase
+                          .from('event_registration_responses')
+                          .select('*, registration:event_registrations!inner(profile_id)')
+                          .in('registration.event_id', [eventItem.id])
+                        if (data) setFormResponses(data as any)
+                      }}>
+                      <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
+                    </button>
+                  </>
+                )}
               </p>
             ) : null}
           </>
@@ -358,6 +395,70 @@ export function EventDetailPage() {
             ) : null}
 
             </div>
+          ) : eventItem.registration_form_config ? (
+            showForm ? (
+              <div>
+                {(eventItem.registration_form_config as RegistrationFormField[]).map((field) => (
+                  <label key={field.id} className="form-field" style={{ marginBottom: '0.5rem' }}>
+                    <span>{field.label}{field.required ? ' *' : ''}</span>
+                    {field.type === 'text' && (
+                      <input value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} placeholder={field.placeholder} />
+                    )}
+                    {field.type === 'textarea' && (
+                      <textarea value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} placeholder={field.placeholder} />
+                    )}
+                    {field.type === 'select' && field.options && (
+                      <select value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})}>
+                        <option value="">--</option>
+                        {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    )}
+                    {field.type === 'checkbox' && (
+                      <label className="checkbox">
+                        <input type="checkbox" checked={!!formData[field.id]} onChange={(e) => setFormData({...formData, [field.id]: e.target.checked})} />
+                        {field.label}
+                      </label>
+                    )}
+                    {field.type === 'radio' && field.options?.map(o => (
+                      <label key={o} className="checkbox">
+                        <input type="radio" name={field.id} value={o} checked={formData[field.id] === o} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} />
+                        {o}
+                      </label>
+                    ))}
+                  </label>
+                ))}
+                <button type="button" disabled={submitting} onClick={async () => {
+                  const fields = eventItem.registration_form_config as RegistrationFormField[]
+                  for (const f of fields) {
+                    if (f.required) {
+                      const val = formData[f.id]
+                      if (val === undefined || val === null || val === '' || val === false) {
+                        showError(`"${f.label}" ${t('eventDetail.fillFormBeforeRegister')}`, null)
+                        return
+                      }
+                    }
+                  }
+                  setSubmitting(true)
+                  const { error } = await supabase.functions.invoke('create-registration', {
+                    body: { event_id: id, form_responses: formData },
+                  })
+                  setSubmitting(false)
+                  if (error) {
+                    showError((error as any).context?.message || error.message, error)
+                    return
+                  }
+                  setShowForm(false)
+                  await load()
+                }}>
+                  {t('eventDetail.register')}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)}>{t('common.cancelReply')}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowForm(true)} disabled={submitting}>
+                {t('eventDetail.register')}
+              </button>
+            )
           ) : (
             <button type="button" onClick={() => void handleRegister()} disabled={submitting}>
               {t('eventDetail.register')}
@@ -458,6 +559,17 @@ export function EventDetailPage() {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {isHost && formResponses.length > 0 ? (
+        <section className="card">
+          <h3>{t('eventDetail.formResponsesTitle')}</h3>
+          {formResponses.map((fr) => (
+            <div key={fr.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
+              <pre style={{ fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>{JSON.stringify(fr.responses, null, 2)}</pre>
+            </div>
+          ))}
         </section>
       ) : null}
 

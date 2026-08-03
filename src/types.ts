@@ -1,6 +1,7 @@
 export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin'
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
+export type EventCategory = 'Social' | 'Practice'
 
 export type TaiwanRegion = 'North' | 'Central' | 'South' | 'East' | 'Islands' | 'Online'
 
@@ -61,9 +62,13 @@ export interface EventItem {
   creator_id: string
   title: string
   description: string | null
+  category: EventCategory
   event_type: string | null
   is_venue_hosted: boolean
   visibility_settings: { type?: Visibility } | null
+  registration_form_config: RegistrationFormField[] | null
+  recurrence_rule: RecurrenceRule | null
+  series_id: string | null
   start_time: string
   location_region: TaiwanRegion | null
   location_detail: string | null
@@ -116,5 +121,29 @@ export interface ReportItem {
   category: 'harassment' | 'impersonation' | 'spam' | 'safety_risk' | 'other'
   details: string
   status: 'open' | 'triaging' | 'resolved' | 'rejected'
+  created_at: string
+}
+
+export interface RegistrationFormField {
+  id: string
+  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio'
+  label: string
+  required: boolean
+  placeholder?: string
+  options?: string[]
+}
+
+export interface RecurrenceRule {
+  frequency: 'weekly' | 'monthly'
+  interval: number
+  days?: string[]
+  count?: number
+  until?: string
+}
+
+export interface RegistrationResponse {
+  id: string
+  registration_id: string
+  responses: Record<string, unknown>
   created_at: string
 }

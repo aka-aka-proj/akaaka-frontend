@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem, TaiwanRegion } from '../types'
+import type { EventItem, EventCategory, TaiwanRegion } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
@@ -27,6 +27,7 @@ export function EditEventPage() {
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
+  const [category, setCategory] = useState<EventCategory>('Social')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
@@ -75,6 +76,7 @@ export function EditEventPage() {
       setRegistrationDeadline(event.registration_deadline ? toLocalDatetime(event.registration_deadline) : '')
       setIsVenueHosted(event.is_venue_hosted)
       setVisibilityType(event.visibility_settings?.type ?? 'public')
+      setCategory(event.category || 'Social')
 
       const { data: regs } = await supabase
         .from('event_registrations')
@@ -135,6 +137,7 @@ export function EditEventPage() {
       .update({
         title: title.trim(),
         description: description.trim() || null,
+        category,
         event_type: stringifyEventTypes(eventType),
         start_time: new Date(startTime).toISOString(),
         location_region: locationRegion,
@@ -248,10 +251,22 @@ export function EditEventPage() {
                 {t(`events.region${region}` as any)}
               </option>
             ))}
+</select>
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.categoryLabel')}
+          </span>
+          <select
+            aria-label={t('editEvent.categoryLabel')}
+            value={category}
+            onChange={(event) => setCategory(event.target.value as EventCategory)}
+          >
+            <option value="Social">{t('createEvent.categorySocial')}</option>
+            <option value="Practice">{t('createEvent.categoryPractice')}</option>
           </select>
         </label>
-        {locationRegion && locationRegion !== 'Online' && (
-          <label className="form-field">
+        <label className="form-field">
             <span className="form-label-row">
               <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('editEvent.locationDetailLabel')}
             </span>

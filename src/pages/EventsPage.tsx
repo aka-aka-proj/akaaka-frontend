@@ -6,11 +6,12 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { canSeeEvent } from '../lib/event-visibility'
-import { parseEventTypes } from '../lib/event-utils'
-import type { EventItem, TaiwanRegion } from '../types'
+import { parseEventTypes, hasPracticeTag, getEffectiveCategory } from '../lib/event-utils'
+import type { EventItem, EventCategory, TaiwanRegion } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
+type CategoryFilter = 'all' | EventCategory
 
 export function EventsPage() {
   const { t } = useT()
@@ -22,6 +23,7 @@ export function EventsPage() {
   const [selectedRegion, setSelectedRegion] = useState<TaiwanRegion | null>(null)
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [myEventsOnly, setMyEventsOnly] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -71,6 +73,11 @@ export function EventsPage() {
         if (!eventTypes.includes(selectedType)) return false
       }
 
+      if (categoryFilter !== 'all') {
+        const eventTypes = parseEventTypes(event.event_type)
+        if (getEffectiveCategory(event.category, eventTypes) !== categoryFilter) return false
+      }
+
       if (selectedRegion !== null) {
         if (event.location_region !== selectedRegion) return false
       }
@@ -87,7 +94,7 @@ export function EventsPage() {
 
       return true
     })
-  }, [events, search, selectedType, selectedRegion, timeFilter, myEventsOnly, user])
+  }, [events, search, selectedType, selectedRegion, timeFilter, myEventsOnly, user, categoryFilter])
 
   return (
     <Layout>
@@ -99,6 +106,30 @@ export function EventsPage() {
 
       <section className="card">
         <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+
+        <div className="category-tabs">
+          <button
+            type="button"
+            className={`category-tab${categoryFilter === 'all' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('all')}
+          >
+            {t('events.categoryAll')}
+          </button>
+          <button
+            type="button"
+            className={`category-tab category-tab-social${categoryFilter === 'Social' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('Social')}
+          >
+            {t('events.categorySocial')}
+          </button>
+          <button
+            type="button"
+            className={`category-tab category-tab-practice${categoryFilter === 'Practice' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('Practice')}
+          >
+            {t('events.categoryPractice')}
+          </button>
+        </div>
 
         <input
           id="search-activities"
@@ -205,16 +236,33 @@ export function EventsPage() {
           <p className="empty-state">{t('events.noResults')}</p>
         ) : (
           <ul>
-            {filtered.map((event) => (
+            {filtered.map((event) => {
+              const eventTypes = parseEventTypes(event.event_type)
+              const effectiveCat = getEffectiveCategory(event.category, eventTypes)
+              return (
               <li key={event.id} className="event-list-item">
                 <Link to={`/events/${event.id}`}>{event.title}</Link>
+                {eventTypes.length > 0 && (
+                  <div className="chip-group" style={{ marginTop: '0.25rem' }}>
+                    {eventTypes.map((type) => {
+                      const isPractice = hasPracticeTag([type]) || effectiveCat === 'Practice'
+                      return (
+                        <span key={type} className={`chip${isPractice ? ' chip-practice' : ' chip-social'}`}>
+                          {isPractice && <Icon href="/action-icons.svg" name="action-shield" size={12} />}
+                          {type}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
                 <p>{event.description ?? t('events.noDescription')}</p>
                 <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('events.startTimeLabel')} {new Date(event.start_time).toLocaleString()}</p>
                 {event.location_region ? (
                   <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</p>
                 ) : null}
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </section>
