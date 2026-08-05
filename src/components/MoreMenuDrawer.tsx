@@ -62,6 +62,11 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
             <span>{t('nav.myReports')}</span>
           </Link>
 
+          <Link to="/settings/analytics" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-chart" size={20} />
+            <span>{t('nav.analytics')}</span>
+          </Link>
+
           <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-lock" size={20} />
             <span>{t('nav.securityPrivacy')}</span>

@@ -57,4 +57,9 @@
     <ellipse cx="10" cy="10" rx="3.333" ry="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <path d="M2.5 10h15M3.333 6.667h13.334M3.333 13.333h13.334" fill="none" stroke="#aa3bff" stroke-width="1" stroke-linecap="round"/>
   </symbol>
+  <symbol id="nav-chart" viewBox="0 0 20 20">
+    <rect x="2.5" y="10" width="3.333" height="6.667" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <rect x="8.333" y="5" width="3.333" height="11.667" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <rect x="14.167" y="7.5" width="3.333" height="9.167" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+  </symbol>
 </svg>

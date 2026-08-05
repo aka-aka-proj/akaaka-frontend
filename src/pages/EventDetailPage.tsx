@@ -4,6 +4,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ShareButton } from '../components/ShareButton'
+import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
@@ -40,6 +41,8 @@ export function EventDetailPage() {
   const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
+  const [shareOpen, setShareOpen] = useState(false)
+  const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
 
@@ -55,7 +58,7 @@ export function EventDetailPage() {
 
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }] =
       await Promise.all([
-        supabase.from('events').select('*, creator:profiles(display_name, reputation_score)').eq('id', id).maybeSingle(),
+        supabase.from('events').select('*, creator:profiles(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
         supabase
           .from('event_threads')
           .select('*, profile:profiles(display_name)')
@@ -211,6 +214,24 @@ export function EventDetailPage() {
     await load()
   }
 
+  const handleCheckIn = async (registrationId: string) => {
+    setSubmitting(true)
+
+    const { error } = await supabase
+      .from('event_registrations')
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq('id', registrationId)
+
+    setSubmitting(false)
+
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+
+    await load()
+  }
+
   const handleReview = async (registrationId: string, action: 'approve' | 'reject' | 'reopen') => {
     if (!id || !user) {
       return
@@ -343,6 +364,11 @@ export function EventDetailPage() {
                 text={eventItem.description ?? ''}
                 url={window.location.href}
               />
+              {isHost ? (
+                <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
+                  {t('shareModal.broadcastToX')}
+                </button>
+              ) : null}
             </div>
             {isHost ? (
               <p>
@@ -392,6 +418,12 @@ export function EventDetailPage() {
             {(myRegistration.status === 'pending' || myRegistration.status === 'approved' || myRegistration.status === 'waitlisted') ? (
               <button type="button" onClick={() => void handleCancelRegistration()} disabled={submitting}>
                 {t('eventDetail.cancelRegistration')}
+              </button>
+            ) : null}
+
+            {myRegistration.status === 'approved' ? (
+              <button type="button" onClick={() => setAttendeeShareOpen(true)} style={{ marginLeft: '0.5rem' }}>
+                {t('shareModal.attendeeAnnounce')}
               </button>
             ) : null}
 
@@ -529,9 +561,18 @@ export function EventDetailPage() {
                           </button>
                         ) : null}
                         {status === 'approved' ? (
-                          <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
-                            {t('eventDetail.forceCancel')}
-                          </button>
+                          <>
+                            {reg.checked_in_at ? (
+                              <span className="chip chip-checked-in">{t('eventDetail.checkedIn')}</span>
+                            ) : (
+                              <button type="button" onClick={() => void handleCheckIn(reg.id)} disabled={submitting}>
+                                {t('eventDetail.checkIn')}
+                              </button>
+                            )}
+                            <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
+                              {t('eventDetail.forceCancel')}
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </li>
@@ -621,6 +662,40 @@ export function EventDetailPage() {
       </section>
 
       {id ? <ReportForm targetEventId={id} /> : null}
+
+      {eventItem ? (
+        <ShareToXModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          templateType="host_broadcast"
+          data={{
+            event: {
+              title: eventItem.title,
+              startTime: new Date(eventItem.start_time).toLocaleString(),
+              region: eventItem.location_region ?? '線上',
+              eventUrl: window.location.href,
+            },
+          }}
+        />
+      ) : null}
+
+      {eventItem && eventItem.creator ? (
+        <ShareToXModal
+          open={attendeeShareOpen}
+          onClose={() => setAttendeeShareOpen(false)}
+          templateType="attendee_announcement"
+          data={{
+            event: {
+              title: eventItem.title,
+              startTime: '',
+              hostName: eventItem.creator.metadata?.twitter_handle
+                ? `@${eventItem.creator.metadata.twitter_handle}`
+                : (eventItem.creator.display_name ?? ''),
+              eventUrl: window.location.href,
+            },
+          }}
+        />
+      ) : null}
     </Layout>
   )
 }

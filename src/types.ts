@@ -86,11 +86,29 @@ export interface Registration {
   profile_id: string
   status: RegistrationStatus
   waitlist_position: number | null
+  waitlist_converted_at: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  checked_in_at: string | null
   created_at: string
   event?: EventItem | null
   profile?: Profile | null
+}
+
+export interface UserStats {
+  hostedEvents: number
+  hostedTags: string[]
+  totalRegistrations: number
+  totalApproved: number
+  approvalRate: number
+  waitlistConversions: number
+  checkedInRegistrations: number
+  attendanceRate: number
+  eventsParticipated: number
+  approvedParticipations: number
+  reputationGained: number
+  reportCount: number
+  exploredTags: string[]
 }
 
 export interface EventThread {

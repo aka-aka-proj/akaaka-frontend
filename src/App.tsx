@@ -21,6 +21,7 @@ import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
 import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
 import { SecurityPrivacyPage } from './pages/SecurityPrivacyPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { VirtualLoversPage } from './pages/VirtualLoversPage'
 import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
 import { VirtualLoverCreatePage } from './pages/VirtualLoverCreatePage'
@@ -221,6 +222,14 @@ function App() {
         element={
           <ProtectedRoute>
             <SecurityPrivacyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/analytics"
+        element={
+          <ProtectedRoute>
+            <AnalyticsPage />
           </ProtectedRoute>
         }
       />

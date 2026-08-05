@@ -19,6 +19,7 @@ const DESKTOP_MORE_ITEMS = [
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
   { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
+  { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
   { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
 ] as const
 
