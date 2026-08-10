@@ -752,12 +752,12 @@ const en = {
     bbq: 'BBQ',
     karaoke: 'Karaoke',
     movie: 'Movie',
-    boardGame: 'BoardGame',
+    boardGame: 'Board Game',
     travel: 'Travel',
-    bookClub: 'BookClub',
+    bookClub: 'Book Club',
     conversation: 'Conversation',
-    speedDating: 'SpeedDating',
-    hangOut: 'HangOut',
+    speedDating: 'Speed Dating',
+    hangOut: 'Hang Out',
   },
 } as const
 

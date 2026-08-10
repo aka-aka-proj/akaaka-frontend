@@ -64,7 +64,8 @@ export const EVENT_TYPE_I18N_KEY_MAP: Record<string, string> = {
 }
 
 export function getEventTypeI18nKey(type: string): string {
-  return `eventTypes.${EVENT_TYPE_I18N_KEY_MAP[type] ?? type}`
+  const key = EVENT_TYPE_I18N_KEY_MAP[type]
+  return key ? `eventTypes.${key}` : type
 }
 
 export function hasPracticeTag(eventType: string[]): boolean {
