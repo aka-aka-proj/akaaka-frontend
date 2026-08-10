@@ -100,7 +100,7 @@ describe('EditProfilePage', () => {
     })
     const metadataQuery = queryBuilder({
       data: {
-        metadata: { external_social_links: [{ platform: 'x', url: 'https://x.com/self' }] },
+        metadata: { twitter_handle: 'self_user', visibility: { bio: 'private' } },
       },
       error: null,
     })
@@ -136,7 +136,7 @@ describe('EditProfilePage', () => {
         display_name: 'Updated User',
         bio: 'Updated bio',
         metadata: {
-          external_social_links: [{ platform: 'x', url: 'https://x.com/self' }],
+          twitter_handle: 'self_user',
           visibility: {
             bio: 'public',
             gender_identity: 'public',
