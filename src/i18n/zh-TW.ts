@@ -731,6 +731,9 @@ const zhTW = {
     mfaRemoved: '驗證器已移除。',
     mfaAlreadyEnabled: '此帳號已啟用驗證器。若要重新設定，請先移除現有驗證器。',
     mfaPending: '已有尚未完成驗證的驗證器設定。請完成或移除它後再重新設定。',
+    mfaVerifySession: '驗證此工作階段',
+    mfaSessionPrompt: '輸入驗證器 App 的一次性驗證碼，提升目前登入工作階段的安全層級。',
+    mfaSessionVerified: '目前工作階段已完成 MFA 驗證。',
   },
 
   visibilityTooltip: {

@@ -26,6 +26,11 @@ interface TotpEnrollment {
   secret: string
 }
 
+interface MfaChallenge {
+  factorId: string
+  challengeId: string
+}
+
 export function SecurityPrivacyPage() {
   const { user } = useAuth()
   const { t } = useT()
@@ -34,7 +39,9 @@ export function SecurityPrivacyPage() {
   const [auditError, setAuditError] = useState('')
   const [mfaFactors, setMfaFactors] = useState<MfaFactor[]>([])
   const [mfaEnrollment, setMfaEnrollment] = useState<TotpEnrollment | null>(null)
+  const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge | null>(null)
   const [mfaCode, setMfaCode] = useState('')
+  const [mfaAssuranceLevel, setMfaAssuranceLevel] = useState('aal1')
   const [mfaLoading, setMfaLoading] = useState(false)
   const [mfaMessage, setMfaMessage] = useState('')
   const [mfaError, setMfaError] = useState('')
@@ -42,12 +49,16 @@ export function SecurityPrivacyPage() {
   const pendingMfaFactors = mfaFactors.filter((factor) => factor.status === 'unverified')
 
   const loadMfaFactors = async () => {
-    const { data, error } = await supabase.auth.mfa.listFactors()
-    if (error) {
-      setMfaError(error.message)
+    const [{ data: factorData, error: factorError }, { data: assuranceData, error: assuranceError }] = await Promise.all([
+      supabase.auth.mfa.listFactors(),
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    ])
+    if (factorError || assuranceError) {
+      setMfaError((factorError ?? assuranceError)?.message ?? 'Unable to load MFA status')
       return
     }
-    setMfaFactors((data?.all ?? []) as MfaFactor[])
+    setMfaFactors((factorData?.all ?? []) as MfaFactor[])
+    setMfaAssuranceLevel(assuranceData?.currentLevel ?? 'aal1')
   }
 
   const loadAuditLogs = async () => {
@@ -121,6 +132,40 @@ export function SecurityPrivacyPage() {
     await loadMfaFactors()
   }
 
+  const beginMfaChallenge = async (factorId: string) => {
+    setMfaLoading(true)
+    setMfaError('')
+    setMfaMessage('')
+    const { data, error } = await supabase.auth.mfa.challenge({ factorId })
+    setMfaLoading(false)
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaChallenge({ factorId, challengeId: data.id })
+    setMfaCode('')
+  }
+
+  const verifyMfaChallenge = async () => {
+    if (!mfaChallenge || !mfaCode.trim()) return
+    setMfaLoading(true)
+    setMfaError('')
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: mfaChallenge.factorId,
+      challengeId: mfaChallenge.challengeId,
+      code: mfaCode.trim(),
+    })
+    setMfaLoading(false)
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaChallenge(null)
+    setMfaCode('')
+    setMfaMessage(t('securityPrivacy.mfaSessionVerified'))
+    await loadMfaFactors()
+  }
+
   const removeMfaFactor = async (factorId: string) => {
     setMfaLoading(true)
     setMfaError('')
@@ -157,11 +202,30 @@ export function SecurityPrivacyPage() {
         {verifiedMfaFactors.map((factor) => (
           <div key={factor.id} className="section-heading-row">
             <span>{factor.friendly_name || t('securityPrivacy.mfaAuthenticator')}</span>
-            <button type="button" onClick={() => void removeMfaFactor(factor.id)} disabled={mfaLoading}>
-              {t('securityPrivacy.mfaRemove')}
-            </button>
+            <div className="section-heading-row">
+              {mfaAssuranceLevel !== 'aal2' ? (
+                <button type="button" onClick={() => void beginMfaChallenge(factor.id)} disabled={mfaLoading}>
+                  {t('securityPrivacy.mfaVerifySession')}
+                </button>
+              ) : <span role="status">{t('securityPrivacy.mfaSessionVerified')}</span>}
+              <button type="button" onClick={() => void removeMfaFactor(factor.id)} disabled={mfaLoading}>
+                {t('securityPrivacy.mfaRemove')}
+              </button>
+            </div>
           </div>
         ))}
+        {mfaChallenge ? (
+          <div className="card" style={{ marginTop: 12 }}>
+            <p>{t('securityPrivacy.mfaSessionPrompt')}</p>
+            <label>
+              {t('securityPrivacy.mfaCode')}
+              <input inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} />
+            </label>
+            <button type="button" onClick={() => void verifyMfaChallenge()} disabled={mfaLoading || !mfaCode.trim()}>
+              {mfaLoading ? t('common.loading') : t('securityPrivacy.mfaVerifySession')}
+            </button>
+          </div>
+        ) : null}
         {verifiedMfaFactors.length > 0 ? (
           <p role="status">{t('securityPrivacy.mfaAlreadyEnabled')}</p>
         ) : !mfaEnrollment ? (

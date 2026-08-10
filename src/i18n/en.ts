@@ -731,6 +731,9 @@ const en = {
     mfaRemoved: 'Authenticator removed.',
     mfaAlreadyEnabled: 'An authenticator is already enabled for this account. Remove it before setting up a new one.',
     mfaPending: 'An unverified authenticator setup already exists. Complete or remove it before starting again.',
+    mfaVerifySession: 'Verify this session',
+    mfaSessionPrompt: 'Enter the one-time code from your authenticator app to raise the assurance level of this session.',
+    mfaSessionVerified: 'This session has completed MFA verification.',
   },
 
   visibilityTooltip: {
