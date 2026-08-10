@@ -283,7 +283,7 @@ export function CreateEventPage() {
   return (
     <Layout>
       <form className="card" onSubmit={submit}>
-        <section className="card" aria-labelledby="ai-organizer-title" style={{ background: '#fff8f5' }}>
+        <section className="card" aria-labelledby="ai-organizer-title" style={{ background: 'var(--color-surface-muted)' }}>
           <h2 id="ai-organizer-title">{t('createEvent.aiOrganizerTitle')}</h2>
           <p>{t('createEvent.aiOrganizerDescription')}</p>
           <textarea
@@ -298,7 +298,7 @@ export function CreateEventPage() {
           </button>
           {aiMessage ? <p className="message">{aiMessage}</p> : null}
         </section>
-        <section className="card" aria-labelledby="event-source-import-title" style={{ background: '#f5f9ff' }}>
+        <section className="card" aria-labelledby="event-source-import-title" style={{ background: 'var(--color-info-surface)' }}>
           <h2 id="event-source-import-title">{t('createEvent.sourceImportTitle')}</h2>
           <p>{t('createEvent.sourceImportDescription')}</p>
           <input
@@ -314,7 +314,7 @@ export function CreateEventPage() {
           {sourcePreview ? <p className="message" role="status">{t('createEvent.sourcePreviewNotice', { provider: sourcePreview.provider })}</p> : null}
         </section>
         {fromEventId && (
-          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t('createEvent.copyFrom')}</p>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{t('createEvent.copyFrom')}</p>
         )}
         <label className="form-field">
           <span className="form-label-row">
@@ -358,7 +358,7 @@ export function CreateEventPage() {
           </select>
         </label>
         {category === 'Practice' && (
-          <p style={{ fontSize: '0.875rem', color: '#92400e', background: '#fffbeb', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', background: 'var(--color-warning-surface)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
             {t('eventDetail.safetyProtocolDesc')}
           </p>
         )}
@@ -578,7 +578,7 @@ export function CreateEventPage() {
           {t('createEvent.recurrenceLabel')}
         </label>
         {recurrenceEnabled && (
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label>
               {t('createEvent.recurrenceEvery')}
               <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />

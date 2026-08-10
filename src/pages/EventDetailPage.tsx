@@ -764,7 +764,7 @@ export function EventDetailPage() {
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
           {formResponses.map((fr) => (
-            <div key={fr.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
+            <div key={fr.id} style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
               <pre style={{ fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>{JSON.stringify(fr.responses, null, 2)}</pre>
             </div>
           ))}
