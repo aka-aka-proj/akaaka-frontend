@@ -33,15 +33,31 @@ describe('NotificationSettingsPage', () => {
       }),
     })
     from.mockImplementation((table: string) => {
-      if (table !== 'event_notification_subscriptions') return {}
+      if (table === 'event_notification_subscriptions') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: [{ event_type: 'Dining', creator_profile_id: 'user-a' }], error: null }),
+          }),
+          insert,
+          delete: deleteSubscription,
+        }
+      }
+      if (table === 'user_follows') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [{ followed_id: 'user-a' }, { followed_id: 'user-b' }], error: null }),
+            }),
+          }),
+        }
+      }
       return {
         select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            not: vi.fn().mockResolvedValue({ data: [{ event_type: 'Dining' }], error: null }),
+          in: vi.fn().mockResolvedValue({
+            data: [{ id: 'user-a', display_name: 'Alice' }, { id: 'user-b', display_name: 'Bob' }],
+            error: null,
           }),
         }),
-        insert,
-        delete: deleteSubscription,
       }
     })
   })
@@ -51,6 +67,7 @@ describe('NotificationSettingsPage', () => {
 
     await waitFor(() => expect((screen.getByRole('checkbox', { name: 'Dining' }) as HTMLInputElement).checked).toBe(true))
     expect((screen.getByRole('checkbox', { name: 'BBQ' }) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByRole('checkbox', { name: 'Alice' }) as HTMLInputElement).checked).toBe(true)
   })
 
   it('creates and removes type subscriptions', async () => {
@@ -66,11 +83,26 @@ describe('NotificationSettingsPage', () => {
     expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', event_type: 'BBQ' })
   })
 
+  it('manages followed-people subscriptions independently from event types', async () => {
+    const user = userEvent.setup()
+    render(<NotificationSettingsPage />)
+
+    const alice = await screen.findByRole('checkbox', { name: 'Alice' })
+    const bob = screen.getByRole('checkbox', { name: 'Bob' })
+    expect((alice as HTMLInputElement).checked).toBe(true)
+
+    await user.click(alice)
+    await user.click(bob)
+
+    expect(deleteSubscription).toHaveBeenCalled()
+    expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', creator_profile_id: 'user-b' })
+  })
+
   it('searches types and supports bulk selection feedback', async () => {
     const user = userEvent.setup()
     render(<NotificationSettingsPage />)
 
-    const search = screen.getByRole('textbox', { name: '搜尋活動類型' })
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型或追蹤的人' })
     await user.type(search, 'Movie')
 
     expect(screen.getByRole('checkbox', { name: 'Movie' })).toBeTruthy()

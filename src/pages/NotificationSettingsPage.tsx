@@ -5,11 +5,18 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 
+type FollowedProfile = {
+  id: string
+  displayName: string
+}
+
 export function NotificationSettingsPage() {
   const { user } = useAuth()
   const { t } = useT()
   const userId = user?.id
   const [subscribedTypes, setSubscribedTypes] = useState<string[]>([])
+  const [subscribedCreators, setSubscribedCreators] = useState<string[]>([])
+  const [followedProfiles, setFollowedProfiles] = useState<FollowedProfile[]>([])
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -21,18 +28,55 @@ export function NotificationSettingsPage() {
 
   useEffect(() => {
     if (!userId) return
-    void supabase
-      .from('event_notification_subscriptions')
-      .select('event_type')
-      .eq('profile_id', userId)
-      .not('event_type', 'is', null)
-      .then(({ data, error }) => {
-        if (error) {
-          setMessage(error.message)
-          return
-        }
-        setSubscribedTypes((data ?? []).map((row) => row.event_type).filter((value): value is string => Boolean(value)))
-      })
+    void (async () => {
+      const [subscriptionsResult, followsResult] = await Promise.all([
+        supabase
+          .from('event_notification_subscriptions')
+          .select('event_type, creator_profile_id')
+          .eq('profile_id', userId),
+        supabase
+          .from('user_follows')
+          .select('followed_id')
+          .eq('follower_id', userId)
+          .order('created_at', { ascending: false }),
+      ])
+
+      if (subscriptionsResult.error) {
+        setMessage(subscriptionsResult.error.message)
+        return
+      }
+      if (followsResult.error) {
+        setMessage(followsResult.error.message)
+        return
+      }
+
+      setSubscribedTypes((subscriptionsResult.data ?? [])
+        .map((row) => row.event_type)
+        .filter((value): value is string => Boolean(value)))
+      setSubscribedCreators((subscriptionsResult.data ?? [])
+        .map((row) => row.creator_profile_id)
+        .filter((value): value is string => Boolean(value)))
+
+      const followedIds = [...new Set((followsResult.data ?? []).map((row) => String(row.followed_id)))]
+      if (followedIds.length === 0) {
+        setFollowedProfiles([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', followedIds)
+
+      if (error) {
+        setMessage(error.message)
+        return
+      }
+
+      const profileMap = new Map((data ?? []).map((row) => [String(row.id), String(row.display_name ?? row.id)]))
+      setFollowedProfiles(followedIds
+        .map((id) => ({ id, displayName: profileMap.get(id) ?? id })))
+    })()
   }, [userId])
 
   const updateTypes = async (eventTypes: readonly string[], enabled: boolean) => {
@@ -61,6 +105,28 @@ export function NotificationSettingsPage() {
     await updateTypes([eventType], !subscribedTypes.includes(eventType))
   }
 
+  const updateCreators = async (profileIds: readonly string[], enabled: boolean) => {
+    if (!user) return
+    setMessage('')
+    setStatus('')
+    const targets = profileIds.filter((profileId) => subscribedCreators.includes(profileId) !== enabled)
+    const results = await Promise.all(targets.map(async (profileId) => {
+      const query = supabase.from('event_notification_subscriptions')
+      return enabled
+        ? query.insert({ profile_id: user.id, creator_profile_id: profileId })
+        : query.delete().eq('profile_id', user.id).eq('creator_profile_id', profileId)
+    }))
+    const failed = results.find((result) => result.error)
+    if (failed?.error) {
+      setMessage(failed.error.message)
+      return
+    }
+    setSubscribedCreators((current) => enabled
+      ? [...new Set([...current, ...targets])]
+      : current.filter((value) => !targets.includes(value)))
+    setStatus(t('notifications.updated'))
+  }
+
   const normalizedSearch = search.trim().toLocaleLowerCase()
 
   return (
@@ -71,7 +137,7 @@ export function NotificationSettingsPage() {
         {message ? <p className="error-message">{message}</p> : null}
         <div className="notification-controls">
           <label className="notification-search">
-            <span>{t('notifications.searchLabel')}</span>
+            <span>{t('notifications.searchAllLabel')}</span>
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('notifications.searchPlaceholder')} />
           </label>
           <div className="notification-bulk-actions">
@@ -100,7 +166,30 @@ export function NotificationSettingsPage() {
             </section>
           )
         })}
-        {normalizedSearch && !categories.some(({ types }) => types.some((eventType) => eventType.toLocaleLowerCase().includes(normalizedSearch))) ? (
+        <section className="notification-category" aria-labelledby="followed-notification-heading">
+          <h2 id="followed-notification-heading">{t('notifications.followedPeopleCategory')}</h2>
+          {followedProfiles.length === 0 ? (
+            <p className="notification-empty-search">{t('notifications.noFollowedPeople')}</p>
+          ) : (
+            <div className="notification-type-grid">
+              {followedProfiles
+                .filter(({ id, displayName }) => {
+                  if (!normalizedSearch) return true
+                  return displayName.toLocaleLowerCase().includes(normalizedSearch) || id.toLocaleLowerCase().includes(normalizedSearch)
+                })
+                .map(({ id, displayName }) => {
+                  const enabled = subscribedCreators.includes(id)
+                  return (
+                    <label key={id} className={`notification-setting-row${enabled ? ' is-selected' : ''}`}>
+                      <span>{displayName}</span>
+                      <input type="checkbox" checked={enabled} aria-label={displayName} onChange={() => void updateCreators([id], !enabled)} />
+                    </label>
+                  )
+                })}
+            </div>
+          )}
+        </section>
+        {normalizedSearch && !categories.some(({ types }) => types.some((eventType) => eventType.toLocaleLowerCase().includes(normalizedSearch))) && !followedProfiles.some(({ id, displayName }) => displayName.toLocaleLowerCase().includes(normalizedSearch) || id.toLocaleLowerCase().includes(normalizedSearch)) ? (
           <p className="notification-empty-search">{t('notifications.noSearchResults')}</p>
         ) : null}
       </section>
