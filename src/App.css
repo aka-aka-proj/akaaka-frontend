@@ -25,16 +25,16 @@
 
 .event-detail-hero > h2 {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-strong);
   font-size: clamp(1.75rem, 3vw, 2.35rem);
   font-weight: 750;
   letter-spacing: -0.025em;
 }
 
 .event-detail-hero > .chip-group .chip {
-  border-color: #c7d2fe;
-  background: #eef2ff;
-  color: #3730a3;
+  border-color: var(--color-info-border);
+  background: var(--color-info-surface);
+  color: var(--color-info);
   font-weight: 600;
 }
 
@@ -44,8 +44,8 @@
 }
 
 .event-admin-section {
-  background: #fbfcfe;
-  border-color: #e2e8f0;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
 }
 
 .event-admin-section--wide,
@@ -87,28 +87,28 @@
 }
 
 .secondary-action {
-  border: 1px solid #cbd5e1;
-  color: #1f2937;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 .secondary-action:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-muted);
 }
 
 .danger-action {
-  border: 1px solid #fecaca;
-  color: #b42318;
-  background: #fff;
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+  background: var(--color-surface);
 }
 
 .danger-action:hover {
-  background: #fef2f2;
+  background: var(--color-danger-surface);
 }
 
 .danger-action-help {
   margin: 0;
-  color: #7f1d1d;
+  color: var(--color-danger);
   font-size: 0.8125rem;
 }
 
@@ -193,7 +193,7 @@ button {
 .onboarding-header h1,
 .onboarding-section-heading h2 {
   margin: 0;
-  color: #172033;
+  color: var(--color-text-strong);
   letter-spacing: -0.02em;
 }
 
@@ -201,13 +201,13 @@ button {
 .onboarding-section-heading p:last-child,
 .onboarding-footer p {
   margin: 0.35rem 0 0;
-  color: #667085;
+  color: var(--color-text-muted);
   line-height: 1.55;
 }
 
 .eyebrow {
   margin: 0 0 0.35rem;
-  color: #6b4fd3;
+  color: var(--color-primary);
   font-size: 0.75rem;
   font-weight: 750;
   letter-spacing: 0.09em;
@@ -219,7 +219,7 @@ button {
   margin-top: 1.25rem;
   overflow: hidden;
   border-radius: 999px;
-  background: #e9e5f7;
+  background: var(--color-info-surface);
 }
 
 .onboarding-progress-bar {
@@ -227,12 +227,12 @@ button {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: #6b4fd3;
+  background: var(--color-primary);
 }
 
 .onboarding-progress-copy {
   margin: 0.4rem 0 0;
-  color: #7a8494;
+  color: var(--color-text-muted);
   font-size: 0.8125rem;
   text-align: right;
 }
@@ -251,7 +251,7 @@ button {
 }
 
 .onboarding-section + .onboarding-section {
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--color-border);
 }
 
 .onboarding-section-heading {
@@ -264,9 +264,9 @@ button {
 
 .onboarding-field-with-visibility {
   padding: 0.75rem;
-  border: 1px solid #edf0f5;
+  border: 1px solid var(--color-border);
   border-radius: 0.65rem;
-  background: #fafbfc;
+  background: var(--color-surface-muted);
 }
 
 .onboarding-field-with-visibility label {
@@ -303,8 +303,8 @@ button {
   flex-direction: column;
   gap: 0.85rem;
   padding: 1.25rem 1.5rem 1.5rem;
-  background: #fafbfc;
-  border-top: 1px solid #edf0f5;
+  background: var(--color-surface-muted);
+  border-top: 1px solid var(--color-border);
 }
 
 .onboarding-footer p {
@@ -316,18 +316,18 @@ button {
   min-height: 3rem;
   border: 0;
   border-radius: 0.6rem;
-  background: #6b4fd3;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-surface);
   font-weight: 700;
 }
 
 .onboarding-submit:hover,
 .onboarding-submit:focus-visible {
-  background: #573db5;
+  background: var(--color-primary-hover);
 }
 
 .message {
-  color: #b42318;
+  color: var(--color-danger);
 }
 
 .form-builder {

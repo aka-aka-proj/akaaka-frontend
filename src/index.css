@@ -6,9 +6,18 @@
   --color-text-strong: #111827;
   --color-text-muted: #64748b;
   --color-primary: #0d6efd;
+  --color-primary-hover: #0b5ed7;
   --color-focus: #8b5cf6;
   --color-border: #d0d7de;
   --color-danger: #b42318;
+  --color-danger-surface: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-info: #3730a3;
+  --color-info-surface: #eef2ff;
+  --color-info-border: #c7d2fe;
+  --color-warning: #92400e;
+  --color-warning-surface: #fffbeb;
+  --color-success: #027a48;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -52,7 +61,7 @@ body {
 }
 
 .privacy-notice__trigger:focus-visible {
-  outline: 3px solid #8b5cf6;
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
