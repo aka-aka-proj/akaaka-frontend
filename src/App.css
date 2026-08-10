@@ -680,6 +680,67 @@ dd {
   border-top: 1px solid #e5e7eb;
 }
 
+.following-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+}
+
+.following-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.following-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.following-profile-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.following-profile-copy strong {
+  font-size: 1.05rem;
+}
+
+.following-profile-copy small {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.following-unfollow {
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .following-toolbar,
+  .following-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .following-unfollow {
+    width: 100%;
+  }
+}
+
 .thread-header {
   display: flex;
   gap: 0.75rem;
@@ -1696,6 +1757,72 @@ dd {
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: 0.6rem;
   margin-top: 1.25rem;
+}
+
+.notification-controls {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.notification-search {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.notification-search input {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0.6rem;
+  font: inherit;
+}
+
+.notification-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.notification-bulk-actions button {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notification-category {
+  margin-top: 1.5rem;
+}
+
+.notification-category h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.notification-setting-row {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.notification-setting-row.is-selected {
+  border-color: #2563eb;
+  background: #eef7ff;
+}
+
+.notification-status {
+  margin: 0.75rem 0 0;
+  color: #16794c;
+  font-size: 0.875rem;
+}
+
+.notification-empty-search {
+  margin-top: 1.5rem;
+  color: var(--muted-text, #6b7280);
 }
 
 .notification-setting-row {
