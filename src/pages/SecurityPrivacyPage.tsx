@@ -13,12 +13,40 @@ interface AuditEntry {
   created_at: string
 }
 
+interface MfaFactor {
+  id: string
+  friendly_name?: string | null
+  status: 'verified' | 'unverified'
+  factor_type: string
+}
+
+interface TotpEnrollment {
+  id: string
+  qr_code: string
+  secret: string
+}
+
 export function SecurityPrivacyPage() {
   const { user } = useAuth()
   const { t } = useT()
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditError, setAuditError] = useState('')
+  const [mfaFactors, setMfaFactors] = useState<MfaFactor[]>([])
+  const [mfaEnrollment, setMfaEnrollment] = useState<TotpEnrollment | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaLoading, setMfaLoading] = useState(false)
+  const [mfaMessage, setMfaMessage] = useState('')
+  const [mfaError, setMfaError] = useState('')
+
+  const loadMfaFactors = async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors()
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaFactors((data?.all ?? []) as MfaFactor[])
+  }
 
   const loadAuditLogs = async () => {
     if (!user) return
@@ -42,7 +70,67 @@ export function SecurityPrivacyPage() {
 
   useEffect(() => {
     void loadAuditLogs()
+    if (user) void loadMfaFactors()
   }, [user?.id])
+
+  const beginMfaEnrollment = async () => {
+    setMfaLoading(true)
+    setMfaError('')
+    setMfaMessage('')
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'AkaAka Authenticator',
+    })
+    setMfaLoading(false)
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaEnrollment({
+      id: data.id,
+      qr_code: data.totp.qr_code,
+      secret: data.totp.secret,
+    })
+  }
+
+  const verifyMfaEnrollment = async () => {
+    if (!mfaEnrollment || !mfaCode.trim()) return
+    setMfaLoading(true)
+    setMfaError('')
+    const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaEnrollment.id })
+    if (challengeError) {
+      setMfaLoading(false)
+      setMfaError(challengeError.message)
+      return
+    }
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: mfaEnrollment.id,
+      challengeId: challenge.id,
+      code: mfaCode.trim(),
+    })
+    setMfaLoading(false)
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaEnrollment(null)
+    setMfaCode('')
+    setMfaMessage(t('securityPrivacy.mfaEnabled'))
+    await loadMfaFactors()
+  }
+
+  const removeMfaFactor = async (factorId: string) => {
+    setMfaLoading(true)
+    setMfaError('')
+    const { error } = await supabase.auth.mfa.unenroll({ factorId })
+    setMfaLoading(false)
+    if (error) {
+      setMfaError(error.message)
+      return
+    }
+    setMfaMessage(t('securityPrivacy.mfaRemoved'))
+    await loadMfaFactors()
+  }
 
   return (
     <Layout>
@@ -55,6 +143,41 @@ export function SecurityPrivacyPage() {
           <li>{t('securityPrivacy.storageSupabase')}</li>
           <li>{t('securityPrivacy.storagePgRls')}</li>
         </ul>
+      </section>
+
+      <section className="card" aria-labelledby="mfa-title">
+        <h2 id="mfa-title" style={{ fontSize: 20, marginBottom: 8 }}>
+          <Icon href="/form-icons.svg" name="form-lock" size={20} /> {t('securityPrivacy.mfaTitle')}
+        </h2>
+        <p>{t('securityPrivacy.mfaDescription')}</p>
+        {mfaError ? <p className="message" role="alert">{mfaError}</p> : null}
+        {mfaMessage ? <p className="message" role="status">{mfaMessage}</p> : null}
+        {mfaFactors.filter((factor) => factor.status === 'verified').map((factor) => (
+          <div key={factor.id} className="section-heading-row">
+            <span>{factor.friendly_name || t('securityPrivacy.mfaAuthenticator')}</span>
+            <button type="button" onClick={() => void removeMfaFactor(factor.id)} disabled={mfaLoading}>
+              {t('securityPrivacy.mfaRemove')}
+            </button>
+          </div>
+        ))}
+        {!mfaEnrollment ? (
+          <button type="button" onClick={() => void beginMfaEnrollment()} disabled={mfaLoading}>
+            {mfaLoading ? t('common.loading') : t('securityPrivacy.mfaAdd')}
+          </button>
+        ) : (
+          <div className="card" style={{ marginTop: 12 }}>
+            <p>{t('securityPrivacy.mfaScanPrompt')}</p>
+            <img src={mfaEnrollment.qr_code} alt={t('securityPrivacy.mfaQrAlt')} width={220} height={220} />
+            <p><strong>{t('securityPrivacy.mfaSecret')}</strong> {mfaEnrollment.secret}</p>
+            <label>
+              {t('securityPrivacy.mfaCode')}
+              <input inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} />
+            </label>
+            <button type="button" onClick={() => void verifyMfaEnrollment()} disabled={mfaLoading || !mfaCode.trim()}>
+              {mfaLoading ? t('common.loading') : t('securityPrivacy.mfaVerify')}
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card">

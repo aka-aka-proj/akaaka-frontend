@@ -716,6 +716,18 @@ const en = {
     auditNoLogs: 'No audit records related to your account yet.',
     auditRoleChange: 'Role change: from {oldStatus} to {newStatus}',
     auditTimestamp: 'Time: {time}',
+    mfaTitle: 'Multi-factor authentication (MFA)',
+    mfaDescription: 'Set up TOTP with an authenticator app. High-risk admin and role-review actions still require server-side MFA enforcement; this page is not an authorization boundary.',
+    mfaAuthenticator: 'Authenticator app',
+    mfaAdd: 'Set up authenticator',
+    mfaRemove: 'Remove authenticator',
+    mfaScanPrompt: 'Scan the QR code with your authenticator app, or enter the secret manually, then enter a one-time code to finish setup.',
+    mfaQrAlt: 'TOTP authenticator setup QR code',
+    mfaSecret: 'Secret:',
+    mfaCode: 'One-time code',
+    mfaVerify: 'Verify and enable',
+    mfaEnabled: 'Multi-factor authentication enabled.',
+    mfaRemoved: 'Authenticator removed.',
   },
 
   visibilityTooltip: {

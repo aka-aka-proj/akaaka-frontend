@@ -716,6 +716,18 @@ const zhTW = {
     auditNoLogs: '尚無與您帳號相關的稽核記錄。',
     auditRoleChange: '角色變更：從 {oldStatus} 變更為 {newStatus}',
     auditTimestamp: '時間：{time}',
+    mfaTitle: '雙重驗證（MFA）',
+    mfaDescription: '可使用驗證器 App 設定 TOTP。高風險管理與角色審核操作仍須由後端 enforce MFA，這個頁面不取代授權檢查。',
+    mfaAuthenticator: '驗證器 App',
+    mfaAdd: '設定驗證器',
+    mfaRemove: '移除驗證器',
+    mfaScanPrompt: '使用驗證器 App 掃描 QR code，或手動輸入 secret，然後輸入一次性驗證碼完成設定。',
+    mfaQrAlt: 'TOTP 驗證器設定 QR code',
+    mfaSecret: 'Secret：',
+    mfaCode: '一次性驗證碼',
+    mfaVerify: '驗證並啟用',
+    mfaEnabled: '雙重驗證已啟用。',
+    mfaRemoved: '驗證器已移除。',
   },
 
   visibilityTooltip: {
