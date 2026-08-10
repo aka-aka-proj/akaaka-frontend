@@ -128,6 +128,13 @@ const en = {
     unfollowSuccess: 'Selected users were unfollowed.',
     empty: 'You are not following anyone yet.',
     noResults: 'No followed users match your search.',
+    explore: 'Explore events',
+    unnamed: 'Unnamed user',
+    unfollowOne: 'Unfollow',
+    confirmTitle: 'Confirm unfollow',
+    confirmDescription: 'Are you sure you want to unfollow {name}?',
+    selectedCount: '{count} selected users',
+    confirmUnfollow: 'Unfollow',
   },
   createEvent: {
     title: 'Create Event',

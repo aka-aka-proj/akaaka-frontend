@@ -128,6 +128,13 @@ const zhTW = {
     unfollowSuccess: '已取消追蹤選取的使用者。',
     empty: '目前沒有追蹤任何使用者。',
     noResults: '找不到符合條件的追蹤使用者。',
+    explore: '探索活動',
+    unnamed: '未設定名稱的使用者',
+    unfollowOne: '取消追蹤',
+    confirmTitle: '確認取消追蹤',
+    confirmDescription: '確定要取消追蹤「{name}」嗎？',
+    selectedCount: '已選取 {count} 位使用者',
+    confirmUnfollow: '確認取消追蹤',
   },
   createEvent: {
     title: '建立活動',

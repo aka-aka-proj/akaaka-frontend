@@ -65,4 +65,21 @@ describe('NotificationSettingsPage', () => {
     expect(deleteSubscription).toHaveBeenCalled()
     expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', event_type: 'BBQ' })
   })
+
+  it('searches types and supports bulk selection feedback', async () => {
+    const user = userEvent.setup()
+    render(<NotificationSettingsPage />)
+
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型' })
+    await user.type(search, 'Movie')
+
+    expect(screen.getByRole('checkbox', { name: 'Movie' })).toBeTruthy()
+    expect(screen.queryByRole('checkbox', { name: 'BBQ' })).toBeNull()
+
+    await user.clear(search)
+    await user.click(screen.getByRole('button', { name: '全部選取' }))
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('設定已更新'))
+    expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', event_type: 'BBQ' })
+  })
 })
