@@ -269,6 +269,7 @@ const zhTW = {
     copyEventSuccess: '已複製至新活動編輯頁面',
     viewFormResponses: '檢視報名問卷回答',
     formResponsesTitle: '報名問卷回答',
+    copyPreviousAnswers: '帶入上次回答',
     noFormConfig: '此活動無報名問卷',
     fillFormBeforeRegister: '請先填寫報名問卷',
   },

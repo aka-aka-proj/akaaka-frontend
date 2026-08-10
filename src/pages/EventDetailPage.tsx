@@ -22,6 +22,23 @@ interface Attendee {
   joined_at: string
 }
 
+function getCompatibleFormData(
+  fields: RegistrationFormField[],
+  responses: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    fields.flatMap((field) => {
+      const value = responses[field.id]
+      const compatible = field.type === 'checkbox'
+        ? typeof value === 'boolean'
+        : (field.type === 'select' || field.type === 'radio')
+          ? typeof value === 'string' && (!field.options || field.options.includes(value))
+          : typeof value === 'string'
+      return value !== undefined && compatible ? [[field.id, value]] : []
+    }),
+  )
+}
+
 export function EventDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -42,6 +59,7 @@ export function EventDetailPage() {
   const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
+  const [previousFormData, setPreviousFormData] = useState<Record<string, unknown>>({})
   const [shareOpen, setShareOpen] = useState(false)
   const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
 
@@ -74,6 +92,7 @@ export function EventDetailPage() {
 
     setEventItem((eventData as EventItem | null) ?? null)
     setThreads((threadData as EventThread[]) ?? [])
+    setPreviousFormData({})
 
     if (eventData) {
       const { data: reportStats } = await supabase
@@ -106,6 +125,32 @@ export function EventDetailPage() {
         .maybeSingle()
 
       setMyRegistration((myReg as Registration | null) ?? null)
+
+      const currentEvent = eventData as EventItem | null
+      if (currentEvent?.registration_form_config) {
+        const { data: pastRegistrations } = await supabase
+          .from('event_registrations')
+          .select('id')
+          .eq('event_id', id)
+          .eq('profile_id', user.id)
+          .eq('status', 'cancelled')
+          .order('created_at', { ascending: false })
+
+        const pastIds = ((pastRegistrations as { id: string }[] | null) ?? []).map((registration) => registration.id)
+        if (pastIds.length > 0) {
+          const { data: pastResponses } = await supabase
+            .from('event_registration_responses')
+            .select('responses, created_at')
+            .in('registration_id', pastIds)
+            .order('created_at', { ascending: false })
+            .limit(1)
+
+          const latestResponses = (pastResponses?.[0] as { responses?: Record<string, unknown> } | undefined)?.responses
+          if (latestResponses) {
+            setPreviousFormData(getCompatibleFormData(currentEvent.registration_form_config, latestResponses))
+          }
+        }
+      }
     }
 
     // Load registrations (host can see all, others see count)
@@ -470,6 +515,16 @@ export function EventDetailPage() {
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
+                {Object.keys(previousFormData).length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(previousFormData)}
+                    disabled={submitting}
+                    style={{ marginBottom: '0.75rem' }}
+                  >
+                    {t('eventDetail.copyPreviousAnswers')}
+                  </button>
+                ) : null}
                 {(eventItem.registration_form_config as RegistrationFormField[]).map((field) => (
                   <label key={field.id} className="form-field" style={{ marginBottom: '0.5rem' }}>
                     <span>{field.label}{field.required ? ' *' : ''}</span>
