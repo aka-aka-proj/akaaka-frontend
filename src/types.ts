@@ -2,6 +2,7 @@ export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 export type EventCategory = 'Social' | 'Practice'
+export type PublicationStatus = 'published' | 'closed'
 
 export type TaiwanRegion = 'North' | 'Central' | 'South' | 'East' | 'Islands' | 'Online'
 
@@ -64,6 +65,9 @@ export interface EventItem {
   description: string | null
   category: EventCategory
   lifecycle_status: 'draft' | 'published' | 'registration_open' | 'registration_closed' | 'completed' | 'archived' | 'cancelled'
+  publication_status: PublicationStatus
+  publish_at: string | null
+  unpublish_at: string | null
   event_type: string | null
   is_venue_hosted: boolean
   visibility_settings: { type?: Visibility } | null

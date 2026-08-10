@@ -19,6 +19,7 @@ export function canSeeEvent(
   const visibility = getEventVisibility(event)
 
   if (event.creator_id === viewerId) return true
+  if (event.publication_status === 'closed') return false
   if (visibility === 'public') return true
   if (visibility === 'private') return false
 

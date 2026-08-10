@@ -214,6 +214,21 @@ export function EventDetailPage() {
     await load()
   }
 
+  const handlePublicationChange = async (status: 'published' | 'closed') => {
+    if (!eventItem || !user || !isHost) return
+    const { data, error } = await supabase.rpc('set_event_publication', {
+      p_event_id: eventItem.id,
+      p_publication_status: status,
+      p_publish_at: null,
+      p_unpublish_at: null,
+    })
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+    setEventItem(data as EventItem)
+  }
+
   const handleCheckIn = async (registrationId: string) => {
     setSubmitting(true)
 
@@ -298,6 +313,16 @@ export function EventDetailPage() {
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>
             ) : null}
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'closed' ? (
+              <p className="message">{t('eventDetail.closedNotice')}</p>
+            ) : null}
+            {isHost && (eventItem.publish_at || eventItem.unpublish_at) ? (
+              <p className="event-meta">
+                {eventItem.publish_at ? `${t('eventDetail.publishAtLabel')}: ${new Date(eventItem.publish_at).toLocaleString()}` : null}
+                {eventItem.publish_at && eventItem.unpublish_at ? ' · ' : null}
+                {eventItem.unpublish_at ? `${t('eventDetail.unpublishAtLabel')}: ${new Date(eventItem.unpublish_at).toLocaleString()}` : null}
+              </p>
+            ) : null}
             {eventItem.event_type && (
               <div className="chip-group" style={{ marginBottom: '1rem' }}>
                 {parseEventTypes(eventItem.event_type).map((type) => (
@@ -346,7 +371,7 @@ export function EventDetailPage() {
             {eventItem.registration_deadline ? (
               <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
             ) : null}
-            {eventItem.lifecycle_status !== 'draft' ? <div className="calendar-actions">
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions">
               <button
                 type="button"
                 className="calendar-btn"
@@ -375,6 +400,16 @@ export function EventDetailPage() {
             </div> : null}
             {isHost ? (
               <p>
+                {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('closed')}>
+                    {t('eventDetail.unpublishNow')}
+                  </button>
+                ) : (
+                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('published')}>
+                    {t('eventDetail.publishNow')}
+                  </button>
+                )}
+                {' | '}
                 <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
                   <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
                 </Link>
@@ -406,7 +441,7 @@ export function EventDetailPage() {
       </section>
 
       {/* Registration Section */}
-      {eventItem && eventItem.lifecycle_status !== 'draft' && user && !isHost ? (
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost ? (
         <section className="card">
           <h3>{t('eventDetail.registration')}</h3>
           {myRegistration ? (

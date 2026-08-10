@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem, EventCategory, TaiwanRegion } from '../types'
+import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
@@ -28,6 +28,9 @@ export function EditEventPage() {
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [category, setCategory] = useState<EventCategory>('Social')
+  const [publicationStatus, setPublicationStatus] = useState<PublicationStatus>('closed')
+  const [publishAt, setPublishAt] = useState('')
+  const [unpublishAt, setUnpublishAt] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
@@ -77,6 +80,9 @@ export function EditEventPage() {
       setIsVenueHosted(event.is_venue_hosted)
       setVisibilityType(event.visibility_settings?.type ?? 'public')
       setCategory(event.category || 'Social')
+      setPublicationStatus(event.publication_status ?? (event.lifecycle_status === 'draft' ? 'closed' : 'published'))
+      setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
+      setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
 
       const { data: regs } = await supabase
         .from('event_registrations')
@@ -132,6 +138,14 @@ export function EditEventPage() {
     setSubmitting(true)
     setMessage('')
 
+    const publishIso = publishAt ? new Date(publishAt).toISOString() : null
+    const unpublishIso = unpublishAt ? new Date(unpublishAt).toISOString() : null
+    if (publishIso && unpublishIso && publishIso >= unpublishIso) {
+      setSubmitting(false)
+      setMessage(t('editEvent.publicationScheduleInvalid'))
+      return
+    }
+
     const { error } = await supabase
       .from('events')
       .update({
@@ -155,6 +169,19 @@ export function EditEventPage() {
 
     if (error) {
       setMessage(error.message)
+      return
+    }
+
+    const { error: publicationError } = await supabase.rpc('set_event_publication', {
+      p_event_id: id,
+      p_publication_status: publicationStatus,
+      p_publish_at: publishIso,
+      p_unpublish_at: unpublishIso,
+    })
+
+    if (publicationError) {
+      setSubmitting(false)
+      setMessage(publicationError.message)
       return
     }
 
@@ -184,6 +211,26 @@ export function EditEventPage() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.publicationStatusLabel')}</span>
+          <select
+            aria-label={t('editEvent.publicationStatusLabel')}
+            value={publicationStatus}
+            onChange={(event) => setPublicationStatus(event.target.value as PublicationStatus)}
+          >
+            <option value="published">{t('editEvent.publicationPublished')}</option>
+            <option value="closed">{t('editEvent.publicationClosed')}</option>
+          </select>
+          <small>{t('editEvent.publicationStatusHint')}</small>
+        </label>
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
+          <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
+          <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
         </label>
         <label className="form-field">
           <span className="form-label-row">
