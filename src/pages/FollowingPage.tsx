@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { getAvatarPath, normalizeSocialLinks } from '../lib/profile'
@@ -28,6 +29,7 @@ export function FollowingPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [pendingUnfollowIds, setPendingUnfollowIds] = useState<string[]>([])
 
   const loadFollowing = async () => {
     if (!user) return
@@ -105,8 +107,12 @@ export function FollowingPage() {
     })
   }
 
-  const removeSelected = async () => {
-    if (!user || selectedIds.size === 0) return
+  const requestUnfollow = (ids: string[]) => {
+    if (ids.length > 0) setPendingUnfollowIds(ids)
+  }
+
+  const removePending = async () => {
+    if (!user || pendingUnfollowIds.length === 0) return
     setSubmitting(true)
     setMessage('')
 
@@ -114,7 +120,7 @@ export function FollowingPage() {
       .from('user_follows')
       .delete()
       .eq('follower_id', user.id)
-      .in('followed_id', [...selectedIds])
+      .in('followed_id', pendingUnfollowIds)
 
     if (error) {
       setMessage(error.message)
@@ -122,8 +128,10 @@ export function FollowingPage() {
       return
     }
 
-    setProfiles((current) => current.filter((profile) => !selectedIds.has(profile.id)))
+    const removedIds = new Set(pendingUnfollowIds)
+    setProfiles((current) => current.filter((profile) => !removedIds.has(profile.id)))
     setSelectedIds(new Set())
+    setPendingUnfollowIds([])
     setMessage(t('following.unfollowSuccess'))
     setSubmitting(false)
   }
@@ -154,25 +162,35 @@ export function FollowingPage() {
         </label>
 
         {!loading && profiles.length > 0 ? (
-          <div className="page-heading-row" style={{ marginTop: '1rem' }}>
+          <div className="following-toolbar">
             <label className="checkbox">
               <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} disabled={filteredProfiles.length === 0} />
               {t('following.selectAll')}
             </label>
-            <button type="button" onClick={() => void removeSelected()} disabled={selectedIds.size === 0 || submitting}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => requestUnfollow([...selectedIds])}
+              disabled={selectedIds.size === 0 || submitting}
+            >
               {submitting ? t('following.removing') : t('following.unfollowSelected', { count: selectedIds.size })}
             </button>
           </div>
         ) : null}
 
         {loading ? <p>{t('common.loading')}</p> : null}
-        {!loading && profiles.length === 0 ? <p className="empty-state">{t('following.empty')}</p> : null}
+        {!loading && profiles.length === 0 ? (
+          <div className="empty-state">
+            <p>{t('following.empty')}</p>
+            <Link to="/events" className="create-event-link">{t('following.explore')}</Link>
+          </div>
+        ) : null}
         {!loading && profiles.length > 0 && filteredProfiles.length === 0 ? <p className="empty-state">{t('following.noResults')}</p> : null}
 
         <ul>
           {filteredProfiles.map((profile) => (
-            <li key={profile.id} className="thread-item">
-              <label className="checkbox">
+            <li key={profile.id} className="following-item">
+              <label className="checkbox following-select">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(profile.id)}
@@ -180,16 +198,36 @@ export function FollowingPage() {
                   aria-label={t('following.selectUser', { name: profile.display_name ?? profile.id })}
                 />
                 <img src={getAvatarPath(profile)} alt="" width={48} height={48} className="avatar" />
-                <span>
+                <span className="following-profile-copy">
                   <Link to={`/profile/${profile.id}`}>
-                    <strong>{profile.display_name || profile.id}</strong>
+                    <strong>{profile.display_name || t('following.unnamed')}</strong>
                   </Link>
-                  <small>{profile.id}</small>
+                  <small title={profile.id}>{profile.id}</small>
                 </span>
               </label>
+              <button
+                type="button"
+                className="btn-secondary following-unfollow"
+                onClick={() => requestUnfollow([profile.id])}
+                disabled={submitting}
+              >
+                {t('following.unfollowOne')}
+              </button>
             </li>
           ))}
         </ul>
+        <DeleteConfirmationDialog
+          isOpen={pendingUnfollowIds.length > 0}
+          title={t('following.confirmTitle')}
+          description={t('following.confirmDescription', {
+            name: pendingUnfollowIds.length === 1
+              ? profiles.find((profile) => profile.id === pendingUnfollowIds[0])?.display_name || pendingUnfollowIds[0]
+              : t('following.selectedCount', { count: pendingUnfollowIds.length }),
+          })}
+          confirmLabel={t('following.confirmUnfollow')}
+          onConfirm={() => void removePending()}
+          onCancel={() => setPendingUnfollowIds([])}
+        />
       </section>
     </Layout>
   )
