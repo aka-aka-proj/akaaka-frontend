@@ -414,6 +414,7 @@ const zhTW = {
     giveRecommendation: '給予推薦',
     recommendationCommentLabel: '推薦留言',
     recommendationCommentPlaceholder: '選填推薦留言',
+    recommendationCommentFor: '寫下對 {name} 的推薦評語（選填）',
     unblockUser: '取消封鎖用戶',
     blockUser: '封鎖用戶',
     deleteAccount: '刪除帳號',
@@ -537,6 +538,7 @@ const zhTW = {
   },
   report: {
     title: '檢舉',
+    reportProfile: '檢舉此使用者',
     categoryLabel: '類別',
     selectCategory: '選擇類別',
     harassment: '騷擾',

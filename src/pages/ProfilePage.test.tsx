@@ -317,6 +317,6 @@ describe('ProfilePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Target User')).toBeTruthy()
     })
-    expect(screen.getByText('Reports: 3')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Reports: 3' })).toBeTruthy()
   })
 })

@@ -412,6 +412,7 @@ const en = {
     giveRecommendation: 'Give Recommendation',
     recommendationCommentLabel: 'Recommendation comment',
     recommendationCommentPlaceholder: 'Optional recommendation comment',
+    recommendationCommentFor: 'Write a recommendation for {name} (optional)',
     unblockUser: 'Unblock User',
     blockUser: 'Block User',
     deleteAccount: 'Delete Account',
@@ -535,6 +536,7 @@ const en = {
   },
   report: {
     title: 'Report',
+    reportProfile: 'Report this user',
     categoryLabel: 'Category',
     selectCategory: 'Select category',
     harassment: 'harassment',

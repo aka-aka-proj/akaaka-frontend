@@ -53,6 +53,7 @@ export function ProfilePage() {
   const [isBlocked, setIsBlocked] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
+  const [canMessage, setCanMessage] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [createdEventsCount, setCreatedEventsCount] = useState(0)
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
@@ -105,6 +106,7 @@ export function ProfilePage() {
     setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
     setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
     setBdsmRolesVisibility(mapped?.metadata?.visibility?.bdsm_roles ?? 'public')
+    setCanMessage(false)
 
     const { data: reportStats } = await supabase
       .from('profile_report_stats')
@@ -151,6 +153,12 @@ export function ProfilePage() {
       }
 
       if (!isOwner) {
+        const [{ data: outgoingConnection }, { data: incomingConnection }] = await Promise.all([
+          supabase.from('connections').select('requester_id, receiver_id, status').eq('requester_id', user.id).eq('receiver_id', targetProfileId).eq('status', 'accepted').maybeSingle(),
+          supabase.from('connections').select('requester_id, receiver_id, status').eq('requester_id', targetProfileId).eq('receiver_id', user.id).eq('status', 'accepted').maybeSingle(),
+        ])
+        setCanMessage(Boolean(outgoingConnection && incomingConnection))
+
         const { data: followData, error: followError } = await supabase
           .from('user_follows')
           .select('followed_id')
@@ -365,17 +373,18 @@ export function ProfilePage() {
       <section className="card">
         {profile ? (
           <div className="profile-header" style={{position: 'relative'}}>
-            <img src={getAvatarPath(profile)} alt="" width={128} height={128} className="avatar avatar-xl" />
+            <img src={getAvatarPath(profile)} alt="" width={128} height={128} className={`avatar avatar-xl ${isOwner ? '' : 'avatar-other'}`} />
               <div className="profile-info">
                 {!isOwner && (
                   <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
-                    <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
+                    <button className="profile-secondary-action" onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
                       <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
                     </button>
                     <button
                       type="button"
                       onClick={() => void toggleFollow()}
                       aria-pressed={isFollowing}
+                      className="profile-follow-action"
                       title={isFollowing ? t('profile.unfollow') : t('profile.follow')}
                     >
                       {isFollowing ? t('profile.unfollow') : t('profile.follow')}
@@ -384,10 +393,16 @@ export function ProfilePage() {
                       type="button"
                       onClick={() => void toggleEventNotificationSubscription()}
                       aria-pressed={isEventNotificationSubscribed}
+                      className="profile-secondary-action profile-mute-action"
                       title={isEventNotificationSubscribed ? t('profile.disableCreatorNotifications') : t('profile.enableCreatorNotifications')}
                     >
                       {isEventNotificationSubscribed ? '🔔' : '🔕'}
                     </button>
+                    {canMessage && !isBlocked ? (
+                      <button type="button" onClick={() => navigate(`/messages/new?user=${targetProfileId}`)} title={t('profile.sendMessage')}>
+                        {t('profile.sendMessage')}
+                      </button>
+                    ) : null}
                   </div>
                 )}
                 <div className="profile-title-row">
@@ -418,10 +433,9 @@ export function ProfilePage() {
                   <strong>{profile.reputation_score}</strong>
                   <span><Icon href="/badge-icons.svg" name="reputation-star" size={15} /> {t('profile.reputation')}</span>
                 </Link>
-                <Link to={`/profile/${targetProfileId}/reports`} className={`metric-card ${reportCount === 0 ? 'metric-muted' : ''}`}>
+                <Link to={`/profile/${targetProfileId}/reports`} aria-label={`${t('profile.reports')}: ${reportCount}`} className={`metric-card ${reportCount === 0 ? 'metric-muted' : ''}`}>
                   <strong>{reportCount}</strong>
                   <span><Icon href="/report-icons.svg" name="report-safety-risk" size={15} /> {t('profile.reports')}</span>
-                  <span className="sr-only">{t('profile.reports')}: {reportCount}</span>
                 </Link>
                 <div className="metric-card">
                   <strong>{createdEventsCount}</strong>
@@ -695,28 +709,29 @@ export function ProfilePage() {
         />
         </>
       ) : (
-        <section className="card">
+        <section className="card trust-actions-card">
           <h3>{t('profile.trustActions')}</h3>
+          <textarea
+            aria-label={t('profile.recommendationCommentLabel')}
+            placeholder={t('profile.recommendationCommentFor', { name: profile?.display_name || t('profile.title') })}
+            value={recommendComment}
+            onChange={(event) => setRecommendComment(event.target.value)}
+          />
           <button
             type="button"
+            className="primary-action"
             onClick={() => void recommend()}
             disabled={user?.id === targetProfileId}
           >
             <Icon href="/action-icons.svg" name="action-thumbsup" size={16} /> {t('profile.giveRecommendation')}
           </button>
-          <textarea
-            aria-label={t('profile.recommendationCommentLabel')}
-            placeholder={t('profile.recommendationCommentPlaceholder')}
-            value={recommendComment}
-            onChange={(event) => setRecommendComment(event.target.value)}
-          />
           {user?.id === targetProfileId ? (
             <p className="message">{t('profile.cannotRecommendSelf')}</p>
           ) : null}
         </section>
       )}
 
-      {!isOwner && targetProfileId ? <ReportForm targetProfileId={targetProfileId} /> : null}
+      {!isOwner && targetProfileId ? <ReportForm targetProfileId={targetProfileId} collapsible /> : null}
     </Layout>
   )
 }
