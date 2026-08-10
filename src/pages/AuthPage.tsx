@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { TurnstileCaptcha } from '../components/TurnstileCaptcha'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_login_credentials: '電子郵件或密碼不正確',
@@ -33,7 +34,10 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() ?? ''
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -119,11 +123,18 @@ export function AuthPage() {
       setMessage(t('auth.emailRequired'))
       return
     }
+    if (turnstileSiteKey && !captchaToken) {
+      setMessage(t('auth.captchaRequired'))
+      return
+    }
 
     setLoading(true)
+    const authOptions = captchaToken ? { captchaToken } : undefined
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({ email, password, options: authOptions })
       setLoading(false)
+      setCaptchaToken('')
+      setCaptchaResetSignal((value) => value + 1)
       if (error) {
         setMessage(AUTH_ERROR_MESSAGES[error.message] ?? error.message)
         return
@@ -135,8 +146,10 @@ export function AuthPage() {
       return
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: authOptions })
     setLoading(false)
+    setCaptchaToken('')
+    setCaptchaResetSignal((value) => value + 1)
     if (error) {
       if (error.message === 'invalid_login_credentials') {
         const { error: resendError } = await supabase.auth.resend({ type: 'signup', email })
@@ -215,6 +228,17 @@ export function AuthPage() {
         <button type="submit" disabled={loading}>
           {isSignUp ? t('auth.createAccount') : t('auth.signIn')}
         </button>
+        {turnstileSiteKey ? (
+          <div className="auth-captcha" aria-describedby="auth-captcha-help">
+            <TurnstileCaptcha
+              siteKey={turnstileSiteKey}
+              resetSignal={captchaResetSignal}
+              onToken={setCaptchaToken}
+              onError={(reason) => setMessage(reason === 'expired' ? t('auth.captchaExpired') : t('auth.captchaError'))}
+            />
+            <p id="auth-captcha-help" className="form-help">{t('auth.captchaHelp')}</p>
+          </div>
+        ) : null}
         <button type="button" onClick={() => setIsSignUp((value) => !value)}>
           {isSignUp ? t('auth.haveAccount') : t('auth.needAccount')}
         </button>

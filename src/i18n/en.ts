@@ -67,6 +67,10 @@ const en = {
     socialLoginError: 'Social login failed. Please try again.',
     emailNotConfirmed: 'Your email has not been verified. A new verification email has been sent. Please check your inbox and click the confirmation link before signing in.',
     emailAlreadyRegistered: 'This email is already registered. Please sign in with the social login you originally used (Google, Facebook, or Apple).',
+    captchaRequired: 'Complete the security check first.',
+    captchaHelp: 'Complete the security check before signing in or signing up.',
+    captchaExpired: 'The security check expired. Please complete it again.',
+    captchaError: 'The security check could not load. Please try again later.',
   },
   events: {
     startTimeLabel: 'Start time',
