@@ -117,4 +117,41 @@ describe('CreateEventPage', () => {
     expect((screen.getByLabelText('活動地區') as HTMLSelectElement).value).toBe('North')
     expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
   })
+
+  it('builds a typed questionnaire field without browser prompts', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.selectOptions(screen.getByRole('combobox', { name: '新增欄位' }), 'radio')
+    await user.type(screen.getByLabelText('欄位標題'), '飲食習慣')
+    await user.type(screen.getByLabelText('選項 1'), '葷食')
+    await user.click(screen.getByRole('button', { name: '+ 新增選項' }))
+    await user.type(screen.getByLabelText('選項 2'), '素食')
+    await user.click(screen.getByLabelText('必填'))
+
+    await user.type(screen.getByLabelText('標題'), '問卷活動')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        registration_form_config: [expect.objectContaining({
+          type: 'radio',
+          label: '飲食習慣',
+          required: true,
+          options: ['葷食', '素食'],
+        })],
+      }),
+    ])
+  })
 })
