@@ -65,6 +65,23 @@ export interface UserFollow {
   created_at: string
 }
 
+export interface DirectConversation {
+  id: string
+  participant_one_id: string
+  participant_two_id: string
+  created_at: string
+  other_profile?: Profile | null
+  latest_message?: DirectMessage | null
+}
+
+export interface DirectMessage {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  created_at: string
+}
+
 export interface EventItem {
   id: string
   creator_id: string

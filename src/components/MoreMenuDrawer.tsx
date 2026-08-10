@@ -10,10 +10,9 @@ import { Icon } from './Icon'
 interface MoreMenuDrawerProps {
   open: boolean
   onClose: () => void
-  unreadNotificationCount: number
 }
 
-export function MoreMenuDrawer({ open, onClose, unreadNotificationCount }: MoreMenuDrawerProps) {
+export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
@@ -57,51 +56,33 @@ export function MoreMenuDrawer({ open, onClose, unreadNotificationCount }: MoreM
         </div>
 
         <nav className="more-drawer-body">
+          <h3 className="more-drawer-section-title">{t('nav.activityGroup')}</h3>
+          <Link to="/messages" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-message" size={20} />
+            <span>{t('nav.messages')}</span>
+          </Link>
           <Link to="/following" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
             <span>{t('nav.following')}</span>
           </Link>
-
-          <Link to="/notifications" onClick={onClose} className="more-drawer-item">
-            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
-            <span>
-              {t('nav.notifications')}
-              {unreadNotificationCount > 0 ? <span className="notification-count">{unreadNotificationCount}</span> : null}
-            </span>
-          </Link>
-
-          <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
-            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
-            <span>{t('nav.notificationSettings')}</span>
-          </Link>
-
           <Link to="/registrations/me" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-calendar" size={20} />
             <span>{t('nav.myRegistrations')}</span>
           </Link>
-
-          <Link to="/issues" onClick={onClose} className="more-drawer-item">
-            <Icon href="/nav-icons.svg" name="nav-flag" size={20} />
-            <span>{t('nav.myIssues')}</span>
-          </Link>
-
-          <Link to="/reports/me" onClick={onClose} className="more-drawer-item">
-            <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
-            <span>{t('nav.myReports')}</span>
-          </Link>
-
           <Link to="/settings/analytics" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-chart" size={20} />
             <span>{t('nav.analytics')}</span>
           </Link>
 
-          <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
-            <Icon href="/nav-icons.svg" name="nav-lock" size={20} />
-            <span>{t('nav.securityPrivacy')}</span>
+          <div className="more-drawer-divider" />
+          <h3 className="more-drawer-section-title">{t('nav.notificationsGroup')}</h3>
+          <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>{t('nav.notificationSettings')}</span>
           </Link>
 
           <div className="more-drawer-divider" />
-
+          <h3 className="more-drawer-section-title">{t('nav.accountGroup')}</h3>
           <div className="more-drawer-item more-drawer-lang">
             <Icon href="/nav-icons.svg" name="nav-language" size={20} />
             <span>{t('common.language')}</span>
@@ -117,6 +98,22 @@ export function MoreMenuDrawer({ open, onClose, unreadNotificationCount }: MoreM
               ))}
             </select>
           </div>
+          <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-lock" size={20} />
+            <span>{t('nav.securityPrivacy')}</span>
+          </Link>
+
+          <div className="more-drawer-divider" />
+          <h3 className="more-drawer-section-title">{t('nav.supportGroup')}</h3>
+          <Link to="/issues" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-flag" size={20} />
+            <span>{t('nav.myIssues')}</span>
+          </Link>
+
+          <Link to="/reports/me" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
+            <span>{t('nav.myReports')}</span>
+          </Link>
 
           <div className="more-drawer-divider" />
 

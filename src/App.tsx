@@ -8,6 +8,7 @@ import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
+import { DirectChatPage } from './pages/DirectChatPage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
@@ -16,6 +17,7 @@ import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
+import { MessagesPage } from './pages/MessagesPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -159,6 +161,18 @@ function App() {
       <Route
         path="/notifications"
         element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/messages"
+        element={<ProtectedRoute><MessagesPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/messages/:conversationId"
+        element={<ProtectedRoute><DirectChatPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/messages/new"
+        element={<ProtectedRoute><DirectChatPage /></ProtectedRoute>}
       />
       <Route
         path="/following"

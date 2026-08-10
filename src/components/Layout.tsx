@@ -18,14 +18,21 @@ const BOTTOM_NAV_ITEMS = [
 ] as const
 
 const DESKTOP_MORE_ITEMS = [
+  { to: '/messages', icon: 'nav-message', labelKey: 'nav.messages' },
   { to: '/following', icon: 'nav-profile', labelKey: 'nav.following' },
-  { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
-  { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
+  { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
+  { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
+  { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
   { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
-  { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
-  { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
+] as const
+
+const DESKTOP_MORE_SECTIONS = [
+  { labelKey: 'nav.activityGroup', items: DESKTOP_MORE_ITEMS.slice(0, 4) },
+  { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(4, 5) },
+  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(5, 6) },
+  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(6, 8) },
 ] as const
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -74,10 +81,15 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
         </div>
         {user ? (
-          <nav className="nav desktop-nav">
-            <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
-            <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
-            <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
+          <div className="topbar-actions">
+            <Link to="/notifications" className="topbar-notification" aria-label={t('nav.notifications')}>
+              <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+              {unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
+            </Link>
+            <nav className="nav desktop-nav">
+              <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
+              <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
+              <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
 
             <div className="desktop-more-wrapper" ref={desktopMoreRef}>
               <button
@@ -91,24 +103,17 @@ export function Layout({ children }: { children: ReactNode }) {
               </button>
               {desktopMoreOpen && (
                 <div className="desktop-more-dropdown" role="menu">
-                  {DESKTOP_MORE_ITEMS.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className="desktop-more-dropdown-item"
-                      role="menuitem"
-                      onClick={() => setDesktopMoreOpen(false)}
-                    >
-                      <Icon href="/nav-icons.svg" name={item.icon} size={16} />
-                      <span>
-                        {t(item.labelKey)}
-                        {item.to === '/notifications' && unreadNotificationCount > 0 ? (
-                          <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>
-                            {unreadNotificationCount}
-                          </span>
-                        ) : null}
-                      </span>
-                    </Link>
+                  {DESKTOP_MORE_SECTIONS.map((section, index) => (
+                    <div key={section.labelKey} className="desktop-more-section">
+                      {index > 0 ? <div className="desktop-more-divider" /> : null}
+                      <h3 className="desktop-more-section-title">{t(section.labelKey)}</h3>
+                      {section.items.map((item) => (
+                        <Link key={item.to} to={item.to} className="desktop-more-dropdown-item" role="menuitem" onClick={() => setDesktopMoreOpen(false)}>
+                          <Icon href="/nav-icons.svg" name={item.icon} size={16} />
+                          <span>{t(item.labelKey)}</span>
+                        </Link>
+                      ))}
+                    </div>
                   ))}
                   <div className="desktop-more-divider" />
                   <div className="desktop-more-dropdown-item desktop-more-lang">
@@ -138,7 +143,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 </div>
               )}
             </div>
-          </nav>
+            </nav>
+          </div>
         ) : (
           <label className="lang-switch desktop-only">
             <Icon href="/nav-icons.svg" name="nav-language" size={16} />
@@ -193,7 +199,6 @@ export function Layout({ children }: { children: ReactNode }) {
       <MoreMenuDrawer
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
-        unreadNotificationCount={unreadNotificationCount}
       />
     </main>
   )
