@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -14,6 +15,10 @@ vi.mock('../context/AuthContext', () => ({
 
 vi.mock('../context/LanguageContext', () => ({
   useLanguage: () => ({ locale: 'en', setLocale: () => {} }),
+}))
+
+vi.mock('../components/Layout', () => ({
+  Layout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }))
 
 vi.mock('../supabaseClient', () => ({
