@@ -334,6 +334,7 @@ const en = {
     closedNotice: 'This event is currently unpublished; only the host can manage it.',
     publishNow: 'Publish now',
     unpublishNow: 'Unpublish now',
+    unpublishConfirmTitle: 'Confirm unpublishing event',
     unpublishConfirm: 'Are you sure you want to unpublish this event now? Registration and sharing will be disabled for visitors.',
     unpublishWarning: 'Unpublishing stops registration and sharing for visitors. Confirm the event status before continuing.',
     publishAtLabel: 'Scheduled publish',

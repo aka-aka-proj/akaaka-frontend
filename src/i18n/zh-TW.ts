@@ -335,6 +335,7 @@ const zhTW = {
     closedNotice: '此活動目前已下架，只有主辦人可以管理。',
     publishNow: '立即公開',
     unpublishNow: '立即下架',
+    unpublishConfirmTitle: '確認下架活動',
     unpublishConfirm: '確定要立即下架這個活動嗎？下架後一般使用者將無法報名或分享。',
     unpublishWarning: '下架會停止一般使用者報名與分享，請確認活動狀態後再執行。',
     publishAtLabel: '預約公開',

@@ -63,6 +63,7 @@ export function EventDetailPage() {
   const [shareOpen, setShareOpen] = useState(false)
   const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
+  const [publicationConfirmOpen, setPublicationConfirmOpen] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isRegistrationClosed = eventItem?.registration_deadline
@@ -267,9 +268,6 @@ export function EventDetailPage() {
 
   const handlePublicationChange = async (status: 'published' | 'closed') => {
     if (!eventItem || !user || !isHost) return
-    if (status === 'closed' && !confirm(t('eventDetail.unpublishConfirm'))) {
-      return
-    }
     const { data, error } = await supabase.rpc('set_event_publication', {
       p_event_id: eventItem.id,
       p_publication_status: status,
@@ -281,6 +279,7 @@ export function EventDetailPage() {
       return
     }
     setEventItem(data as EventItem)
+    setPublicationConfirmOpen(false)
   }
 
   const handleCheckIn = async (registrationId: string) => {
@@ -450,21 +449,17 @@ export function EventDetailPage() {
               ) : null}
             </div>
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
-              <button
-                type="button"
-                className="calendar-btn"
-                onClick={() => downloadIcs(eventItem)}
-              >
-                {t('events.downloadIcs')}
-              </button>
-              <a
-                href={getGoogleCalendarUrl(eventItem)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="calendar-btn"
-              >
-                {t('events.googleCalendar')}
-              </a>
+              <details className="calendar-menu">
+                <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
+                <div className="calendar-menu-items">
+                  <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
+                    {t('events.downloadIcs')}
+                  </button>
+                  <a href={getGoogleCalendarUrl(eventItem)} target="_blank" rel="noopener noreferrer" className="calendar-btn">
+                    {t('events.googleCalendar')}
+                  </a>
+                </div>
+              </details>
               <ShareButton
                 title={eventItem.title}
                 text={eventItem.description ?? ''}
@@ -612,7 +607,7 @@ export function EventDetailPage() {
           </div>
           <div className="event-admin-actions">
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
-              <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
+              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
                 {t('eventDetail.unpublishNow')}
               </button>
             ) : (
@@ -638,13 +633,12 @@ export function EventDetailPage() {
               </button>
             ) : null}
           </div>
-          <p className="danger-action-help">{t('eventDetail.unpublishWarning')}</p>
         </section>
       ) : null}
 
       {/* Host Review Section - All Registrations */}
       {isHost && registrations.length > 0 ? (
-        <section className="card event-admin-section">
+        <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
           {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending', 'cancellation_rejected'] as const).map((status) => {
             const filtered = registrations.filter((r) => r.status === status)
@@ -728,7 +722,7 @@ export function EventDetailPage() {
 
       {/* Attendees Section */}
       {isHost && attendees.length > 0 ? (
-        <section className="card event-admin-section">
+        <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.attendees')} ({attendees.length})</h3>
           <ul>
             {attendees.map((a) => (
@@ -747,7 +741,7 @@ export function EventDetailPage() {
       ) : null}
 
       {isHost && formResponses.length > 0 ? (
-        <section className="card event-admin-section">
+        <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
           {formResponses.map((fr) => (
             <div key={fr.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
@@ -822,6 +816,25 @@ export function EventDetailPage() {
               <button type="button" className="modal-close" onClick={() => setReportOpen(false)} aria-label={t('common.close')}>×</button>
             </div>
             <ReportForm targetEventId={id} />
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && publicationConfirmOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setPublicationConfirmOpen(false)
+        }}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="unpublish-dialog-title">
+            <h3 id="unpublish-dialog-title">{t('eventDetail.unpublishConfirmTitle')}</h3>
+            <p>{t('eventDetail.unpublishWarning')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="secondary-action" onClick={() => setPublicationConfirmOpen(false)}>
+                {t('common.cancelReply')}
+              </button>
+              <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
+                {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
