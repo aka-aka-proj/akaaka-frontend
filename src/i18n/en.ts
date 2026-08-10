@@ -112,6 +112,7 @@ const en = {
     noBookmarks: 'You have no saved events yet.',
     bookmarkError: 'Unable to update saved status. Please try again.',
     externalRegistration: 'External registration',
+    loadMore: 'Load more events',
   },
   notifications: {
     title: 'Notifications',

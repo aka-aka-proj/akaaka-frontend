@@ -15,12 +15,15 @@ import { TAIWAN_REGIONS } from '../types'
 type TimeFilter = 'all' | 'upcoming' | 'past'
 type CategoryFilter = 'all' | EventCategory
 const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
+const EVENT_PAGE_SIZE = 50
 
 export function EventsPage() {
   const { t } = useT()
   const { user } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [message, setMessage] = useState('')
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [hasMoreEvents, setHasMoreEvents] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<TaiwanRegion | null>(null)
@@ -42,6 +45,8 @@ export function EventsPage() {
 
   useEffect(() => {
     const loadEvents = async () => {
+      setEventsLoading(true)
+      setMessage('')
       const { data, error } = await supabase
         .rpc('search_events', {
           p_search: search || null,
@@ -49,20 +54,48 @@ export function EventsPage() {
           p_location_region: selectedRegion,
           p_time_filter: timeFilter,
           p_creator_id: myEventsOnly ? userId : null,
-          p_limit: 100,
+          p_limit: EVENT_PAGE_SIZE,
           p_offset: 0,
         })
 
       if (error) {
         setMessage(error.message)
+        setEvents([])
+        setHasMoreEvents(false)
+        setEventsLoading(false)
         return
       }
 
-      setEvents((data as EventItem[]) ?? [])
+      const nextEvents = (data as EventItem[]) ?? []
+      setEvents(nextEvents)
+      setHasMoreEvents(nextEvents.length === EVENT_PAGE_SIZE)
+      setEventsLoading(false)
     }
 
     void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
+
+  const loadMoreEvents = async () => {
+    if (eventsLoading || !hasMoreEvents) return
+    setEventsLoading(true)
+    const { data, error } = await supabase.rpc('search_events', {
+      p_search: search || null,
+      p_event_type: selectedType,
+      p_location_region: selectedRegion,
+      p_time_filter: timeFilter,
+      p_creator_id: myEventsOnly ? userId : null,
+      p_limit: EVENT_PAGE_SIZE,
+      p_offset: events.length,
+    })
+    if (error) {
+      setMessage(error.message)
+    } else {
+      const nextEvents = (data as EventItem[]) ?? []
+      setEvents((current) => [...current, ...nextEvents])
+      setHasMoreEvents(nextEvents.length === EVENT_PAGE_SIZE)
+    }
+    setEventsLoading(false)
+  }
 
   useEffect(() => {
     if (!userId) {
@@ -282,7 +315,9 @@ export function EventsPage() {
 
         {message ? <p className="message">{message}</p> : null}
 
-        {events.length === 0 ? (
+        {eventsLoading && events.length === 0 ? (
+          <p className="empty-state" role="status">{t('common.loading')}</p>
+        ) : events.length === 0 ? (
           <div className="empty-state">
             <img src="/illustration-empty-events.svg" alt="" width={480} height={320} className="illustration" />
             <p>{t('events.noDescription')}</p>
@@ -329,6 +364,11 @@ export function EventsPage() {
             })}
           </ul>
         )}
+        {hasMoreEvents ? (
+          <button type="button" onClick={() => void loadMoreEvents()} disabled={eventsLoading}>
+            {eventsLoading ? t('common.loading') : t('events.loadMore')}
+          </button>
+        ) : null}
       </section>
     </Layout>
   )

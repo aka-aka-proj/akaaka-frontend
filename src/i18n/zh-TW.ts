@@ -111,6 +111,7 @@ const zhTW = {
     bookmarksTitle: '我的收藏',
     noBookmarks: '你還沒有收藏任何活動。',
     bookmarkError: '收藏狀態更新失敗，請再試一次。',
+    loadMore: '載入更多活動',
   },
   notifications: {
     title: '通知',
