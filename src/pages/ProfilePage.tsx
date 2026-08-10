@@ -51,6 +51,8 @@ export function ProfilePage() {
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
   const [joinedEventsCount, setJoinedEventsCount] = useState(0)
   const [message, setMessage] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [showUserId, setShowUserId] = useState(false)
 
   const xProfileUrl = useMemo(() => {
     if (isOwner && identities) {
@@ -380,6 +382,7 @@ export function ProfilePage() {
                     </button>
                   </div>
                 )}
+                <div className="profile-title-row">
                 <h2>
                   {profile.display_name || profile.id}
                   {user?.app_metadata?.role === 'admin' && (
@@ -391,38 +394,40 @@ export function ProfilePage() {
                     </>
                   )}
                 </h2>
+                {isOwner && (
+                  <button type="button" className="btn-secondary profile-edit-trigger" onClick={() => setIsEditing((current) => !current)}>
+                    <Icon href="/action-icons.svg" name="action-edit" size={16} />
+                    {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
+                  </button>
+                )}
+                </div>
               <p className="profile-role">
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
-                {' '}{t('profile.role')}: {profile.role_status}
+                <span className="role-badge">{t('profile.role')}: {profile.role_status}</span>
               </p>
-              <p className="profile-reputation">
-                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
-                  <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
-                  {' '}{t('profile.reputation')}: {profile.reputation_score}
+              <div className="profile-metrics" aria-label={t('profile.profileStats')}>
+                <Link to={`/profile/${targetProfileId}/feedback`} className="metric-card">
+                  <strong>{profile.reputation_score}</strong>
+                  <span><Icon href="/badge-icons.svg" name="reputation-star" size={15} /> {t('profile.reputation')}</span>
                 </Link>
-              </p>
-              <p className="profile-reports">
-                <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
-                  <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
-                  {' '}{t('profile.reports')}: {reportCount}
+                <Link to={`/profile/${targetProfileId}/reports`} className={`metric-card ${reportCount === 0 ? 'metric-muted' : ''}`}>
+                  <strong>{reportCount}</strong>
+                  <span><Icon href="/report-icons.svg" name="report-safety-risk" size={15} /> {t('profile.reports')}</span>
+                  <span className="sr-only">{t('profile.reports')}: {reportCount}</span>
                 </Link>
-              </p>
-              <p className="profile-event-stats">
-                <span className="event-stat">
-                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
-                  {' '}{t('profile.createdEvents')}: {createdEventsCount}
-                </span>
-                <br />
-                <span className="event-stat">
-                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
-                  {' '}{t('profile.completedEvents')}: {completedEventsCount}
-                </span>
-                <br />
-                <span className="event-stat">
-                  <Icon href="/action-icons.svg" name="action-thumbsup" size={14} />
-                  {' '}{t('profile.joinedEvents')}: {joinedEventsCount}
-                </span>
-              </p>
+                <div className="metric-card">
+                  <strong>{createdEventsCount}</strong>
+                  <span><Icon href="/form-icons.svg" name="form-calendar" size={15} /> {t('profile.createdEvents')}</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{completedEventsCount}</strong>
+                  <span><Icon href="/form-icons.svg" name="form-calendar" size={15} /> {t('profile.completedEvents')}</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{joinedEventsCount}</strong>
+                  <span><Icon href="/action-icons.svg" name="action-thumbsup" size={15} /> {t('profile.joinedEvents')}</span>
+                </div>
+              </div>
               {profile.metadata?.gender_identity ? (
                 <p>
                   {t('profile.genderIdentityLabel')}:{' '}
@@ -477,12 +482,17 @@ export function ProfilePage() {
 
       {isOwner ? (
         <>
-        <section className="card">
+        <section className="card login-info-card">
           <h3>{t('profile.loginInfo')}</h3>
           <p className="login-info-private">{t('profile.loginInfoPrivate')}</p>
           <dl>
             <dt>{t('profile.loginInfoUserId')}</dt>
-            <dd>{user?.id}</dd>
+            <dd className="sensitive-value">
+              <span>{showUserId ? user?.id : `${user?.id?.slice(0, 8)}…${user?.id?.slice(-4)}`}</span>
+              <button type="button" className="btn-quiet" onClick={() => setShowUserId((current) => !current)} aria-label={showUserId ? t('profile.hideUserId') : t('profile.showUserId')}>
+                <Icon href="/form-icons.svg" name={showUserId ? 'form-lock' : 'form-eye'} size={16} />
+              </button>
+            </dd>
             <dt>{t('profile.loginInfoEmail')}</dt>
             <dd>{user?.email}</dd>
             <dt>{t('profile.connectedAccounts')}</dt>
@@ -497,7 +507,7 @@ export function ProfilePage() {
           </button>
         </section>
 
-        <form className="card" onSubmit={saveProfile}>
+        {isEditing && <form className="card profile-edit-form" onSubmit={saveProfile}>
           <h3>{t('profile.editProfile')}</h3>
           <label>
             {t('profile.displayNameLabel')}
@@ -593,8 +603,9 @@ export function ProfilePage() {
           </label>
           <fieldset>
             <legend>{t('profile.bdsmRolesLabel')}</legend>
+            <div className="role-chips">
             {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging'] as BdsmRole[]).map((role) => (
-              <label key={role} className="checkbox">
+              <label key={role} className={`role-chip ${bdsmRoles.includes(role) ? 'selected' : ''}`}>
                 <input
                   type="checkbox"
                   checked={bdsmRoles.includes(role)}
@@ -609,6 +620,7 @@ export function ProfilePage() {
                 {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
               </label>
             ))}
+            </div>
           </fieldset>
           <label>
             {t('profile.bdsmRolesVisibilityLabel')}
@@ -623,8 +635,11 @@ export function ProfilePage() {
             </select>
             <VisibilityTooltip fieldName="bdsm_roles" />
           </label>
-          <button type="submit">{t('profile.saveProfile')}</button>
-        </form>
+          <div className="form-actions">
+            <button type="submit">{t('profile.saveProfile')}</button>
+            <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>{t('profile.cancelEdit')}</button>
+          </div>
+        </form>}
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>

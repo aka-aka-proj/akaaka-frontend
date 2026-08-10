@@ -88,6 +88,9 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Self User')).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: 'Give Recommendation' })).toBeNull()
+    expect(screen.queryByLabelText('Display name')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }))
+    expect(screen.getByLabelText('Display name')).toBeTruthy()
   })
 
   it('hides private bio for non-owner viewer', async () => {

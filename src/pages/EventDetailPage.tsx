@@ -62,8 +62,13 @@ export function EventDetailPage() {
   const [previousFormData, setPreviousFormData] = useState<Record<string, unknown>>({})
   const [shareOpen, setShareOpen] = useState(false)
   const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+  const isRegistrationClosed = eventItem?.registration_deadline
+    ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
+    : false
+  const isAtCapacity = Boolean(eventItem?.max_capacity && attendees.length >= eventItem.max_capacity)
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !blockedUserIds.includes(thread.profile_id)),
@@ -397,7 +402,7 @@ export function EventDetailPage() {
               <img src={getAvatarPath(eventItem.creator)} alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
             </p>
-            <p className="event-creator-stats">
+            <div className="event-creator-stats">
               <span className="creator-stat">
                 <Icon href="/badge-icons.svg" name="reputation-star" size={14} />
                 {eventItem.creator?.reputation_score ?? 0}
@@ -406,17 +411,31 @@ export function EventDetailPage() {
                 <Icon href="/report-icons.svg" name="report-safety-risk" size={14} />
                 {creatorReportCount} {t('eventDetail.reports')}
               </span>
-            </p>
-            <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.startTimeLabel')}: {new Date(eventItem.start_time).toLocaleString()}</p>
-            {eventItem.location_region ? (
-              <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</p>
-            ) : null}
-            {eventItem.max_capacity ? (
-              <p>{t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</p>
-            ) : null}
-            {eventItem.registration_deadline ? (
-              <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
-            ) : null}
+            </div>
+            <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
+              {eventItem.location_region ? (
+                <div className="event-summary-item">
+                  <Icon href="/form-icons.svg" name="form-location" size={18} />
+                  <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
+                </div>
+              ) : null}
+              <div className="event-summary-item">
+                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
+              </div>
+              {eventItem.max_capacity ? (
+                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                  <Icon href="/form-icons.svg" name="form-user" size={18} />
+                  <span><strong>{t('eventDetail.capacityLabel')}</strong>{isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</span>
+                </div>
+              ) : null}
+              {eventItem.registration_deadline ? (
+                <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
+                  <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                  <span><strong>{t('eventDetail.registrationDeadlineLabel')}</strong>{new Date(eventItem.registration_deadline).toLocaleString()}</span>
+                </div>
+              ) : null}
+            </div>
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions">
               <button
                 type="button"
@@ -512,6 +531,8 @@ export function EventDetailPage() {
             ) : null}
 
             </div>
+          ) : eventItem.registration_deadline && isRegistrationClosed ? (
+            <p className="message">{t('eventDetail.registrationClosed')}</p>
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
@@ -554,7 +575,7 @@ export function EventDetailPage() {
                     ))}
                   </label>
                 ))}
-                <button type="button" disabled={submitting} onClick={async () => {
+                <button type="button" className="primary-cta" disabled={submitting} onClick={async () => {
                   const fields = eventItem.registration_form_config as RegistrationFormField[]
                   for (const f of fields) {
                     if (f.required) {
@@ -577,17 +598,21 @@ export function EventDetailPage() {
                   setShowForm(false)
                   await load()
                 }}>
-                  {t('eventDetail.register')}
+                  {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
                 </button>
                 <button type="button" onClick={() => setShowForm(false)}>{t('common.cancelReply')}</button>
               </div>
             ) : (
-              <button type="button" onClick={() => setShowForm(true)} disabled={submitting}>
-                {t('eventDetail.register')}
+                <button type="button" className="primary-cta" onClick={() => setShowForm(true)} disabled={submitting}>
+                {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
               </button>
             )
+          ) : eventItem.max_capacity && isAtCapacity ? (
+            <button type="button" className="primary-cta" onClick={() => void handleRegister()} disabled={submitting}>
+              {t('eventDetail.waitlistRegister')}
+            </button>
           ) : (
-            <button type="button" onClick={() => void handleRegister()} disabled={submitting}>
+            <button type="button" className="primary-cta" onClick={() => void handleRegister()} disabled={submitting}>
               {t('eventDetail.register')}
             </button>
           )}
@@ -755,7 +780,28 @@ export function EventDetailPage() {
         )}
       </section>
 
-      {id ? <ReportForm targetEventId={id} /> : null}
+      {id ? (
+        <section className="event-report-section" aria-label={t('report.title')}>
+          <button type="button" className="report-trigger" onClick={() => setReportOpen(true)}>
+            <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+            {t('eventDetail.reportEvent')}
+          </button>
+        </section>
+      ) : null}
+
+      {id && reportOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setReportOpen(false)
+        }}>
+          <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="event-report-title">
+            <div className="report-modal-header">
+              <h3 id="event-report-title">{t('eventDetail.reportEvent')}</h3>
+              <button type="button" className="modal-close" onClick={() => setReportOpen(false)} aria-label={t('common.close')}>×</button>
+            </div>
+            <ReportForm targetEventId={id} />
+          </div>
+        </div>
+      ) : null}
 
       {eventItem ? (
         <ShareToXModal

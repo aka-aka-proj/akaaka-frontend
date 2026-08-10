@@ -25,6 +25,16 @@ export function EventsPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [myEventsOnly, setMyEventsOnly] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
+
+  const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
+
+  const clearFilters = () => {
+    setSelectedType(null)
+    setSelectedRegion(null)
+    setTimeFilter('all')
+    setMyEventsOnly(false)
+  }
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -106,7 +116,13 @@ export function EventsPage() {
       ) : null}
 
       <section className="card">
-        <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+        <div className="events-toolbar">
+          <div>
+            <p className="eyebrow">{t('events.title')}</p>
+            <h1>{t('events.exploreTitle')}</h1>
+          </div>
+          <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+        </div>
 
         <div className="category-tabs">
           <button
@@ -132,20 +148,29 @@ export function EventsPage() {
           </button>
         </div>
 
-        <input
-          id="search-activities"
-          name="search"
-          className="search-input"
-          type="search"
-          placeholder={t('events.searchPlaceholder')}
-          aria-label={t('events.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <label className="search-field" htmlFor="search-activities">
+          <span className="search-icon" aria-hidden="true">⌕</span>
+          <input
+            id="search-activities"
+            name="search"
+            className="search-input"
+            type="search"
+            placeholder={t('events.searchPlaceholder')}
+            aria-label={t('events.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
 
-        {eventTypes.length > 0 && (
-          <>
-            <h3>{t('events.activityTypeLabel')}</h3>
+        <details className="filter-details" open={moreFiltersOpen} onToggle={(e) => setMoreFiltersOpen(e.currentTarget.open)}>
+          <summary>
+            <span>{t('events.moreFilters')}</span>
+            {activeFilterCount > 0 ? <span className="filter-count">{activeFilterCount}</span> : null}
+          </summary>
+          <div className="filter-panel">
+            {eventTypes.length > 0 && (
+              <div className="filter-section">
+                <h3>{t('events.activityTypeLabel')}</h3>
             <div className="chip-group">
               <button
                 type="button"
@@ -165,11 +190,12 @@ export function EventsPage() {
                 </button>
               ))}
             </div>
-          </>
-        )}
+              </div>
+            )}
 
-        <h3>{t('events.regionLabel')}</h3>
-        <div className="chip-group">
+            <div className="filter-section">
+              <h3>{t('events.regionLabel')}</h3>
+              <div className="chip-group">
           <button
             type="button"
             className={`chip${selectedRegion === null ? ' chip-active' : ''}`}
@@ -187,10 +213,12 @@ export function EventsPage() {
               {t(`events.region${region}` as any)}
             </button>
           ))}
-        </div>
+              </div>
+            </div>
 
-        <h3>{t('events.timeLabel')}</h3>
-        <div className="chip-group">
+            <div className="filter-section">
+              <h3>{t('events.timeLabel')}</h3>
+              <div className="chip-group">
           <button
             type="button"
             className={`chip${timeFilter === 'all' ? ' chip-active' : ''}`}
@@ -212,10 +240,11 @@ export function EventsPage() {
           >
             {t('events.past')}
           </button>
-        </div>
+              </div>
+            </div>
 
-        {user && (
-          <div className="chip-group">
+            {user && (
+              <div className="filter-section">
             <button
               type="button"
               className={`chip${myEventsOnly ? ' chip-active' : ''}`}
@@ -223,8 +252,11 @@ export function EventsPage() {
             >
               {t('events.myEvents')}
             </button>
+              </div>
+            )}
+            {activeFilterCount > 0 ? <button type="button" className="clear-filters" onClick={clearFilters}>{t('events.clearFilters')}</button> : null}
           </div>
-        )}
+        </details>
 
         {message ? <p className="message">{message}</p> : null}
 
@@ -236,13 +268,14 @@ export function EventsPage() {
         ) : filtered.length === 0 ? (
           <p className="empty-state">{t('events.noResults')}</p>
         ) : (
-          <ul>
+          <ul className="event-grid">
             {filtered.map((event) => {
               const eventTypes = parseEventTypes(event.event_type)
               const effectiveCat = getEffectiveCategory(event.category, eventTypes)
               return (
               <li key={event.id} className="event-list-item">
-                <Link to={`/events/${event.id}`}>{event.title}</Link>
+                <article className="event-card">
+                <Link to={`/events/${event.id}`} className="event-card-title">{event.title}</Link>
                 {eventTypes.length > 0 && (
                   <div className="chip-group" style={{ marginTop: '0.25rem' }}>
                     {eventTypes.map((type) => {
@@ -256,11 +289,12 @@ export function EventsPage() {
                     })}
                   </div>
                 )}
-                <p>{event.description ?? t('events.noDescription')}</p>
-                <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('events.startTimeLabel')} {new Date(event.start_time).toLocaleString()}</p>
+                <p className="event-card-description">{event.description ?? t('events.noDescription')}</p>
+                <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> <span>{new Date(event.start_time).toLocaleString()}</span></p>
                 {event.location_region ? (
-                  <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</p>
+                  <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</span></p>
                 ) : null}
+                </article>
               </li>
               )
             })}
