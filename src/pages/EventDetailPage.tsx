@@ -15,6 +15,7 @@ import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
+import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
 interface Attendee {
@@ -483,6 +484,11 @@ export function EventDetailPage() {
                 <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
                   {t('shareModal.broadcastToX')}
                 </button>
+              ) : null}
+              {eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
+                <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="calendar-btn">
+                  {t('eventDetail.externalRegistration')}
+                </a>
               ) : null}
             </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}><EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /></div> : null}
           </>

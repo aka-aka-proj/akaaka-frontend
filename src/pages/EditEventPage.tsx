@@ -11,6 +11,7 @@ import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, Registr
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
+import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 
 export function EditEventPage() {
   const { id } = useParams()
@@ -26,6 +27,7 @@ export function EditEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [category, setCategory] = useState<EventCategory>('Social')
@@ -79,6 +81,7 @@ export function EditEventPage() {
       setLocationDetail(event.location_detail ?? '')
       setMaxCapacity(event.max_capacity?.toString() ?? '')
       setRegistrationDeadline(event.registration_deadline ? toLocalDatetime(event.registration_deadline) : '')
+      setExternalRegistrationUrl(event.external_registration_url ?? '')
       setIsVenueHosted(event.is_venue_hosted)
       setVisibilityType(event.visibility_settings?.type ?? 'public')
       setCategory(event.category || 'Social')
@@ -133,6 +136,11 @@ export function EditEventPage() {
       return
     }
 
+    if (!isAllowedExternalRegistrationUrl(externalRegistrationUrl)) {
+      setMessage(t('editEvent.externalRegistrationUrlInvalid'))
+      return
+    }
+
     if (isVenueHosted && profile?.role_status !== 'venue_approved') {
       setMessage(t('editEvent.venueApprovalRequired'))
       return
@@ -166,6 +174,7 @@ export function EditEventPage() {
           ? new Date(registrationDeadline).toISOString()
           : null,
         registration_form_config: formFields.length > 0 ? formFields : null,
+        external_registration_url: externalRegistrationUrl.trim() || null,
       })
       .eq('id', id)
 
@@ -215,6 +224,11 @@ export function EditEventPage() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">{t('editEvent.externalRegistrationUrlLabel')}</span>
+          <input type="url" inputMode="url" aria-label={t('editEvent.externalRegistrationUrlLabel')} placeholder={t('editEvent.externalRegistrationUrlPlaceholder')} value={externalRegistrationUrl} onChange={(event) => setExternalRegistrationUrl(event.target.value)} />
+          <small>{t('editEvent.externalRegistrationUrlHint')}</small>
         </label>
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.publicationStatusLabel')}</span>

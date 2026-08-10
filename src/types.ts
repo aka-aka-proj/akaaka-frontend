@@ -103,6 +103,7 @@ export interface EventItem {
   location_detail: string | null
   max_capacity: number | null
   registration_deadline: string | null
+  external_registration_url: string | null
   created_at: string
   creator?: Profile | null
 }

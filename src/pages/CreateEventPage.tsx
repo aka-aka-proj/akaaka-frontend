@@ -8,6 +8,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
+import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RegistrationFormField } from '../types'
@@ -41,6 +42,7 @@ export function CreateEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
@@ -83,6 +85,7 @@ export function CreateEventPage() {
           setLocationDetail(data.location_detail ?? '')
           setMaxCapacity(data.max_capacity?.toString() ?? '')
           setRegistrationDeadline(data.registration_deadline ? data.registration_deadline.slice(0, 16) : '')
+          setExternalRegistrationUrl(data.external_registration_url ?? '')
           setVisibilityType(data.visibility_settings?.type ?? 'public')
           setIsVenueHosted(data.is_venue_hosted ?? false)
           if (data.registration_form_config) setFormFields(data.registration_form_config)
@@ -183,6 +186,11 @@ export function CreateEventPage() {
       return
     }
 
+    if (!isAllowedExternalRegistrationUrl(externalRegistrationUrl)) {
+      setMessage(t('createEvent.externalRegistrationUrlInvalid'))
+      return
+    }
+
     setSubmitting(true)
     const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [getStartWeekday()]
     const recurrenceRule = recurrenceEnabled ? {
@@ -211,6 +219,7 @@ export function CreateEventPage() {
           max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
           registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
           registration_form_config: formFields.length > 0 ? formFields : null,
+          external_registration_url: externalRegistrationUrl.trim() || null,
           recurrence_rule: recurrenceRule,
         },
       ])
@@ -274,6 +283,18 @@ export function CreateEventPage() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">{t('createEvent.externalRegistrationUrlLabel')}</span>
+          <input
+            type="url"
+            inputMode="url"
+            aria-label={t('createEvent.externalRegistrationUrlLabel')}
+            placeholder={t('createEvent.externalRegistrationUrlPlaceholder')}
+            value={externalRegistrationUrl}
+            onChange={(event) => setExternalRegistrationUrl(event.target.value)}
+          />
+          <small>{t('createEvent.externalRegistrationUrlHint')}</small>
         </label>
         <label className="form-field">
           <span className="form-label-row">
