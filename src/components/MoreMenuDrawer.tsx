@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -9,14 +10,14 @@ import { Icon } from './Icon'
 interface MoreMenuDrawerProps {
   open: boolean
   onClose: () => void
+  unreadNotificationCount: number
 }
 
-export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
+export function MoreMenuDrawer({ open, onClose, unreadNotificationCount }: MoreMenuDrawerProps) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
-
   const handleSignOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -27,6 +28,15 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
     onClose()
     navigate('/auth', { replace: true })
   }
+
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -47,6 +57,24 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
         </div>
 
         <nav className="more-drawer-body">
+          <Link to="/following" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
+            <span>{t('nav.following')}</span>
+          </Link>
+
+          <Link to="/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>
+              {t('nav.notifications')}
+              {unreadNotificationCount > 0 ? <span className="notification-count">{unreadNotificationCount}</span> : null}
+            </span>
+          </Link>
+
+          <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>{t('nav.notificationSettings')}</span>
+          </Link>
+
           <Link to="/registrations/me" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-calendar" size={20} />
             <span>{t('nav.myRegistrations')}</span>
@@ -60,6 +88,11 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
           <Link to="/reports/me" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
             <span>{t('nav.myReports')}</span>
+          </Link>
+
+          <Link to="/settings/analytics" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-chart" size={20} />
+            <span>{t('nav.analytics')}</span>
           </Link>
 
           <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">

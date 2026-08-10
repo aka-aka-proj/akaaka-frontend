@@ -7,6 +7,8 @@ import { supabase } from '../supabaseClient'
 import { useT } from '../hooks/useT'
 import { Icon } from './Icon'
 import { MoreMenuDrawer } from './MoreMenuDrawer'
+import { PrivacyNotice } from './PrivacyNotice'
+import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
@@ -16,9 +18,13 @@ const BOTTOM_NAV_ITEMS = [
 ] as const
 
 const DESKTOP_MORE_ITEMS = [
+  { to: '/following', icon: 'nav-profile', labelKey: 'nav.following' },
+  { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
+  { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
   { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
+  { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
   { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
 ] as const
 
@@ -30,6 +36,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
+  const unreadNotificationCount = useUnreadNotificationCount(user?.id)
   const desktopMoreRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -93,7 +100,14 @@ export function Layout({ children }: { children: ReactNode }) {
                       onClick={() => setDesktopMoreOpen(false)}
                     >
                       <Icon href="/nav-icons.svg" name={item.icon} size={16} />
-                      <span>{t(item.labelKey)}</span>
+                      <span>
+                        {t(item.labelKey)}
+                        {item.to === '/notifications' && unreadNotificationCount > 0 ? (
+                          <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>
+                            {unreadNotificationCount}
+                          </span>
+                        ) : null}
+                      </span>
                     </Link>
                   ))}
                   <div className="desktop-more-divider" />
@@ -144,6 +158,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </label>
         )}
       </header>
+      {user ? <PrivacyNotice /> : null}
       {children}
       {user ? (
         <nav className="bottom-nav" aria-label="Mobile navigation">
@@ -175,7 +190,11 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
       ) : null}
-      <MoreMenuDrawer open={moreOpen} onClose={() => setMoreOpen(false)} />
+      <MoreMenuDrawer
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </main>
   )
 }

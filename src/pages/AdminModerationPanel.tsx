@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { ReportItem } from '../types'
+import type { AdminReportQueueItem } from '../types'
 
 type ActionType = 'warn' | 'suspend' | 'ban' | 'role_upgrade' | 'role_revoke' | 'note'
 
@@ -17,16 +17,15 @@ interface ActionFormState {
 const DEFAULT_FORM: ActionFormState = { action_type: 'warn', payload: '{}' }
 
 export function AdminModerationPanel() {
-  const { user, profile, loading } = useAuth()
-  console.log('Current Profile:', profile);
+  const { user, loading } = useAuth()
   const { t } = useT()
-  const [reports, setReports] = useState<ReportItem[]>([])
+  const [reports, setReports] = useState<AdminReportQueueItem[]>([])
   const [forms, setForms] = useState<Record<string, ActionFormState>>({})
   const [messages, setMessages] = useState<Record<string, string>>({})
   const [pageMessage, setPageMessage] = useState('')
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({})
 
-  const isAdmin = profile?.role_status === 'admin'
+  const isAdmin = user?.app_metadata?.role === 'admin'
 
   const ACTION_OPTIONS: { value: ActionType; label: string }[] = [
     { value: 'warn', label: t('admin.moderation.warn') },
@@ -38,18 +37,14 @@ export function AdminModerationPanel() {
   ]
 
   const loadReports = async () => {
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .in('status', ['open', 'triaging'])
-      .order('created_at', { ascending: false })
+    const { data, error } = await supabase.rpc('get_admin_report_queue')
 
     if (error) {
       setPageMessage(error.message)
       return
     }
 
-    const loaded = (data as ReportItem[]) ?? []
+    const loaded = (data as AdminReportQueueItem[]) ?? []
     setReports(loaded)
 
     setForms((prev) => {
@@ -89,7 +84,7 @@ export function AdminModerationPanel() {
     setForms((prev) => ({ ...prev, [reportId]: { ...(prev[reportId] ?? DEFAULT_FORM), ...patch } }))
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>, report: ReportItem) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>, report: AdminReportQueueItem) => {
     event.preventDefault()
     const form = forms[report.id] ?? DEFAULT_FORM
 
@@ -154,9 +149,6 @@ export function AdminModerationPanel() {
               &nbsp;
               <strong>{report.category}</strong>
             </div>
-            <p>
-              <strong>{t('admin.moderation.reporter')}:</strong> {report.reporter_id}
-            </p>
             {report.target_profile_id ? (
               <p>
                 <strong>{t('admin.moderation.target')}:</strong> {report.target_profile_id}
@@ -167,9 +159,6 @@ export function AdminModerationPanel() {
                 <strong>{t('admin.moderation.event')}:</strong> {report.target_event_id}
               </p>
             ) : null}
-            <p>
-              <strong>{t('admin.moderation.details')}:</strong> {report.details}
-            </p>
             <p>
               <strong>{t('admin.moderation.submitted')}:</strong> {new Date(report.created_at).toLocaleString()}
             </p>

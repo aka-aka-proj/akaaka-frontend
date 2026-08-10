@@ -1,9 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean
   title: string
   description: string
+  confirmationPhrase?: string
+  confirmationLabel?: string
+  confirmationPlaceholder?: string
+  confirmLabel?: string
   onConfirm: () => void
   onCancel: () => void
 }
@@ -12,11 +16,20 @@ export function DeleteConfirmationDialog({
   isOpen,
   title,
   description,
+  confirmationPhrase,
+  confirmationLabel,
+  confirmationPlaceholder,
+  confirmLabel = '刪除',
   onConfirm,
   onCancel,
 }: DeleteConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const cancelBtnRef = useRef<HTMLButtonElement>(null)
+  const [confirmationInput, setConfirmationInput] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) setConfirmationInput('')
+  }, [isOpen])
 
   useEffect(() => {
     const el = dialogRef.current
@@ -61,6 +74,17 @@ export function DeleteConfirmationDialog({
         <h2 id="delete-dialog-title">{title}</h2>
         <div className="modal-body">
           <p id="delete-dialog-description">{description}</p>
+          {confirmationPhrase ? (
+            <label className="confirmation-input">
+              {confirmationLabel}
+              <input
+                value={confirmationInput}
+                onChange={(event) => setConfirmationInput(event.target.value)}
+                placeholder={confirmationPlaceholder}
+                autoComplete="off"
+              />
+            </label>
+          ) : null}
         </div>
         <div className="modal-actions">
           <button
@@ -74,8 +98,9 @@ export function DeleteConfirmationDialog({
             type="button"
             className="danger"
             onClick={onConfirm}
+            disabled={Boolean(confirmationPhrase && confirmationInput !== confirmationPhrase)}
           >
-            刪除
+            {confirmLabel}
           </button>
         </div>
       </div>

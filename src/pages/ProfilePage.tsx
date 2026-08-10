@@ -8,7 +8,7 @@ import { ReportForm } from '../components/ReportForm'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
-import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
+import { canViewBio, getAvatarPath, getBioVisibility, normalizeSocialLinks, PRESET_AVATAR_PATHS } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Profile, Visibility } from '../types'
 
@@ -25,10 +25,17 @@ function mapProfileRow(row: unknown): Profile {
   }
 }
 
+function maskEmail(email: string | undefined) {
+  if (!email) return ''
+  const [localPart, domain] = email.split('@')
+  if (!domain || localPart.length < 3) return email
+  return `${localPart.slice(0, 2)}***${localPart.slice(-1)}@${domain}`
+}
+
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, profile: currentUserProfile, refreshProfile, identities } = useAuth()
+  const { user, refreshProfile, identities } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -36,6 +43,7 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
+  const [avatarPath, setAvatarPath] = useState('/default-avatar.svg')
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
@@ -43,11 +51,16 @@ export function ProfilePage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [createdEventsCount, setCreatedEventsCount] = useState(0)
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
   const [joinedEventsCount, setJoinedEventsCount] = useState(0)
   const [message, setMessage] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [showUserId, setShowUserId] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
 
   const xProfileUrl = useMemo(() => {
     if (isOwner && identities) {
@@ -86,6 +99,7 @@ export function ProfilePage() {
     setProfile(mapped)
     setDisplayName(mapped?.display_name ?? '')
     setBio(mapped?.bio ?? '')
+    setAvatarPath(getAvatarPath(mapped))
     setVisibility(getBioVisibility(mapped))
     setGenderIdentity(mapped?.metadata?.gender_identity ?? '')
     setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
@@ -135,6 +149,28 @@ export function ProfilePage() {
       } else {
         setIsBlocked(Boolean(blockData))
       }
+
+      if (!isOwner) {
+        const { data: followData, error: followError } = await supabase
+          .from('user_follows')
+          .select('followed_id')
+          .eq('follower_id', user.id)
+          .eq('followed_id', targetProfileId)
+          .maybeSingle()
+        if (followError) setMessage(followError.message)
+        setIsFollowing(Boolean(followData))
+      }
+
+      if (!isOwner) {
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('event_notification_subscriptions')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('creator_profile_id', targetProfileId)
+          .maybeSingle()
+        if (subscriptionError) setMessage(subscriptionError.message)
+        setIsEventNotificationSubscribed(Boolean(subscription))
+      }
     }
   }
 
@@ -168,6 +204,7 @@ export function ProfilePage() {
             gender_identity: genderIdentityVisibility || 'public',
             bdsm_roles: bdsmRolesVisibility || 'public',
           },
+          avatar_path: avatarPath === '/default-avatar.svg' ? null : avatarPath,
           gender_identity: genderIdentity || null,
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : null,
         },
@@ -248,6 +285,50 @@ export function ProfilePage() {
     setMessage(t('profile.userBlocked'))
   }
 
+  const toggleEventNotificationSubscription = async () => {
+    if (!user || isOwner || !targetProfileId) return
+
+    const result = isEventNotificationSubscribed
+      ? await supabase
+        .from('event_notification_subscriptions')
+        .delete()
+        .eq('profile_id', user.id)
+        .eq('creator_profile_id', targetProfileId)
+      : await supabase
+        .from('event_notification_subscriptions')
+        .insert({ profile_id: user.id, creator_profile_id: targetProfileId })
+
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+
+    setIsEventNotificationSubscribed((current) => !current)
+    setMessage(t(isEventNotificationSubscribed ? 'profile.creatorNotificationDisabled' : 'profile.creatorNotificationEnabled'))
+  }
+
+  const toggleFollow = async () => {
+    if (!user || isOwner || !targetProfileId) return
+
+    const result = isFollowing
+      ? await supabase
+        .from('user_follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('followed_id', targetProfileId)
+      : await supabase
+        .from('user_follows')
+        .insert({ follower_id: user.id, followed_id: targetProfileId })
+
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+
+    setIsFollowing((current) => !current)
+    setMessage(t(isFollowing ? 'profile.userUnfollowed' : 'profile.userFollowed'))
+  }
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   const performDeleteAccount = async () => {
@@ -284,18 +365,35 @@ export function ProfilePage() {
       <section className="card">
         {profile ? (
           <div className="profile-header" style={{position: 'relative'}}>
-            <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
+            <img src={getAvatarPath(profile)} alt="" width={128} height={128} className="avatar avatar-xl" />
               <div className="profile-info">
                 {!isOwner && (
                   <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
                     <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
                       <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleFollow()}
+                      aria-pressed={isFollowing}
+                      title={isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                    >
+                      {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleEventNotificationSubscription()}
+                      aria-pressed={isEventNotificationSubscribed}
+                      title={isEventNotificationSubscribed ? t('profile.disableCreatorNotifications') : t('profile.enableCreatorNotifications')}
+                    >
+                      {isEventNotificationSubscribed ? '🔔' : '🔕'}
+                    </button>
                   </div>
                 )}
+                <div className="profile-title-row">
                 <h2>
                   {profile.display_name || profile.id}
-                  {currentUserProfile?.role_status === 'admin' && (
+                  {user?.app_metadata?.role === 'admin' && (
                     <>
                       {' '}
                       <Link to="/admin/moderation" className="link-small">
@@ -304,54 +402,75 @@ export function ProfilePage() {
                     </>
                   )}
                 </h2>
+                {isOwner && (
+                  <button type="button" className="btn-secondary profile-edit-trigger" onClick={() => setIsEditing((current) => !current)}>
+                    <Icon href="/action-icons.svg" name="action-edit" size={16} />
+                    {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
+                  </button>
+                )}
+                </div>
               <p className="profile-role">
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
-                {' '}{t('profile.role')}: {profile.role_status}
+                <span className="role-badge">{t('profile.role')}: {profile.role_status}</span>
               </p>
-              <p className="profile-reputation">
-                <Link to={`/profile/${targetProfileId}/feedback`} className="link-small">
-                  <Icon href="/badge-icons.svg" name="reputation-star" size={16} />
-                  {' '}{t('profile.reputation')}: {profile.reputation_score}
+              <div className="profile-metrics" aria-label={t('profile.profileStats')}>
+                <Link to={`/profile/${targetProfileId}/feedback`} className="metric-card">
+                  <strong>{profile.reputation_score}</strong>
+                  <span><Icon href="/badge-icons.svg" name="reputation-star" size={15} /> {t('profile.reputation')}</span>
                 </Link>
-              </p>
-              <p className="profile-reports">
-                <Link to={`/profile/${targetProfileId}/reports`} className="link-small">
-                  <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
-                  {' '}{t('profile.reports')}: {reportCount}
+                <Link to={`/profile/${targetProfileId}/reports`} className={`metric-card ${reportCount === 0 ? 'metric-muted' : ''}`}>
+                  <strong>{reportCount}</strong>
+                  <span><Icon href="/report-icons.svg" name="report-safety-risk" size={15} /> {t('profile.reports')}</span>
+                  <span className="sr-only">{t('profile.reports')}: {reportCount}</span>
                 </Link>
-              </p>
-              <p className="profile-event-stats">
-                <span className="event-stat">
-                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
-                  {' '}{t('profile.createdEvents')}: {createdEventsCount}
-                </span>
-                <br />
-                <span className="event-stat">
-                  <Icon href="/form-icons.svg" name="form-calendar" size={14} />
-                  {' '}{t('profile.completedEvents')}: {completedEventsCount}
-                </span>
-                <br />
-                <span className="event-stat">
-                  <Icon href="/action-icons.svg" name="action-thumbsup" size={14} />
-                  {' '}{t('profile.joinedEvents')}: {joinedEventsCount}
-                </span>
-              </p>
-              {profile.metadata?.gender_identity ? (
-                <p>
-                  {t('profile.genderIdentityLabel')}:{' '}
-                  {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
-                </p>
-              ) : null}
-              {profile.metadata?.bdsm_roles && profile.metadata.bdsm_roles.length > 0 ? (
-                <p>
-                  {t('profile.bdsmRolesLabel')}:{' '}
-                  {profile.metadata.bdsm_roles.map((r) => t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)).join(', ')}
-                </p>
-              ) : null}
+                <div className="metric-card">
+                  <strong>{createdEventsCount}</strong>
+                  <span><Icon href="/form-icons.svg" name="form-calendar" size={15} /> {t('profile.createdEvents')}</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{completedEventsCount}</strong>
+                  <span><Icon href="/form-icons.svg" name="form-calendar" size={15} /> {t('profile.completedEvents')}</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{joinedEventsCount}</strong>
+                  <span><Icon href="/action-icons.svg" name="action-thumbsup" size={15} /> {t('profile.joinedEvents')}</span>
+                </div>
+              </div>
+              <div className="profile-attributes">
+                {profile.metadata?.gender_identity ? (
+                  <div className="profile-attribute">
+                    <span className="attribute-label">{t('profile.genderIdentityLabel')}</span>
+                    <span className="profile-chip">
+                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
+                    </span>
+                  </div>
+                ) : null}
+                {profile.metadata?.bdsm_roles && profile.metadata.bdsm_roles.length > 0 ? (
+                  <div className="profile-attribute">
+                    <span className="attribute-label">{t('profile.bdsmRolesLabel')}</span>
+                    <div className="profile-chip-list">
+                      {profile.metadata.bdsm_roles.map((r) => (
+                        <span className="profile-chip" key={r}>
+                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <p>
                 {t('profile.bio')}:{' '}
                 {showBio
-                  ? profile.bio || t('profile.noBio')
+                  ? profile.bio ? profile.bio : (
+                    <>
+                      <span>{t('profile.noBio')}</span>
+                      {isOwner && (
+                        <button type="button" className="btn-link-inline" onClick={() => setIsEditing(true)}>
+                          {t('profile.addBio')}
+                        </button>
+                      )}
+                    </>
+                  )
                   : t('profile.hidden', { visibility: bioVisibility })}
               </p>
               <ul className="social-links-list">
@@ -390,14 +509,24 @@ export function ProfilePage() {
 
       {isOwner ? (
         <>
-        <section className="card">
+        <section className="card login-info-card">
           <h3>{t('profile.loginInfo')}</h3>
           <p className="login-info-private">{t('profile.loginInfoPrivate')}</p>
           <dl>
             <dt>{t('profile.loginInfoUserId')}</dt>
-            <dd>{user?.id}</dd>
+            <dd className="sensitive-value">
+              <span>{showUserId ? user?.id : `${user?.id?.slice(0, 8)}…${user?.id?.slice(-4)}`}</span>
+              <button type="button" className="btn-quiet" onClick={() => setShowUserId((current) => !current)} aria-label={showUserId ? t('profile.hideUserId') : t('profile.showUserId')}>
+                <Icon href="/form-icons.svg" name={showUserId ? 'form-lock' : 'form-eye'} size={16} />
+              </button>
+            </dd>
             <dt>{t('profile.loginInfoEmail')}</dt>
-            <dd>{user?.email}</dd>
+            <dd className="sensitive-value">
+              <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>
+              <button type="button" className="btn-quiet" onClick={() => setShowEmail((current) => !current)} aria-label={showEmail ? t('profile.hideEmail') : t('profile.showEmail')}>
+                <Icon href="/form-icons.svg" name={showEmail ? 'form-lock' : 'form-eye'} size={16} />
+              </button>
+            </dd>
             <dt>{t('profile.connectedAccounts')}</dt>
             <dd>
               {identities && identities.length > 0 
@@ -410,7 +539,7 @@ export function ProfilePage() {
           </button>
         </section>
 
-        <form className="card" onSubmit={saveProfile}>
+        {isEditing && <form className="card profile-edit-form" onSubmit={saveProfile}>
           <h3>{t('profile.editProfile')}</h3>
           <label>
             {t('profile.displayNameLabel')}
@@ -420,6 +549,34 @@ export function ProfilePage() {
               onChange={(event) => setDisplayName(event.target.value)}
             />
           </label>
+          <fieldset>
+            <legend>{t('profile.avatarLabel')}</legend>
+            <div className="avatar-picker">
+              <label className="avatar-option">
+                <input
+                  type="radio"
+                  name="profile-avatar"
+                  value="/default-avatar.svg"
+                  checked={avatarPath === '/default-avatar.svg'}
+                  onChange={() => setAvatarPath('/default-avatar.svg')}
+                />
+                <img src="/default-avatar.svg" alt={t('profile.defaultAvatar')} className="avatar avatar-lg" />
+                <span>{t('profile.defaultAvatar')}</span>
+              </label>
+              {PRESET_AVATAR_PATHS.map((path) => (
+                <label className="avatar-option" key={path}>
+                  <input
+                    type="radio"
+                    name="profile-avatar"
+                    value={path}
+                    checked={avatarPath === path}
+                    onChange={() => setAvatarPath(path)}
+                  />
+                  <img src={path} alt="" className="avatar avatar-lg" />
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label>
             {t('profile.bioLabel')}
             <textarea
@@ -478,8 +635,9 @@ export function ProfilePage() {
           </label>
           <fieldset>
             <legend>{t('profile.bdsmRolesLabel')}</legend>
+            <div className="role-chips">
             {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging'] as BdsmRole[]).map((role) => (
-              <label key={role} className="checkbox">
+              <label key={role} className={`role-chip ${bdsmRoles.includes(role) ? 'selected' : ''}`}>
                 <input
                   type="checkbox"
                   checked={bdsmRoles.includes(role)}
@@ -494,6 +652,7 @@ export function ProfilePage() {
                 {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
               </label>
             ))}
+            </div>
           </fieldset>
           <label>
             {t('profile.bdsmRolesVisibilityLabel')}
@@ -508,8 +667,11 @@ export function ProfilePage() {
             </select>
             <VisibilityTooltip fieldName="bdsm_roles" />
           </label>
-          <button type="submit">{t('profile.saveProfile')}</button>
-        </form>
+          <div className="form-actions">
+            <button type="submit">{t('profile.saveProfile')}</button>
+            <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>{t('profile.cancelEdit')}</button>
+          </div>
+        </form>}
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>
@@ -521,6 +683,10 @@ export function ProfilePage() {
           isOpen={isDeleteModalOpen}
           title={t('profile.deleteAccount')}
           description={t('profile.deleteAccountConfirm')}
+          confirmationPhrase="DELETE"
+          confirmationLabel={t('profile.deleteAccountConfirmationLabel')}
+          confirmationPlaceholder={t('profile.deleteAccountConfirmationPlaceholder')}
+          confirmLabel={t('profile.deleteAccount')}
           onConfirm={() => {
             setIsDeleteModalOpen(false)
             void performDeleteAccount()

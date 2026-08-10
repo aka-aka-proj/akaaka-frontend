@@ -15,23 +15,17 @@ export function ProfileReportPage() {
   const [error, setError] = useState<string | null>(null)
 
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
-  const isAdmin = user?.app_metadata?.role === 'admin'
 
   useEffect(() => {
     const fetchReports = async () => {
       if (!targetProfileId || !user) return
       setLoading(true)
       
-      let query = supabase
+      const query = supabase
         .from('reports')
         .select('*')
         .eq('target_profile_id', targetProfileId)
         .order('created_at', { ascending: false })
-
-      if (!isAdmin) {
-        // Non-admin can only see their own reports for this profile
-        query = query.eq('reporter_id', user.id)
-      }
 
       const { data, error } = await query
 
@@ -44,7 +38,7 @@ export function ProfileReportPage() {
     }
 
     void fetchReports()
-  }, [targetProfileId, user, isAdmin])
+  }, [targetProfileId, user])
 
   const getCategoryLabel = (category: string) => {
     const key = category.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
@@ -72,11 +66,7 @@ export function ProfileReportPage() {
                 </div>
                 <p style={{ margin: '0 0 0.5rem 0', whiteSpace: 'pre-wrap' }}>{report.details}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                  {isAdmin ? (
-                    <span>{t('admin.moderation.reporter')}: {report.reporter_id}</span>
-                  ) : (
-                    <span />
-                  )}
+                  <span />
                   <time>
                     {new Date(report.created_at).toLocaleDateString()}
                   </time>

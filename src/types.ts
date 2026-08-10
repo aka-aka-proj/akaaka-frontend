@@ -1,7 +1,8 @@
-export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin'
+export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved'
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 export type EventCategory = 'Social' | 'Practice'
+export type PublicationStatus = 'published' | 'closed'
 
 export type TaiwanRegion = 'North' | 'Central' | 'South' | 'East' | 'Islands' | 'Online'
 
@@ -53,8 +54,15 @@ export interface Profile {
     gender_identity?: GenderIdentity
     bdsm_roles?: BdsmRole[]
     twitter_handle?: string
+    avatar_path?: string
   } | null
   reputation_score: number
+}
+
+export interface UserFollow {
+  follower_id: string
+  followed_id: string
+  created_at: string
 }
 
 export interface EventItem {
@@ -63,6 +71,10 @@ export interface EventItem {
   title: string
   description: string | null
   category: EventCategory
+  lifecycle_status: 'draft' | 'published' | 'registration_open' | 'registration_closed' | 'completed' | 'archived' | 'cancelled'
+  publication_status: PublicationStatus
+  publish_at: string | null
+  unpublish_at: string | null
   event_type: string | null
   is_venue_hosted: boolean
   visibility_settings: { type?: Visibility } | null
@@ -86,11 +98,29 @@ export interface Registration {
   profile_id: string
   status: RegistrationStatus
   waitlist_position: number | null
+  waitlist_converted_at: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  checked_in_at: string | null
   created_at: string
   event?: EventItem | null
   profile?: Profile | null
+}
+
+export interface UserStats {
+  hostedEvents: number
+  hostedTags: string[]
+  totalRegistrations: number
+  totalApproved: number
+  approvalRate: number
+  waitlistConversions: number
+  checkedInRegistrations: number
+  attendanceRate: number
+  eventsParticipated: number
+  approvedParticipations: number
+  reputationGained: number
+  reportCount: number
+  exploredTags: string[]
 }
 
 export interface EventThread {
@@ -121,6 +151,15 @@ export interface ReportItem {
   category: 'harassment' | 'impersonation' | 'spam' | 'safety_risk' | 'other'
   details: string
   status: 'open' | 'triaging' | 'resolved' | 'rejected'
+  created_at: string
+}
+
+export interface AdminReportQueueItem {
+  id: string
+  category: ReportItem['category']
+  status: ReportItem['status']
+  target_profile_id: string | null
+  target_event_id: string | null
   created_at: string
 }
 

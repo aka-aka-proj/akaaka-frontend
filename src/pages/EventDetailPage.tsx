@@ -4,6 +4,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { ShareButton } from '../components/ShareButton'
+import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
@@ -12,12 +13,30 @@ import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag } from '../lib/event-types'
+import { getAvatarPath } from '../lib/profile'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
 interface Attendee {
   profile_id: string
   display_name: string | null
   joined_at: string
+}
+
+function getCompatibleFormData(
+  fields: RegistrationFormField[],
+  responses: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    fields.flatMap((field) => {
+      const value = responses[field.id]
+      const compatible = field.type === 'checkbox'
+        ? typeof value === 'boolean'
+        : (field.type === 'select' || field.type === 'radio')
+          ? typeof value === 'string' && (!field.options || field.options.includes(value))
+          : typeof value === 'string'
+      return value !== undefined && compatible ? [[field.id, value]] : []
+    }),
+  )
 }
 
 export function EventDetailPage() {
@@ -40,8 +59,16 @@ export function EventDetailPage() {
   const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
+  const [previousFormData, setPreviousFormData] = useState<Record<string, unknown>>({})
+  const [shareOpen, setShareOpen] = useState(false)
+  const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+  const isRegistrationClosed = eventItem?.registration_deadline
+    ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
+    : false
+  const isAtCapacity = Boolean(eventItem?.max_capacity && attendees.length >= eventItem.max_capacity)
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !blockedUserIds.includes(thread.profile_id)),
@@ -55,7 +82,7 @@ export function EventDetailPage() {
 
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }] =
       await Promise.all([
-        supabase.from('events').select('*, creator:profiles(display_name, reputation_score)').eq('id', id).maybeSingle(),
+        supabase.from('events').select('*, creator:profiles(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
         supabase
           .from('event_threads')
           .select('*, profile:profiles(display_name)')
@@ -70,6 +97,7 @@ export function EventDetailPage() {
 
     setEventItem((eventData as EventItem | null) ?? null)
     setThreads((threadData as EventThread[]) ?? [])
+    setPreviousFormData({})
 
     if (eventData) {
       const { data: reportStats } = await supabase
@@ -102,6 +130,32 @@ export function EventDetailPage() {
         .maybeSingle()
 
       setMyRegistration((myReg as Registration | null) ?? null)
+
+      const currentEvent = eventData as EventItem | null
+      if (currentEvent?.registration_form_config) {
+        const { data: pastRegistrations } = await supabase
+          .from('event_registrations')
+          .select('id')
+          .eq('event_id', id)
+          .eq('profile_id', user.id)
+          .eq('status', 'cancelled')
+          .order('created_at', { ascending: false })
+
+        const pastIds = ((pastRegistrations as { id: string }[] | null) ?? []).map((registration) => registration.id)
+        if (pastIds.length > 0) {
+          const { data: pastResponses } = await supabase
+            .from('event_registration_responses')
+            .select('responses, created_at')
+            .in('registration_id', pastIds)
+            .order('created_at', { ascending: false })
+            .limit(1)
+
+          const latestResponses = (pastResponses?.[0] as { responses?: Record<string, unknown> } | undefined)?.responses
+          if (latestResponses) {
+            setPreviousFormData(getCompatibleFormData(currentEvent.registration_form_config, latestResponses))
+          }
+        }
+      }
     }
 
     // Load registrations (host can see all, others see count)
@@ -211,6 +265,39 @@ export function EventDetailPage() {
     await load()
   }
 
+  const handlePublicationChange = async (status: 'published' | 'closed') => {
+    if (!eventItem || !user || !isHost) return
+    const { data, error } = await supabase.rpc('set_event_publication', {
+      p_event_id: eventItem.id,
+      p_publication_status: status,
+      p_publish_at: null,
+      p_unpublish_at: null,
+    })
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+    setEventItem(data as EventItem)
+  }
+
+  const handleCheckIn = async (registrationId: string) => {
+    setSubmitting(true)
+
+    const { error } = await supabase
+      .from('event_registrations')
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq('id', registrationId)
+
+    setSubmitting(false)
+
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+
+    await load()
+  }
+
   const handleReview = async (registrationId: string, action: 'approve' | 'reject' | 'reopen') => {
     if (!id || !user) {
       return
@@ -274,6 +361,19 @@ export function EventDetailPage() {
         {eventItem ? (
           <>
             <h2>{eventItem.title}</h2>
+            {eventItem.lifecycle_status === 'draft' ? (
+              <p className="message">{t('eventDetail.draftNotice')}</p>
+            ) : null}
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'closed' ? (
+              <p className="message">{t('eventDetail.closedNotice')}</p>
+            ) : null}
+            {isHost && (eventItem.publish_at || eventItem.unpublish_at) ? (
+              <p className="event-meta">
+                {eventItem.publish_at ? `${t('eventDetail.publishAtLabel')}: ${new Date(eventItem.publish_at).toLocaleString()}` : null}
+                {eventItem.publish_at && eventItem.unpublish_at ? ' · ' : null}
+                {eventItem.unpublish_at ? `${t('eventDetail.unpublishAtLabel')}: ${new Date(eventItem.unpublish_at).toLocaleString()}` : null}
+              </p>
+            ) : null}
             {eventItem.event_type && (
               <div className="chip-group" style={{ marginBottom: '1rem' }}>
                 {parseEventTypes(eventItem.event_type).map((type) => (
@@ -299,10 +399,10 @@ export function EventDetailPage() {
               </div>
             )}
             <p className="event-meta">
-              <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
+              <img src={getAvatarPath(eventItem.creator)} alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
             </p>
-            <p className="event-creator-stats">
+            <div className="event-creator-stats">
               <span className="creator-stat">
                 <Icon href="/badge-icons.svg" name="reputation-star" size={14} />
                 {eventItem.creator?.reputation_score ?? 0}
@@ -311,18 +411,32 @@ export function EventDetailPage() {
                 <Icon href="/report-icons.svg" name="report-safety-risk" size={14} />
                 {creatorReportCount} {t('eventDetail.reports')}
               </span>
-            </p>
-            <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.startTimeLabel')}: {new Date(eventItem.start_time).toLocaleString()}</p>
-            {eventItem.location_region ? (
-              <p><Icon href="/form-icons.svg" name="form-location" size={14} /> {t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</p>
-            ) : null}
-            {eventItem.max_capacity ? (
-              <p>{t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</p>
-            ) : null}
-            {eventItem.registration_deadline ? (
-              <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
-            ) : null}
-            <div className="calendar-actions">
+            </div>
+            <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
+              {eventItem.location_region ? (
+                <div className="event-summary-item">
+                  <Icon href="/form-icons.svg" name="form-location" size={18} />
+                  <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
+                </div>
+              ) : null}
+              <div className="event-summary-item">
+                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
+              </div>
+              {eventItem.max_capacity ? (
+                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                  <Icon href="/form-icons.svg" name="form-user" size={18} />
+                  <span><strong>{t('eventDetail.capacityLabel')}</strong>{isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</span>
+                </div>
+              ) : null}
+              {eventItem.registration_deadline ? (
+                <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
+                  <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                  <span><strong>{t('eventDetail.registrationDeadlineLabel')}</strong>{new Date(eventItem.registration_deadline).toLocaleString()}</span>
+                </div>
+              ) : null}
+            </div>
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions">
               <button
                 type="button"
                 className="calendar-btn"
@@ -343,9 +457,24 @@ export function EventDetailPage() {
                 text={eventItem.description ?? ''}
                 url={window.location.href}
               />
-            </div>
+              {isHost ? (
+                <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
+                  {t('shareModal.broadcastToX')}
+                </button>
+              ) : null}
+            </div> : null}
             {isHost ? (
               <p>
+                {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('closed')}>
+                    {t('eventDetail.unpublishNow')}
+                  </button>
+                ) : (
+                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('published')}>
+                    {t('eventDetail.publishNow')}
+                  </button>
+                )}
+                {' | '}
                 <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
                   <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
                 </Link>
@@ -377,7 +506,7 @@ export function EventDetailPage() {
       </section>
 
       {/* Registration Section */}
-      {eventItem && user && !isHost ? (
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost ? (
         <section className="card">
           <h3>{t('eventDetail.registration')}</h3>
           {myRegistration ? (
@@ -395,10 +524,28 @@ export function EventDetailPage() {
               </button>
             ) : null}
 
+            {myRegistration.status === 'approved' ? (
+              <button type="button" onClick={() => setAttendeeShareOpen(true)} style={{ marginLeft: '0.5rem' }}>
+                {t('shareModal.attendeeAnnounce')}
+              </button>
+            ) : null}
+
             </div>
+          ) : eventItem.registration_deadline && isRegistrationClosed ? (
+            <p className="message">{t('eventDetail.registrationClosed')}</p>
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
+                {Object.keys(previousFormData).length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(previousFormData)}
+                    disabled={submitting}
+                    style={{ marginBottom: '0.75rem' }}
+                  >
+                    {t('eventDetail.copyPreviousAnswers')}
+                  </button>
+                ) : null}
                 {(eventItem.registration_form_config as RegistrationFormField[]).map((field) => (
                   <label key={field.id} className="form-field" style={{ marginBottom: '0.5rem' }}>
                     <span>{field.label}{field.required ? ' *' : ''}</span>
@@ -428,7 +575,7 @@ export function EventDetailPage() {
                     ))}
                   </label>
                 ))}
-                <button type="button" disabled={submitting} onClick={async () => {
+                <button type="button" className="primary-cta" disabled={submitting} onClick={async () => {
                   const fields = eventItem.registration_form_config as RegistrationFormField[]
                   for (const f of fields) {
                     if (f.required) {
@@ -451,17 +598,21 @@ export function EventDetailPage() {
                   setShowForm(false)
                   await load()
                 }}>
-                  {t('eventDetail.register')}
+                  {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
                 </button>
                 <button type="button" onClick={() => setShowForm(false)}>{t('common.cancelReply')}</button>
               </div>
             ) : (
-              <button type="button" onClick={() => setShowForm(true)} disabled={submitting}>
-                {t('eventDetail.register')}
+                <button type="button" className="primary-cta" onClick={() => setShowForm(true)} disabled={submitting}>
+                {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
               </button>
             )
+          ) : eventItem.max_capacity && isAtCapacity ? (
+            <button type="button" className="primary-cta" onClick={() => void handleRegister()} disabled={submitting}>
+              {t('eventDetail.waitlistRegister')}
+            </button>
           ) : (
-            <button type="button" onClick={() => void handleRegister()} disabled={submitting}>
+            <button type="button" className="primary-cta" onClick={() => void handleRegister()} disabled={submitting}>
               {t('eventDetail.register')}
             </button>
           )}
@@ -529,9 +680,18 @@ export function EventDetailPage() {
                           </button>
                         ) : null}
                         {status === 'approved' ? (
-                          <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
-                            {t('eventDetail.forceCancel')}
-                          </button>
+                          <>
+                            {reg.checked_in_at ? (
+                              <span className="chip chip-checked-in">{t('eventDetail.checkedIn')}</span>
+                            ) : (
+                              <button type="button" onClick={() => void handleCheckIn(reg.id)} disabled={submitting}>
+                                {t('eventDetail.checkIn')}
+                              </button>
+                            )}
+                            <button type="button" onClick={() => void handleForceCancel(reg.id)} disabled={submitting}>
+                              {t('eventDetail.forceCancel')}
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </li>
@@ -620,7 +780,62 @@ export function EventDetailPage() {
         )}
       </section>
 
-      {id ? <ReportForm targetEventId={id} /> : null}
+      {id ? (
+        <section className="event-report-section" aria-label={t('report.title')}>
+          <button type="button" className="report-trigger" onClick={() => setReportOpen(true)}>
+            <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
+            {t('eventDetail.reportEvent')}
+          </button>
+        </section>
+      ) : null}
+
+      {id && reportOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setReportOpen(false)
+        }}>
+          <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="event-report-title">
+            <div className="report-modal-header">
+              <h3 id="event-report-title">{t('eventDetail.reportEvent')}</h3>
+              <button type="button" className="modal-close" onClick={() => setReportOpen(false)} aria-label={t('common.close')}>×</button>
+            </div>
+            <ReportForm targetEventId={id} />
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem ? (
+        <ShareToXModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          templateType="host_broadcast"
+          data={{
+            event: {
+              title: eventItem.title,
+              startTime: new Date(eventItem.start_time).toLocaleString(),
+              region: eventItem.location_region ?? '線上',
+              eventUrl: window.location.href,
+            },
+          }}
+        />
+      ) : null}
+
+      {eventItem && eventItem.creator ? (
+        <ShareToXModal
+          open={attendeeShareOpen}
+          onClose={() => setAttendeeShareOpen(false)}
+          templateType="attendee_announcement"
+          data={{
+            event: {
+              title: eventItem.title,
+              startTime: '',
+              hostName: eventItem.creator.metadata?.twitter_handle
+                ? `@${eventItem.creator.metadata.twitter_handle}`
+                : (eventItem.creator.display_name ?? ''),
+              eventUrl: window.location.href,
+            },
+          }}
+        />
+      ) : null}
     </Layout>
   )
 }

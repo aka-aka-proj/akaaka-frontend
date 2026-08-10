@@ -11,16 +11,20 @@ import { CreateEventPage } from './pages/CreateEventPage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
+import { FollowingPage } from './pages/FollowingPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
+import { NotificationsPage } from './pages/NotificationsPage'
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
 import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
 import { SecurityPrivacyPage } from './pages/SecurityPrivacyPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { VirtualLoversPage } from './pages/VirtualLoversPage'
 import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
 import { VirtualLoverCreatePage } from './pages/VirtualLoverCreatePage'
@@ -153,6 +157,18 @@ function App() {
         }
       />
       <Route
+        path="/notifications"
+        element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/following"
+        element={<ProtectedRoute><FollowingPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/settings/notifications"
+        element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>}
+      />
+      <Route
         path="/issues"
         element={
           <ProtectedRoute>
@@ -221,6 +237,14 @@ function App() {
         element={
           <ProtectedRoute>
             <SecurityPrivacyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/analytics"
+        element={
+          <ProtectedRoute>
+            <AnalyticsPage />
           </ProtectedRoute>
         }
       />

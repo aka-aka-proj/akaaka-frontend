@@ -32,6 +32,7 @@ function queryBuilder(response: QueryResponse) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
+    is: vi.fn().mockResolvedValue(response),
     lt: vi.fn().mockResolvedValue(response),
     order: vi.fn().mockResolvedValue(response),
     gte: vi.fn().mockResolvedValue(response),
@@ -87,6 +88,9 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Self User')).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: 'Give Recommendation' })).toBeNull()
+    expect(screen.queryByLabelText('Display name')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }))
+    expect(screen.getByLabelText('Display name')).toBeTruthy()
   })
 
   it('hides private bio for non-owner viewer', async () => {
@@ -126,6 +130,49 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Target User')).toBeTruthy()
     })
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
+  })
+
+  it('follows another user from their profile', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user',
+        role_status: 'general',
+        display_name: 'Target User',
+        bio: 'Public bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 3,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+    const followsQuery = queryBuilder({ data: null, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      if (table === 'user_follows') return followsQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const user = userEvent.setup()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Follow' })).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: 'Follow' }))
+
+    expect(followsQuery.insert).toHaveBeenCalledWith({
+      follower_id: 'viewer-user',
+      followed_id: 'target-user',
+    })
+    expect(await screen.findByText('User followed.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Unfollow' })).toBeTruthy()
   })
 
   it('shows rate limit message when Edge Function returns 429', async () => {

@@ -137,9 +137,10 @@ export function VirtualLoverChatPage() {
       if (!id) return
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) return
         const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
-          headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         })
         const data = await res.json()
         if (data.model) setUsedModel(data.model)
@@ -148,9 +149,20 @@ export function VirtualLoverChatPage() {
       }
     }
 
+    const provisionLlmKey = async () => {
+      if (!user?.id) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/llm-key`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+    }
+
     void loadCharacter()
     void loadFeedback()
     void pickRandomModel()
+    void provisionLlmKey()
   }, [id, user?.id])
 
   const sendMessage = async () => {
@@ -175,13 +187,14 @@ export function VirtualLoverChatPage() {
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Authentication required')
       const functionUrl = `${supabaseUrl}/functions/v1/chat`
 
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${supabaseAnonKey}`,
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -292,9 +305,10 @@ export function VirtualLoverChatPage() {
   const handleShuffle = async () => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
       const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
-        headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
       const data = await res.json()
       if (data.model) {
