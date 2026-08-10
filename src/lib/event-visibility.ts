@@ -14,6 +14,8 @@ export function canSeeEvent(
 ): boolean {
   if (!viewerId) return false
 
+  if (event.lifecycle_status === 'draft' && event.creator_id !== viewerId) return false
+
   const visibility = getEventVisibility(event)
 
   if (event.creator_id === viewerId) return true

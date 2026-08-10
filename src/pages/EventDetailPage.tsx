@@ -295,6 +295,9 @@ export function EventDetailPage() {
         {eventItem ? (
           <>
             <h2>{eventItem.title}</h2>
+            {eventItem.lifecycle_status === 'draft' ? (
+              <p className="message">{t('eventDetail.draftNotice')}</p>
+            ) : null}
             {eventItem.event_type && (
               <div className="chip-group" style={{ marginBottom: '1rem' }}>
                 {parseEventTypes(eventItem.event_type).map((type) => (
@@ -343,7 +346,7 @@ export function EventDetailPage() {
             {eventItem.registration_deadline ? (
               <p><Icon href="/form-icons.svg" name="form-calendar" size={14} /> {t('eventDetail.registrationDeadlineLabel')}: {new Date(eventItem.registration_deadline).toLocaleString()}</p>
             ) : null}
-            <div className="calendar-actions">
+            {eventItem.lifecycle_status !== 'draft' ? <div className="calendar-actions">
               <button
                 type="button"
                 className="calendar-btn"
@@ -369,7 +372,7 @@ export function EventDetailPage() {
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}
-            </div>
+            </div> : null}
             {isHost ? (
               <p>
                 <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
@@ -403,7 +406,7 @@ export function EventDetailPage() {
       </section>
 
       {/* Registration Section */}
-      {eventItem && user && !isHost ? (
+      {eventItem && eventItem.lifecycle_status !== 'draft' && user && !isHost ? (
         <section className="card">
           <h3>{t('eventDetail.registration')}</h3>
           {myRegistration ? (

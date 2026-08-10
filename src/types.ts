@@ -63,6 +63,7 @@ export interface EventItem {
   title: string
   description: string | null
   category: EventCategory
+  lifecycle_status: 'draft' | 'published' | 'registration_open' | 'registration_closed' | 'completed' | 'archived' | 'cancelled'
   event_type: string | null
   is_venue_hosted: boolean
   visibility_settings: { type?: Visibility } | null

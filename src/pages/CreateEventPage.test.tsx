@@ -49,11 +49,12 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('標題'), 'My Event')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
-    await user.click(screen.getByRole('button', { name: '儲存活動' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
         title: 'My Event',
+        lifecycle_status: 'draft',
         is_venue_hosted: false,
         location_region: 'North',
       }),
@@ -77,14 +78,36 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByLabelText('場地主辦'))
-    await user.click(screen.getByRole('button', { name: '儲存活動' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
         title: 'Approved Event',
+        lifecycle_status: 'draft',
         is_venue_hosted: true,
         location_region: 'North',
       }),
     ])
+  })
+
+  it('organizes a rough idea into editable fields without publishing', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('活動發想'), '週末桌遊聚會\n台北北部一起認識新朋友')
+    await user.click(screen.getByRole('button', { name: 'AI 整理' }))
+
+    expect((screen.getByLabelText('標題') as HTMLInputElement).value).toBe('週末桌遊聚會')
+    expect((screen.getByLabelText('活動地區') as HTMLSelectElement).value).toBe('North')
+    expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
   })
 })
