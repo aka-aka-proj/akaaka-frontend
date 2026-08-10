@@ -274,14 +274,14 @@ export function EditEventPage() {
               <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
             ))}
           </select>
-          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--border-color, #ccc)', borderRadius: '4px', background: 'var(--bg-primary, #fff)' }}>
+          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
             {eventType.map(type => (
-              <span key={type} className="tag" style={{ background: 'var(--bg-secondary, #eee)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
+              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
                 {t(getEventTypeI18nKey(type))}
                 <button 
                   type="button" 
                   onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--text-secondary, #666)' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
                   aria-label={t('editEvent.removeType')}
                 >
                   &times;
