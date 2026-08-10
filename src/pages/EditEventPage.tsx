@@ -9,7 +9,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField } from '../types'
 import { TAIWAN_REGIONS } from '../types'
-import { EVENT_TYPES } from '../lib/event-types'
+import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
 
 export function EditEventPage() {
@@ -257,13 +257,13 @@ export function EditEventPage() {
           >
             <option value="" disabled>{t('editEvent.selectEventType')}</option>
             {EVENT_TYPES.map(type => (
-              <option key={type} value={type}>{type}</option>
+              <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
             ))}
           </select>
           <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--border-color, #ccc)', borderRadius: '4px', background: 'var(--bg-primary, #fff)' }}>
             {eventType.map(type => (
               <span key={type} className="tag" style={{ background: 'var(--bg-secondary, #eee)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
-                {type}
+                {t(getEventTypeI18nKey(type))}
                 <button 
                   type="button" 
                   onClick={() => setEventType(eventType.filter(t => t !== type))} 

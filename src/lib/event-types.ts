@@ -34,6 +34,39 @@ export const EVENT_TYPES = [...PRACTICE_TAGS, ...SOCIAL_TAGS] as const;
 
 export type EventType = typeof EVENT_TYPES[number];
 
+export const EVENT_TYPE_I18N_KEY_MAP: Record<string, string> = {
+  'Bondage': 'bondage',
+  'Discipline': 'discipline',
+  'Dominance / Submission': 'dominanceSubmission',
+  'D/S': 'ds',
+  'Sadism / Masochism': 'sadismMasochism',
+  'SM': 'sm',
+  'SP': 'sp',
+  'Spanking': 'spanking',
+  'TK': 'tk',
+  'Tickling': 'tickling',
+  'K9': 'k9',
+  'DID': 'did',
+  'CNC': 'cnc',
+  'DDLG': 'ddlg',
+  '4 love': 'fourLove',
+  'ABDL': 'abdl',
+  'Dining': 'dining',
+  'BBQ': 'bbq',
+  'Karaoke': 'karaoke',
+  'Movie': 'movie',
+  'BoardGame': 'boardGame',
+  'Travel': 'travel',
+  'BookClub': 'bookClub',
+  'Conversation': 'conversation',
+  'SpeedDating': 'speedDating',
+  'HangOut': 'hangOut',
+}
+
+export function getEventTypeI18nKey(type: string): string {
+  return `eventTypes.${EVENT_TYPE_I18N_KEY_MAP[type] ?? type}`
+}
+
 export function hasPracticeTag(eventType: string[]): boolean {
   return eventType.some(t => (PRACTICE_TAGS as readonly string[]).includes(t))
 }
