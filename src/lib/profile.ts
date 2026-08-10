@@ -57,6 +57,19 @@ export function normalizeSocialLinks(value: unknown): SocialLink[] {
     .filter((item): item is SocialLink => item !== null)
 }
 
+export function mapProfileRow(row: unknown): Profile {
+  const source = (row ?? {}) as Record<string, unknown>
+  return {
+    id: String(source.id ?? ''),
+    role_status: (source.role_status as Profile['role_status']) ?? 'general',
+    display_name: (source.display_name as string | null) ?? null,
+    bio: (source.bio as string | null) ?? null,
+    external_social_links: normalizeSocialLinks(source.external_social_links),
+    metadata: (source.metadata as Profile['metadata']) ?? null,
+    reputation_score: Number(source.reputation_score ?? 0),
+  }
+}
+
 export function getBioVisibility(profile: Profile | null | undefined): Visibility {
   const visibility = profile?.metadata?.visibility?.bio
   if (visibility && VISIBILITY_OPTIONS.has(visibility)) {

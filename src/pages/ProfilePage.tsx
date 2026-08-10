@@ -1,29 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { ReportForm } from '../components/ReportForm'
-import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
-import { canViewBio, getAvatarPath, getBioVisibility, normalizeSocialLinks, PRESET_AVATAR_PATHS } from '../lib/profile'
+import { canViewBio, getAvatarPath, getBioVisibility, mapProfileRow } from '../lib/profile'
 import { supabase } from '../supabaseClient'
-import type { BdsmRole, GenderIdentity, Profile, Visibility } from '../types'
-
-function mapProfileRow(row: unknown): Profile {
-  const source = (row ?? {}) as Record<string, unknown>
-  return {
-    id: String(source.id ?? ''),
-    role_status: (source.role_status as Profile['role_status']) ?? 'general',
-    display_name: (source.display_name as string | null) ?? null,
-    bio: (source.bio as string | null) ?? null,
-    external_social_links: normalizeSocialLinks(source.external_social_links),
-    metadata: (source.metadata as Profile['metadata']) ?? null,
-    reputation_score: Number(source.reputation_score ?? 0),
-  }
-}
+import type { Profile } from '../types'
 
 function maskEmail(email: string | undefined) {
   if (!email) return ''
@@ -35,20 +20,12 @@ function maskEmail(email: string | undefined) {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, refreshProfile, identities } = useAuth()
+  const { user, identities } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
 
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [displayName, setDisplayName] = useState('')
-  const [bio, setBio] = useState('')
-  const [avatarPath, setAvatarPath] = useState('/default-avatar.svg')
-  const [visibility, setVisibility] = useState<Visibility>('public')
-  const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
-  const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
-  const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
-  const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -59,7 +36,6 @@ export function ProfilePage() {
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
   const [joinedEventsCount, setJoinedEventsCount] = useState(0)
   const [message, setMessage] = useState('')
-  const [isEditing, setIsEditing] = useState(false)
   const [showUserId, setShowUserId] = useState(false)
   const [showEmail, setShowEmail] = useState(false)
 
@@ -98,14 +74,6 @@ export function ProfilePage() {
 
     const mapped = data ? mapProfileRow(data) : null
     setProfile(mapped)
-    setDisplayName(mapped?.display_name ?? '')
-    setBio(mapped?.bio ?? '')
-    setAvatarPath(getAvatarPath(mapped))
-    setVisibility(getBioVisibility(mapped))
-    setGenderIdentity(mapped?.metadata?.gender_identity ?? '')
-    setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
-    setBdsmRoles(mapped?.metadata?.bdsm_roles ?? [])
-    setBdsmRolesVisibility(mapped?.metadata?.visibility?.bdsm_roles ?? 'public')
     setCanMessage(false)
 
     const { data: reportStats } = await supabase
@@ -185,49 +153,6 @@ export function ProfilePage() {
   useEffect(() => {
     void loadProfile()
   }, [targetProfileId, user?.id])
-
-  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!isOwner || !user) {
-      return
-    }
-
-    const { data: currentRow } = await supabase
-      .from('profiles')
-      .select('metadata')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const existingMeta = (currentRow?.metadata as Record<string, unknown>) ?? {}
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        display_name: displayName.trim() || null,
-        bio: bio.trim() || null,
-        metadata: {
-          ...existingMeta,
-          visibility: {
-            bio: visibility || 'public',
-            gender_identity: genderIdentityVisibility || 'public',
-            bdsm_roles: bdsmRolesVisibility || 'public',
-          },
-          avatar_path: avatarPath === '/default-avatar.svg' ? null : avatarPath,
-          gender_identity: genderIdentity || null,
-          bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : null,
-        },
-      })
-      .eq('id', user.id)
-
-    if (error) {
-      setMessage(error.message)
-      return
-    }
-
-    setMessage(t('profile.profileUpdated'))
-    await refreshProfile()
-    await loadProfile()
-  }
 
   const recommend = async () => {
     if (!user || !targetProfileId) {
@@ -418,10 +343,10 @@ export function ProfilePage() {
                   )}
                 </h2>
                 {isOwner && (
-                  <button type="button" className="btn-secondary profile-edit-trigger" onClick={() => setIsEditing((current) => !current)}>
+                  <Link to="/profile/me/edit" className="btn-secondary profile-edit-trigger">
                     <Icon href="/action-icons.svg" name="action-edit" size={16} />
-                    {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
-                  </button>
+                    {t('profile.editProfile')}
+                  </Link>
                 )}
                 </div>
               <p className="profile-role">
@@ -479,9 +404,9 @@ export function ProfilePage() {
                     <>
                       <span>{t('profile.noBio')}</span>
                       {isOwner && (
-                        <button type="button" className="btn-link-inline" onClick={() => setIsEditing(true)}>
+                        <Link to="/profile/me/edit" className="btn-link-inline">
                           {t('profile.addBio')}
-                        </button>
+                        </Link>
                       )}
                     </>
                   )
@@ -552,140 +477,6 @@ export function ProfilePage() {
             {t('nav.signOut')}
           </button>
         </section>
-
-        {isEditing && <form className="card profile-edit-form" onSubmit={saveProfile}>
-          <h3>{t('profile.editProfile')}</h3>
-          <label>
-            {t('profile.displayNameLabel')}
-            <input
-              aria-label={t('profile.displayNameLabel')}
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </label>
-          <fieldset>
-            <legend>{t('profile.avatarLabel')}</legend>
-            <div className="avatar-picker">
-              <label className="avatar-option">
-                <input
-                  type="radio"
-                  name="profile-avatar"
-                  value="/default-avatar.svg"
-                  checked={avatarPath === '/default-avatar.svg'}
-                  onChange={() => setAvatarPath('/default-avatar.svg')}
-                />
-                <img src="/default-avatar.svg" alt={t('profile.defaultAvatar')} className="avatar avatar-lg" />
-                <span>{t('profile.defaultAvatar')}</span>
-              </label>
-              {PRESET_AVATAR_PATHS.map((path) => (
-                <label className="avatar-option" key={path}>
-                  <input
-                    type="radio"
-                    name="profile-avatar"
-                    value={path}
-                    checked={avatarPath === path}
-                    onChange={() => setAvatarPath(path)}
-                  />
-                  <img src={path} alt="" className="avatar avatar-lg" />
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <label>
-            {t('profile.bioLabel')}
-            <textarea
-              aria-label={t('profile.bioLabel')}
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
-            />
-          </label>
-          <label>
-            {t('profile.bioVisibilityLabel')}
-            <select
-              aria-label={t('profile.bioVisibilityLabel')}
-              value={visibility}
-              onChange={(event) => setVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('profile.public')}</option>
-              <option value="connections_only">{t('profile.connectionsOnly')}</option>
-              <option value="private">{t('profile.private')}</option>
-            </select>
-            <VisibilityTooltip fieldName="bio" />
-          </label>
-          <label>
-            {t('profile.genderIdentityLabel')}
-            <select
-              aria-label={t('profile.genderIdentityLabel')}
-              value={genderIdentity}
-              onChange={(event) => setGenderIdentity(event.target.value as GenderIdentity | '')}
-            >
-              <option value="">{t('profile.genderIdentityLabel')}</option>
-              <option value="man">{t('profile.genderIdentityMan')}</option>
-              <option value="woman">{t('profile.genderIdentityWoman')}</option>
-              <option value="non_binary">{t('profile.genderIdentityNonBinary')}</option>
-              <option value="genderqueer">{t('profile.genderIdentityGenderqueer')}</option>
-              <option value="agender">{t('profile.genderIdentityAgender')}</option>
-              <option value="bigender">{t('profile.genderIdentityBigender')}</option>
-              <option value="demiboy">{t('profile.genderIdentityDemiboy')}</option>
-              <option value="demigirl">{t('profile.genderIdentityDemigirl')}</option>
-              <option value="genderfluid">{t('profile.genderIdentityGenderfluid')}</option>
-              <option value="two_spirit">{t('profile.genderIdentityTwoSpirit')}</option>
-              <option value="questioning">{t('profile.genderIdentityQuestioning')}</option>
-              <option value="other">{t('profile.genderIdentityOther')}</option>
-            </select>
-          </label>
-          <label>
-            {t('profile.genderIdentityVisibilityLabel')}
-            <select
-              aria-label={t('profile.genderIdentityVisibilityLabel')}
-              value={genderIdentityVisibility}
-              onChange={(event) => setGenderIdentityVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('profile.public')}</option>
-              <option value="connections_only">{t('profile.connectionsOnly')}</option>
-              <option value="private">{t('profile.private')}</option>
-            </select>
-            <VisibilityTooltip fieldName="gender_identity" />
-          </label>
-          <fieldset>
-            <legend>{t('profile.bdsmRolesLabel')}</legend>
-            <div className="role-chips">
-            {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging'] as BdsmRole[]).map((role) => (
-              <label key={role} className={`role-chip ${bdsmRoles.includes(role) ? 'selected' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={bdsmRoles.includes(role)}
-                  onChange={(event) => {
-                    setBdsmRoles((prev) =>
-                      event.target.checked
-                        ? [...prev, role]
-                        : prev.filter((r) => r !== role),
-                    )
-                  }}
-                />
-                {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
-              </label>
-            ))}
-            </div>
-          </fieldset>
-          <label>
-            {t('profile.bdsmRolesVisibilityLabel')}
-            <select
-              aria-label={t('profile.bdsmRolesVisibilityLabel')}
-              value={bdsmRolesVisibility}
-              onChange={(event) => setBdsmRolesVisibility(event.target.value as Visibility)}
-            >
-              <option value="public">{t('profile.public')}</option>
-              <option value="connections_only">{t('profile.connectionsOnly')}</option>
-              <option value="private">{t('profile.private')}</option>
-            </select>
-            <VisibilityTooltip fieldName="bdsm_roles" />
-          </label>
-          <div className="form-actions">
-            <button type="submit">{t('profile.saveProfile')}</button>
-            <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>{t('profile.cancelEdit')}</button>
-          </div>
-        </form>}
 
         <section className="card danger-zone">
           <h3>{t('profile.deleteAccount')}</h3>
