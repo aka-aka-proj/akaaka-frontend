@@ -289,6 +289,8 @@ const en = {
     notFound: 'Profile not found.',
     editProfile: 'Edit profile',
     displayNameLabel: 'Display name',
+    avatarLabel: 'Profile avatar',
+    defaultAvatar: 'Default avatar',
     bioLabel: 'Bio',
     bioVisibilityLabel: 'Bio visibility',
     public: 'public',

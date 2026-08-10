@@ -13,6 +13,7 @@ import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag } from '../lib/event-types'
+import { getAvatarPath } from '../lib/profile'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
 interface Attendee {
@@ -348,7 +349,7 @@ export function EventDetailPage() {
               </div>
             )}
             <p className="event-meta">
-              <img src="/default-avatar.svg" alt="" width={24} height={24} className="avatar avatar-sm" />
+              <img src={getAvatarPath(eventItem.creator)} alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
             </p>
             <p className="event-creator-stats">

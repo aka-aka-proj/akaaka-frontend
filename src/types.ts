@@ -54,6 +54,7 @@ export interface Profile {
     gender_identity?: GenderIdentity
     bdsm_roles?: BdsmRole[]
     twitter_handle?: string
+    avatar_path?: string
   } | null
   reputation_score: number
 }

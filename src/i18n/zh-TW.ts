@@ -290,6 +290,8 @@ const zhTW = {
     notFound: '找不到個人資料。',
     editProfile: '編輯個人資料',
     displayNameLabel: '顯示名稱',
+    avatarLabel: '個人頭像',
+    defaultAvatar: '預設頭像',
     bioLabel: '簡介',
     bioVisibilityLabel: '簡介可見度',
     public: '公開',

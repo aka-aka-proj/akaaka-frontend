@@ -372,6 +372,28 @@ dd {
   height: 128px;
 }
 
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.75rem;
+}
+
+.avatar-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.avatar-option input {
+  accent-color: var(--color-primary);
+}
+
+.avatar-option img {
+  width: 64px;
+  height: 64px;
+}
+
 .profile-header {
   display: flex;
   gap: 1.25rem;

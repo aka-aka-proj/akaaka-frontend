@@ -8,7 +8,7 @@ import { ReportForm } from '../components/ReportForm'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
-import { canViewBio, getBioVisibility, normalizeSocialLinks } from '../lib/profile'
+import { canViewBio, getAvatarPath, getBioVisibility, normalizeSocialLinks, PRESET_AVATAR_PATHS } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Profile, Visibility } from '../types'
 
@@ -36,6 +36,7 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
+  const [avatarPath, setAvatarPath] = useState('/default-avatar.svg')
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
@@ -87,6 +88,7 @@ export function ProfilePage() {
     setProfile(mapped)
     setDisplayName(mapped?.display_name ?? '')
     setBio(mapped?.bio ?? '')
+    setAvatarPath(getAvatarPath(mapped))
     setVisibility(getBioVisibility(mapped))
     setGenderIdentity(mapped?.metadata?.gender_identity ?? '')
     setGenderIdentityVisibility(mapped?.metadata?.visibility?.gender_identity ?? 'public')
@@ -180,6 +182,7 @@ export function ProfilePage() {
             gender_identity: genderIdentityVisibility || 'public',
             bdsm_roles: bdsmRolesVisibility || 'public',
           },
+          avatar_path: avatarPath === '/default-avatar.svg' ? null : avatarPath,
           gender_identity: genderIdentity || null,
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : null,
         },
@@ -318,7 +321,7 @@ export function ProfilePage() {
       <section className="card">
         {profile ? (
           <div className="profile-header" style={{position: 'relative'}}>
-            <img src="/default-avatar.svg" alt="" width={128} height={128} className="avatar avatar-xl" />
+            <img src={getAvatarPath(profile)} alt="" width={128} height={128} className="avatar avatar-xl" />
               <div className="profile-info">
                 {!isOwner && (
                   <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
@@ -462,6 +465,34 @@ export function ProfilePage() {
               onChange={(event) => setDisplayName(event.target.value)}
             />
           </label>
+          <fieldset>
+            <legend>{t('profile.avatarLabel')}</legend>
+            <div className="avatar-picker">
+              <label className="avatar-option">
+                <input
+                  type="radio"
+                  name="profile-avatar"
+                  value="/default-avatar.svg"
+                  checked={avatarPath === '/default-avatar.svg'}
+                  onChange={() => setAvatarPath('/default-avatar.svg')}
+                />
+                <img src="/default-avatar.svg" alt={t('profile.defaultAvatar')} className="avatar avatar-lg" />
+                <span>{t('profile.defaultAvatar')}</span>
+              </label>
+              {PRESET_AVATAR_PATHS.map((path) => (
+                <label className="avatar-option" key={path}>
+                  <input
+                    type="radio"
+                    name="profile-avatar"
+                    value={path}
+                    checked={avatarPath === path}
+                    onChange={() => setAvatarPath(path)}
+                  />
+                  <img src={path} alt="" className="avatar avatar-lg" />
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label>
             {t('profile.bioLabel')}
             <textarea

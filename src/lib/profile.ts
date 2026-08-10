@@ -3,6 +3,33 @@ import type { Profile, SocialLink, Visibility } from '../types'
 const SOCIAL_PLATFORMS = new Set(['facebook', 'instagram', 'x'])
 const VISIBILITY_OPTIONS = new Set(['public', 'connections_only', 'private'])
 
+export const PRESET_AVATAR_PATHS = [
+  'Creative_studio_20260806_202218.jpg',
+  'Creative_studio_20260806_202339.jpg',
+  'Creative_studio_20260806_202422.jpg',
+  'Creative_studio_20260806_202518.jpg',
+  'Creative_studio_20260806_202557.jpg',
+  'Creative_studio_20260806_202648.jpg',
+  'Creative_studio_20260806_202733.jpg',
+  'Creative_studio_20260806_203217.jpg',
+  'Creative_studio_20260806_203310.jpg',
+  'Creative_studio_20260806_203532.jpg',
+  'Creative_studio_20260806_203647.jpg',
+  'Creative_studio_20260806_203804.jpg',
+  'Creative_studio_20260806_203938.jpg',
+  'Creative_studio_20260806_204120.jpg',
+  'Creative_studio_20260806_204327.jpg',
+].map((filename) => `/avatar/${filename}`)
+
+const PRESET_AVATAR_PATH_SET = new Set(PRESET_AVATAR_PATHS)
+
+export function getAvatarPath(profile: Pick<Profile, 'metadata'> | null | undefined): string {
+  const avatarPath = profile?.metadata?.avatar_path
+  return typeof avatarPath === 'string' && PRESET_AVATAR_PATH_SET.has(avatarPath)
+    ? avatarPath
+    : '/default-avatar.svg'
+}
+
 export function normalizeSocialLinks(value: unknown): SocialLink[] {
   if (!Array.isArray(value)) {
     return []
