@@ -775,7 +775,6 @@ export function EventDetailPage() {
         </form>
         {visibleThreads.length === 0 ? (
           <div className="empty-state">
-            <img src="/illustration-empty-discussion.svg" alt="" width={480} height={280} className="illustration" />
             <p>{t('eventDetail.postComment')}</p>
           </div>
         ) : (
