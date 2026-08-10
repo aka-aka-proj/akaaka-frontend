@@ -104,6 +104,7 @@ export interface EventItem {
   max_capacity: number | null
   registration_deadline: string | null
   external_registration_url: string | null
+  source_url: string | null
   created_at: string
   creator?: Profile | null
 }

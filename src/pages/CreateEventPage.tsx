@@ -10,6 +10,8 @@ import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
+import { isAllowedEventSourceUrl } from '../lib/event-source'
+import type { EventSourcePreview } from '../lib/event-source'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RegistrationFormField } from '../types'
 
@@ -43,6 +45,8 @@ export function CreateEventPage() {
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [sourcePreview, setSourcePreview] = useState<EventSourcePreview | null>(null)
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
@@ -86,6 +90,7 @@ export function CreateEventPage() {
           setMaxCapacity(data.max_capacity?.toString() ?? '')
           setRegistrationDeadline(data.registration_deadline ? data.registration_deadline.slice(0, 16) : '')
           setExternalRegistrationUrl(data.external_registration_url ?? '')
+          setSourceUrl(data.source_url ?? '')
           setVisibilityType(data.visibility_settings?.type ?? 'public')
           setIsVenueHosted(data.is_venue_hosted ?? false)
           if (data.registration_form_config) setFormFields(data.registration_form_config)
@@ -107,6 +112,27 @@ export function CreateEventPage() {
     if (organized.locationRegion) setLocationRegion(organized.locationRegion)
     setAiMessage(t('createEvent.aiOrganizedNotice'))
     setOrganizing(false)
+  }
+
+  const importSource = async () => {
+    const normalized = sourceUrl.trim()
+    if (!isAllowedEventSourceUrl(normalized)) {
+      setMessage(t('createEvent.sourceUrlInvalid'))
+      return
+    }
+    setOrganizing(true)
+    setMessage('')
+    const { data, error } = await supabase.functions.invoke('import-event-source', { body: { source_url: normalized } })
+    setOrganizing(false)
+    if (error || !data?.preview) {
+      setMessage(error?.message ?? t('createEvent.sourceImportFailed'))
+      return
+    }
+    const preview = data as EventSourcePreview
+    setSourcePreview(preview)
+    if (preview.preview.title) setTitle(preview.preview.title)
+    if (preview.preview.description) setDescription(preview.preview.description)
+    setAiMessage(t('createEvent.sourceImportPreview'))
   }
 
   const addType = (type: string) => {
@@ -220,6 +246,7 @@ export function CreateEventPage() {
           registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
           registration_form_config: formFields.length > 0 ? formFields : null,
           external_registration_url: externalRegistrationUrl.trim() || null,
+          source_url: sourceUrl.trim() || null,
           recurrence_rule: recurrenceRule,
         },
       ])
@@ -270,6 +297,21 @@ export function CreateEventPage() {
             {organizing ? t('createEvent.aiOrganizing') : t('createEvent.aiOrganize')}
           </button>
           {aiMessage ? <p className="message">{aiMessage}</p> : null}
+        </section>
+        <section className="card" aria-labelledby="event-source-import-title" style={{ background: '#f5f9ff' }}>
+          <h2 id="event-source-import-title">{t('createEvent.sourceImportTitle')}</h2>
+          <p>{t('createEvent.sourceImportDescription')}</p>
+          <input
+            type="url"
+            aria-label={t('createEvent.sourceUrlLabel')}
+            placeholder={t('createEvent.sourceUrlPlaceholder')}
+            value={sourceUrl}
+            onChange={(event) => setSourceUrl(event.target.value)}
+          />
+          <button type="button" onClick={() => void importSource()} disabled={!sourceUrl.trim() || organizing}>
+            {organizing ? t('createEvent.sourceImporting') : t('createEvent.sourceImportButton')}
+          </button>
+          {sourcePreview ? <p className="message" role="status">{t('createEvent.sourcePreviewNotice', { provider: sourcePreview.provider })}</p> : null}
         </section>
         {fromEventId && (
           <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{t('createEvent.copyFrom')}</p>
