@@ -35,11 +35,17 @@ export function CreateEventPage() {
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([])
   const [recurrenceCount, setRecurrenceCount] = useState(4)
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
+
+  const getStartWeekday = () => {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return dayNames[new Date(startTime).getDay()] ?? 'Mon'
+  }
 
   useEffect(() => {
     if (fromEventId) {
@@ -100,6 +106,15 @@ export function CreateEventPage() {
     }
 
     setSubmitting(true)
+    const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [getStartWeekday()]
+    const recurrenceRule = recurrenceEnabled ? {
+      frequency: recurrenceFreq,
+      interval: recurrenceInterval,
+      days: recurrenceFreq === 'weekly' ? selectedRecurrenceDays : undefined,
+      count: recurrenceCount,
+      until: recurrenceEndDate ? new Date(`${recurrenceEndDate}T23:59:59`).toISOString() : undefined,
+    } : null
+
     const { data, error } = await supabase
       .from('events')
       .insert([
@@ -118,12 +133,7 @@ export function CreateEventPage() {
           max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
           registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
           registration_form_config: formFields.length > 0 ? formFields : null,
-          recurrence_rule: recurrenceEnabled ? {
-            frequency: recurrenceFreq,
-            interval: recurrenceInterval,
-            days: recurrenceFreq === 'weekly' ? recurrenceDays : undefined,
-            count: recurrenceCount,
-          } : null,
+          recurrence_rule: recurrenceRule,
         },
       ])
       .select('id')
@@ -135,19 +145,22 @@ export function CreateEventPage() {
       return
     }
 
-    if (recurrenceEnabled && data) {
-      await supabase.functions.invoke('create-recurring-events', {
+    if (recurrenceEnabled && data && recurrenceRule) {
+      const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
         body: {
           parent_event_id: data.id,
-          recurrence_rule: {
-            frequency: recurrenceFreq,
-            interval: recurrenceInterval,
-            days: recurrenceFreq === 'weekly' ? recurrenceDays : undefined,
-            count: recurrenceCount,
-          },
+          recurrence_rule: recurrenceRule,
           start_time: new Date(startTime).toISOString(),
         },
       })
+      if (recurrenceError) {
+        setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
+        return
+      }
+      if (recurrenceResult && recurrenceResult.success === false) {
+        setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
+        return
+      }
     }
 
     navigate(`/events/${data.id}`, { replace: true })
@@ -389,6 +402,9 @@ export function CreateEventPage() {
             )}
             <label>
               {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+            </label>
+            <label>
+              {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
             </label>
           </div>
         )}
