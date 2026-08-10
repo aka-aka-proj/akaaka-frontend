@@ -7,6 +7,8 @@ import { supabase } from '../supabaseClient'
 import { useT } from '../hooks/useT'
 import { Icon } from './Icon'
 import { MoreMenuDrawer } from './MoreMenuDrawer'
+import { PrivacyNotice } from './PrivacyNotice'
+import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
@@ -34,7 +36,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+  const unreadNotificationCount = useUnreadNotificationCount(user?.id)
   const desktopMoreRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,18 +48,6 @@ export function Layout({ children }: { children: ReactNode }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  useEffect(() => {
-    if (!user) {
-      setUnreadNotificationCount(0)
-      return
-    }
-    void supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .is('read_at', null)
-      .then(({ count }) => setUnreadNotificationCount(count ?? 0))
-  }, [user?.id])
 
   const handleSignOut = async () => {
     try {
@@ -168,6 +158,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </label>
         )}
       </header>
+      {user ? <PrivacyNotice /> : null}
       {children}
       {user ? (
         <nav className="bottom-nav" aria-label="Mobile navigation">
@@ -199,7 +190,11 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
       ) : null}
-      <MoreMenuDrawer open={moreOpen} onClose={() => setMoreOpen(false)} />
+      <MoreMenuDrawer
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </main>
   )
 }

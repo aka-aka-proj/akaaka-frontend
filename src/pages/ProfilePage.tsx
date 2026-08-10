@@ -28,7 +28,7 @@ function mapProfileRow(row: unknown): Profile {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, profile: currentUserProfile, refreshProfile, identities } = useAuth()
+  const { user, refreshProfile, identities } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -382,7 +382,7 @@ export function ProfilePage() {
                 )}
                 <h2>
                   {profile.display_name || profile.id}
-                  {currentUserProfile?.role_status === 'admin' && (
+                  {user?.app_metadata?.role === 'admin' && (
                     <>
                       {' '}
                       <Link to="/admin/moderation" className="link-small">

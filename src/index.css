@@ -11,6 +11,48 @@ body {
     sans-serif;
 }
 
+.privacy-notice {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  z-index: 30;
+}
+
+.privacy-notice__trigger {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 50%;
+  background: var(--card-background, #fff);
+  color: var(--text-muted, #666);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.privacy-notice__trigger:focus-visible {
+  outline: 3px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+.privacy-notice__popover {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 10px;
+  background: var(--card-background, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  color: var(--text-color, #333);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.privacy-notice__popover p {
+  margin: 6px 0 8px;
+}
+
 a {
   color: #0d6efd;
 }

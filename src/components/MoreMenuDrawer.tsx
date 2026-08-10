@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useEffect, useState } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { locales, type Locale } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -10,24 +9,14 @@ import { Icon } from './Icon'
 interface MoreMenuDrawerProps {
   open: boolean
   onClose: () => void
+  unreadNotificationCount: number
 }
 
-export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
+export function MoreMenuDrawer({ open, onClose, unreadNotificationCount }: MoreMenuDrawerProps) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
-
-  useEffect(() => {
-    if (!user || !open) return
-    void supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .is('read_at', null)
-      .then(({ count }) => setUnreadNotificationCount(count ?? 0))
-  }, [user?.id, open])
-
   const handleSignOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()

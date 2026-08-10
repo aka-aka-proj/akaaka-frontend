@@ -1,4 +1,4 @@
-export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved' | 'admin'
+export type RoleStatus = 'general' | 'venue_pending' | 'venue_approved'
 export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 export type EventCategory = 'Social' | 'Practice'
@@ -151,6 +151,15 @@ export interface ReportItem {
   category: 'harassment' | 'impersonation' | 'spam' | 'safety_risk' | 'other'
   details: string
   status: 'open' | 'triaging' | 'resolved' | 'rejected'
+  created_at: string
+}
+
+export interface AdminReportQueueItem {
+  id: string
+  category: ReportItem['category']
+  status: ReportItem['status']
+  target_profile_id: string | null
+  target_event_id: string | null
   created_at: string
 }
 

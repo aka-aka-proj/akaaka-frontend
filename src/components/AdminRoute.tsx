@@ -5,7 +5,7 @@ import { useT } from '../hooks/useT'
 
 /** Renders children only when the authenticated user has app_metadata.role === 'admin'. */
 export function AdminRoute({ children }: { children: ReactNode }) {
-  const { user, profile, loading } = useAuth()
+  const { user, loading } = useAuth()
   const { t } = useT()
   const location = useLocation()
 
@@ -17,7 +17,7 @@ export function AdminRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />
   }
 
-  const isAdmin = profile?.role_status === 'admin'
+  const isAdmin = user.app_metadata?.role === 'admin'
   if (!isAdmin) {
     return <Navigate to="/" replace />
   }
