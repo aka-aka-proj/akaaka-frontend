@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
 import { ReportForm } from '../components/ReportForm'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
+import { ProfileShareModal } from '../components/ProfileShareModal'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getAvatarPath, getBioVisibility, normalizeSocialLinks, PRESET_AVATAR_PATHS } from '../lib/profile'
@@ -62,6 +63,8 @@ export function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showUserId, setShowUserId] = useState(false)
   const [showEmail, setShowEmail] = useState(false)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
   const xProfileUrl = useMemo(() => {
     if (isOwner && identities) {
@@ -418,10 +421,15 @@ export function ProfilePage() {
                   )}
                 </h2>
                 {isOwner && (
-                  <button type="button" className="btn-secondary profile-edit-trigger" onClick={() => setIsEditing((current) => !current)}>
-                    <Icon href="/action-icons.svg" name="action-edit" size={16} />
-                    {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
-                  </button>
+                  <div className="profile-title-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setIsShareModalOpen(true)}>
+                      {t('profile.shareProfile')}
+                    </button>
+                    <button type="button" className="btn-secondary profile-edit-trigger" onClick={() => setIsEditing((current) => !current)}>
+                      <Icon href="/action-icons.svg" name="action-edit" size={16} />
+                      {isEditing ? t('profile.cancelEdit') : t('profile.editProfile')}
+                    </button>
+                  </div>
                 )}
                 </div>
               <p className="profile-role">
@@ -732,6 +740,14 @@ export function ProfilePage() {
       )}
 
       {!isOwner && targetProfileId ? <ReportForm targetProfileId={targetProfileId} collapsible /> : null}
+      {isShareModalOpen && profile ? (
+        <ProfileShareModal
+          profileUrl={profileUrl}
+          profileName={profile.display_name || profile.id}
+          onClose={() => setIsShareModalOpen(false)}
+          onMessage={setMessage}
+        />
+      ) : null}
     </Layout>
   )
 }

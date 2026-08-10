@@ -747,3 +747,14 @@ const en = {
 } as const
 
 export default en
+    shareProfile: 'Share my profile',
+    shareTitle: 'Share profile',
+    closeShare: 'Close share dialog',
+    shareQrAlt: 'QR code for {name}\'s profile',
+    shareQrLoading: 'Generating QR code…',
+    shareQrFailed: 'Could not generate the QR code.',
+    share: 'Share link',
+    copyProfileLink: 'Copy link',
+    shareText: 'Find me on AkaAka.',
+    shareLinkCopied: 'Profile link copied.',
+    shareFailed: 'Sharing failed. Please copy the URL manually.',

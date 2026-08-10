@@ -93,6 +93,42 @@ describe('ProfilePage', () => {
     expect(screen.getByLabelText('Display name')).toBeTruthy()
   })
 
+  it('opens the profile share dialog for the owner', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'viewer-user',
+        role_status: 'general',
+        display_name: 'Self User',
+        bio: 'Own bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 1,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/me']}>
+        <Routes>
+          <Route path="/profile/me" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Share my profile' })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: 'Share my profile' }))
+
+    expect(screen.getByRole('dialog', { name: 'Share profile' })).toBeTruthy()
+    expect(screen.getByText(`${window.location.origin}/profile/viewer-user`)).toBeTruthy()
+  })
+
   it('hides private bio for non-owner viewer', async () => {
     const profilesQuery = queryBuilder({
       data: {

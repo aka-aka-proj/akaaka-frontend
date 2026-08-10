@@ -2708,3 +2708,60 @@ dd {
     max-width: 90%;
   }
 }
+.profile-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.profile-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(17 24 39 / 55%);
+}
+
+.profile-share-modal {
+  width: min(100%, 26rem);
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgb(17 24 39 / 25%);
+  text-align: center;
+}
+
+.profile-share-heading,
+.profile-share-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.profile-share-heading h3 {
+  margin: 0;
+}
+
+.profile-share-qr {
+  display: block;
+  width: 240px;
+  height: 240px;
+  max-width: 100%;
+  margin: 1rem auto;
+}
+
+.profile-share-url {
+  overflow-wrap: anywhere;
+  color: #656d76;
+  font-size: 0.8125rem;
+}
+
+.profile-share-actions > button {
+  flex: 1;
+  min-height: 44px;
+}
+

@@ -748,3 +748,14 @@ const zhTW = {
 } as const
 
 export default zhTW
+    shareProfile: '分享我的個人頁',
+    shareTitle: '分享個人頁',
+    closeShare: '關閉分享視窗',
+    shareQrAlt: '{name} 的個人頁 QR code',
+    shareQrLoading: '正在產生 QR code…',
+    shareQrFailed: 'QR code 產生失敗。',
+    share: '分享連結',
+    copyProfileLink: '複製連結',
+    shareText: '在 AkaAka 找到我。',
+    shareLinkCopied: '已複製個人頁連結。',
+    shareFailed: '分享失敗，請手動複製網址。',
