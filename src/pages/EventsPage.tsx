@@ -13,6 +13,7 @@ import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
 type CategoryFilter = 'all' | EventCategory
+const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
 
 export function EventsPage() {
   const { t } = useT()
@@ -22,7 +23,7 @@ export function EventsPage() {
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [selectedRegion, setSelectedRegion] = useState<TaiwanRegion | null>(null)
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(DEFAULT_TIME_FILTER)
   const [myEventsOnly, setMyEventsOnly] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
@@ -32,7 +33,7 @@ export function EventsPage() {
   const clearFilters = () => {
     setSelectedType(null)
     setSelectedRegion(null)
-    setTimeFilter('all')
+    setTimeFilter(DEFAULT_TIME_FILTER)
     setMyEventsOnly(false)
   }
 
