@@ -9,6 +9,7 @@ import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
 import { CreateEventPage } from './pages/CreateEventPage'
 import { DirectChatPage } from './pages/DirectChatPage'
+import { EditProfilePage } from './pages/EditProfilePage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
@@ -99,6 +100,14 @@ function App() {
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/me/edit"
+        element={
+          <ProtectedRoute>
+            <EditProfilePage />
           </ProtectedRoute>
         }
       />

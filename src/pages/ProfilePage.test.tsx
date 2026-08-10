@@ -89,8 +89,7 @@ describe('ProfilePage', () => {
     })
     expect(screen.queryByRole('button', { name: 'Give Recommendation' })).toBeNull()
     expect(screen.queryByLabelText('Display name')).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }))
-    expect(screen.getByLabelText('Display name')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Edit profile' }).getAttribute('href')).toBe('/profile/me/edit')
   })
 
   it('opens the profile share dialog for the owner', async () => {
