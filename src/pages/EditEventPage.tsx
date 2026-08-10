@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { RegistrationFormBuilder } from '../components/RegistrationFormBuilder'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus } from '../types'
+import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
@@ -28,6 +29,7 @@ export function EditEventPage() {
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
   const [category, setCategory] = useState<EventCategory>('Social')
+  const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
   const [publicationStatus, setPublicationStatus] = useState<PublicationStatus>('closed')
   const [publishAt, setPublishAt] = useState('')
   const [unpublishAt, setUnpublishAt] = useState('')
@@ -80,6 +82,7 @@ export function EditEventPage() {
       setIsVenueHosted(event.is_venue_hosted)
       setVisibilityType(event.visibility_settings?.type ?? 'public')
       setCategory(event.category || 'Social')
+      setFormFields(event.registration_form_config ?? [])
       setPublicationStatus(event.publication_status ?? (event.lifecycle_status === 'draft' ? 'closed' : 'published'))
       setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
       setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
@@ -162,6 +165,7 @@ export function EditEventPage() {
         registration_deadline: registrationDeadline
           ? new Date(registrationDeadline).toISOString()
           : null,
+        registration_form_config: formFields.length > 0 ? formFields : null,
       })
       .eq('id', id)
 
@@ -379,6 +383,7 @@ export function EditEventPage() {
             <option value="private">{t('editEvent.private')}</option>
           </select>
         </label>
+        <RegistrationFormBuilder fields={formFields} setFields={setFormFields} />
         <button type="submit" disabled={submitting}>
           <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}
         </button>
