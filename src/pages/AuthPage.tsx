@@ -13,8 +13,8 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   signup_disabled: '註冊功能目前已關閉',
   too_many_requests: '登入嘗試次數過多，請稍後再試',
   over_request_rate_limit: '請求過於頻繁，請稍後再試',
-  'User already registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google 或 Facebook）登入。',
-  'A user with this email address has already been registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google 或 Facebook）登入。',
+  'User already registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。',
+  'A user with this email address has already been registered': '此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。',
 }
 
 type SocialProvider = 'google' | 'facebook' | 'x'

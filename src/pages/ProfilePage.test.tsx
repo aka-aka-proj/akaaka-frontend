@@ -32,6 +32,8 @@ function queryBuilder(response: QueryResponse) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
+    is: vi.fn().mockResolvedValue(response),
+    lt: vi.fn().mockResolvedValue(response),
     order: vi.fn().mockResolvedValue(response),
     gte: vi.fn().mockResolvedValue(response),
     maybeSingle: vi.fn().mockResolvedValue(response),

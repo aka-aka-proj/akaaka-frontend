@@ -29,6 +29,13 @@ describe('CreateEventPage', () => {
       if (table === 'events') {
         return { insert }
       }
+      if (table === 'notifications') {
+        const query = {
+          select: vi.fn().mockReturnThis(),
+          is: vi.fn().mockResolvedValue({ count: 0 }),
+        }
+        return query
+      }
       return {}
     })
   })
