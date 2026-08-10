@@ -7,7 +7,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { canSeeEvent } from '../lib/event-visibility'
 import { parseEventTypes } from '../lib/event-utils'
-import { hasPracticeTag, getEffectiveCategory } from '../lib/event-types'
+import { hasPracticeTag, getEffectiveCategory, getEventTypeI18nKey } from '../lib/event-types'
 import type { EventItem, EventCategory, TaiwanRegion } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 
@@ -186,7 +186,7 @@ export function EventsPage() {
                   className={`chip${selectedType === type ? ' chip-active' : ''}`}
                   onClick={() => setSelectedType(type)}
                 >
-                  {type}
+                  {t(getEventTypeI18nKey(type))}
                 </button>
               ))}
             </div>
@@ -283,7 +283,7 @@ export function EventsPage() {
                       return (
                         <span key={type} className={`chip${isPractice ? ' chip-practice' : ' chip-social'}`}>
                           {isPractice && <Icon href="/action-icons.svg" name="action-shield" size={12} />}
-                          {type}
+                          {t(getEventTypeI18nKey(type))}
                         </span>
                       )
                     })}

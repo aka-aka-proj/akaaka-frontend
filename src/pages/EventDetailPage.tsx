@@ -12,7 +12,7 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { parseEventTypes } from '../lib/event-utils'
-import { hasPracticeTag } from '../lib/event-types'
+import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
 
@@ -381,7 +381,7 @@ export function EventDetailPage() {
               <div className="chip-group" style={{ marginBottom: '1rem' }}>
                 {parseEventTypes(eventItem.event_type).map((type) => (
                   <span key={type} className="chip">
-                    {type}
+                    {t(getEventTypeI18nKey(type))}
                   </span>
                 ))}
               </div>
