@@ -49,7 +49,7 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
             type="button"
             className="more-drawer-close"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ✕
           </button>
@@ -89,7 +89,7 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
             <select
               value={locale}
               onChange={(e) => setLocale(e.target.value as Locale)}
-              aria-label="Language"
+              aria-label={t('common.language')}
             >
               {locales.map((l) => (
                 <option key={l.value} value={l.value}>

@@ -78,7 +78,7 @@ function AttendanceRing({ rate, size = 120 }: { rate: number; size?: number }) {
           {rate}%
         </text>
       </svg>
-      <div style={{ fontSize: '0.8125rem', color: '#6b7280' }}>出席率</div>
+      <div style={{ fontSize: '0.8125rem', color: '#6b7280' }}>{useT().t('analytics.attendanceRate')}</div>
     </div>
   )
 }

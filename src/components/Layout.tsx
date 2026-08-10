@@ -121,7 +121,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     <select
                       value={locale}
                       onChange={(e) => setLocale(e.target.value as Locale)}
-                      aria-label="Language"
+                      aria-label={t('common.language')}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {locales.map((l) => (
@@ -151,7 +151,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <select
               id="language-select-mobile"
               name="language"
-              aria-label="Language"
+              aria-label={t('common.language')}
               value={locale}
               onChange={(e) => setLocale(e.target.value as Locale)}
             >

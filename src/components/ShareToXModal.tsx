@@ -96,7 +96,7 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
             type="button"
             onClick={onClose}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#666' }}
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ✕
           </button>
