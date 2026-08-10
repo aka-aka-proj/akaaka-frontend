@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
 test.describe('public event discovery', () => {
@@ -15,5 +16,11 @@ test.describe('public event discovery', () => {
       viewportWidth: window.innerWidth,
     }))
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth)
+  })
+
+  test('has no automated axe violations on the authentication boundary', async ({ page }) => {
+    await page.goto('/events')
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
   })
 })

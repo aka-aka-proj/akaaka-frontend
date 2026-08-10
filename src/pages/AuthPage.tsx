@@ -156,7 +156,7 @@ export function AuthPage() {
       {showVerificationPrompt ? (
         <div className="card auth-card">
           <img src="/logo-login.svg" alt="AkaAka" width={800} height={160} className="auth-logo" />
-          <h2>{t('auth.signUp')}</h2>
+          <h1>{t('auth.signUp')}</h1>
           <p className="message">{t('auth.verificationSent')}</p>
           <p className="verification-email">{email}</p>
           <button
@@ -175,7 +175,7 @@ export function AuthPage() {
         </div>
       ) : (
       <form className="card auth-card" onSubmit={submit}>
-        <h2>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h2>
+        <h1>{isSignUp ? t('auth.signUp') : t('auth.signIn')}</h1>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px' }}>
           <button type="button" className="social-btn" onClick={() => signInWithSocial('google')} aria-label={t('auth.continueWithGoogle')}>
             <Icon href="/social-icons.svg" name="social-google" size={24} />
