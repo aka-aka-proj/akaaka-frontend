@@ -43,9 +43,15 @@ export function EventsPage() {
   useEffect(() => {
     const loadEvents = async () => {
       const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_time', { ascending: true })
+        .rpc('search_events', {
+          p_search: search || null,
+          p_event_type: selectedType,
+          p_location_region: selectedRegion,
+          p_time_filter: timeFilter,
+          p_creator_id: myEventsOnly ? userId : null,
+          p_limit: 100,
+          p_offset: 0,
+        })
 
       if (error) {
         setMessage(error.message)
@@ -56,7 +62,7 @@ export function EventsPage() {
     }
 
     void loadEvents()
-  }, [])
+  }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
 
   useEffect(() => {
     if (!userId) {
