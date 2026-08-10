@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { locales, type Locale } from '../i18n'
 import { supabase } from '../supabaseClient'
@@ -16,6 +17,16 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+
+  useEffect(() => {
+    if (!user || !open) return
+    void supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .is('read_at', null)
+      .then(({ count }) => setUnreadNotificationCount(count ?? 0))
+  }, [user?.id, open])
 
   const handleSignOut = async () => {
     try {
@@ -47,6 +58,19 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
         </div>
 
         <nav className="more-drawer-body">
+          <Link to="/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>
+              {t('nav.notifications')}
+              {unreadNotificationCount > 0 ? <span className="notification-count">{unreadNotificationCount}</span> : null}
+            </span>
+          </Link>
+
+          <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>{t('nav.notificationSettings')}</span>
+          </Link>
+
           <Link to="/registrations/me" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-calendar" size={20} />
             <span>{t('nav.myRegistrations')}</span>

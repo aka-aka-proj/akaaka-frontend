@@ -28,6 +28,8 @@ const zhTW = {
     signOut: '登出',
     securityPrivacy: '安全與隱私',
     more: '更多',
+    notifications: '通知',
+    notificationSettings: '通知設定',
   },
   auth: {
     title: 'AkaAka 登入',
@@ -85,6 +87,15 @@ const zhTW = {
     share: '分享',
     shareLinkCopied: '已複製連結',
     shareFailed: '分享失敗，請手動複製網址',
+  },
+  notifications: {
+    title: '通知',
+    description: '查看你可能感興趣的新活動。',
+    empty: '目前沒有通知。',
+    newEvent: '新活動',
+    markAllRead: '全部標為已讀',
+    settingsTitle: '通知設定',
+    settingsDescription: '選擇你想收到新公開活動通知的活動類型。',
   },
   createEvent: {
     title: '建立活動',
@@ -263,6 +274,10 @@ const zhTW = {
   },
   profile: {
     title: '個人資料',
+    enableCreatorNotifications: '通知我這位使用者的新活動',
+    disableCreatorNotifications: '停止通知這位使用者的新活動',
+    creatorNotificationEnabled: '已開啟這位使用者的新活動通知。',
+    creatorNotificationDisabled: '已關閉主辦人活動通知。',
     role: '角色',
     reputation: '聲望',
     reports: '檢舉',

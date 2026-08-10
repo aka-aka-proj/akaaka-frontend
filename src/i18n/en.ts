@@ -28,6 +28,8 @@ const en = {
     signOut: 'Sign out',
     securityPrivacy: 'Security & Privacy',
     more: 'More',
+    notifications: 'Notifications',
+    notificationSettings: 'Notification settings',
   },
   auth: {
     title: 'AkaAka Auth',
@@ -85,6 +87,15 @@ const en = {
     share: 'Share',
     shareLinkCopied: 'Link copied',
     shareFailed: 'Failed to share, please copy the link manually',
+  },
+  notifications: {
+    title: 'Notifications',
+    description: 'Updates about new events you may be interested in.',
+    empty: 'No notifications yet.',
+    newEvent: 'New event',
+    markAllRead: 'Mark all as read',
+    settingsTitle: 'Notification settings',
+    settingsDescription: 'Choose event types whose newly published events you want to hear about.',
   },
   createEvent: {
     title: 'Create Event',
@@ -262,6 +273,10 @@ const en = {
   },
   profile: {
     title: 'Profile',
+    enableCreatorNotifications: 'Notify me about this user’s new events',
+    disableCreatorNotifications: 'Stop notifying me about this user’s new events',
+    creatorNotificationEnabled: 'You will be notified about this user’s new events.',
+    creatorNotificationDisabled: 'Creator notifications disabled.',
     role: 'Role',
     reputation: 'Reputation',
     reports: 'Reports',

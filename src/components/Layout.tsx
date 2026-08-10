@@ -16,6 +16,8 @@ const BOTTOM_NAV_ITEMS = [
 ] as const
 
 const DESKTOP_MORE_ITEMS = [
+  { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
+  { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
   { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
@@ -31,6 +33,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const desktopMoreRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -42,6 +45,18 @@ export function Layout({ children }: { children: ReactNode }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotificationCount(0)
+      return
+    }
+    void supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .is('read_at', null)
+      .then(({ count }) => setUnreadNotificationCount(count ?? 0))
+  }, [user?.id])
 
   const handleSignOut = async () => {
     try {
@@ -94,7 +109,14 @@ export function Layout({ children }: { children: ReactNode }) {
                       onClick={() => setDesktopMoreOpen(false)}
                     >
                       <Icon href="/nav-icons.svg" name={item.icon} size={16} />
-                      <span>{t(item.labelKey)}</span>
+                      <span>
+                        {t(item.labelKey)}
+                        {item.to === '/notifications' && unreadNotificationCount > 0 ? (
+                          <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>
+                            {unreadNotificationCount}
+                          </span>
+                        ) : null}
+                      </span>
                     </Link>
                   ))}
                   <div className="desktop-more-divider" />

@@ -43,6 +43,7 @@ export function ProfilePage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
+  const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [createdEventsCount, setCreatedEventsCount] = useState(0)
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
@@ -134,6 +135,17 @@ export function ProfilePage() {
         setMessage(blockError.message)
       } else {
         setIsBlocked(Boolean(blockData))
+      }
+
+      if (!isOwner) {
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('event_notification_subscriptions')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('creator_profile_id', targetProfileId)
+          .maybeSingle()
+        if (subscriptionError) setMessage(subscriptionError.message)
+        setIsEventNotificationSubscribed(Boolean(subscription))
       }
     }
   }
@@ -248,6 +260,28 @@ export function ProfilePage() {
     setMessage(t('profile.userBlocked'))
   }
 
+  const toggleEventNotificationSubscription = async () => {
+    if (!user || isOwner || !targetProfileId) return
+
+    const result = isEventNotificationSubscribed
+      ? await supabase
+        .from('event_notification_subscriptions')
+        .delete()
+        .eq('profile_id', user.id)
+        .eq('creator_profile_id', targetProfileId)
+      : await supabase
+        .from('event_notification_subscriptions')
+        .insert({ profile_id: user.id, creator_profile_id: targetProfileId })
+
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+
+    setIsEventNotificationSubscribed((current) => !current)
+    setMessage(t(isEventNotificationSubscribed ? 'profile.creatorNotificationDisabled' : 'profile.creatorNotificationEnabled'))
+  }
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   const performDeleteAccount = async () => {
@@ -290,6 +324,14 @@ export function ProfilePage() {
                   <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
                     <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
                       <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleEventNotificationSubscription()}
+                      aria-pressed={isEventNotificationSubscribed}
+                      title={isEventNotificationSubscribed ? t('profile.disableCreatorNotifications') : t('profile.enableCreatorNotifications')}
+                    >
+                      {isEventNotificationSubscribed ? '🔔' : '🔕'}
                     </button>
                   </div>
                 )}

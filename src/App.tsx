@@ -15,6 +15,8 @@ import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
+import { NotificationsPage } from './pages/NotificationsPage'
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
@@ -152,6 +154,14 @@ function App() {
             <MyRegistrationsPage />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/notifications"
+        element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/settings/notifications"
+        element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>}
       />
       <Route
         path="/issues"
