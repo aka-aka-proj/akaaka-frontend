@@ -16,6 +16,7 @@ const BOTTOM_NAV_ITEMS = [
 ] as const
 
 const DESKTOP_MORE_ITEMS = [
+  { to: '/following', icon: 'nav-profile', labelKey: 'nav.following' },
   { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
   { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },

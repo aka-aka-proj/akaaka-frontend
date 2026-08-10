@@ -58,6 +58,11 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
         </div>
 
         <nav className="more-drawer-body">
+          <Link to="/following" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
+            <span>{t('nav.following')}</span>
+          </Link>
+
           <Link to="/notifications" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
             <span>

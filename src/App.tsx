@@ -11,6 +11,7 @@ import { CreateEventPage } from './pages/CreateEventPage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
+import { FollowingPage } from './pages/FollowingPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { MyReportsPage } from './pages/MyReportsPage'
@@ -158,6 +159,10 @@ function App() {
       <Route
         path="/notifications"
         element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/following"
+        element={<ProtectedRoute><FollowingPage /></ProtectedRoute>}
       />
       <Route
         path="/settings/notifications"
