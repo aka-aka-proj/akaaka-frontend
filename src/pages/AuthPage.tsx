@@ -155,7 +155,7 @@ export function AuthPage() {
     <Layout>
       {showVerificationPrompt ? (
         <div className="card auth-card">
-          <img src="/logo-login.svg" alt="AkaAka" width={140} height={140} className="auth-logo" />
+          <img src="/logo-login.svg" alt="AkaAka" width={800} height={160} className="auth-logo" />
           <h2>{t('auth.signUp')}</h2>
           <p className="message">{t('auth.verificationSent')}</p>
           <p className="verification-email">{email}</p>

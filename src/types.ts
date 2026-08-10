@@ -59,6 +59,12 @@ export interface Profile {
   reputation_score: number
 }
 
+export interface UserFollow {
+  follower_id: string
+  followed_id: string
+  created_at: string
+}
+
 export interface EventItem {
   id: string
   creator_id: string

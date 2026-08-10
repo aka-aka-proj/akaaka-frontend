@@ -44,6 +44,7 @@ export function ProfilePage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false)
   const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [createdEventsCount, setCreatedEventsCount] = useState(0)
@@ -137,6 +138,17 @@ export function ProfilePage() {
         setMessage(blockError.message)
       } else {
         setIsBlocked(Boolean(blockData))
+      }
+
+      if (!isOwner) {
+        const { data: followData, error: followError } = await supabase
+          .from('user_follows')
+          .select('followed_id')
+          .eq('follower_id', user.id)
+          .eq('followed_id', targetProfileId)
+          .maybeSingle()
+        if (followError) setMessage(followError.message)
+        setIsFollowing(Boolean(followData))
       }
 
       if (!isOwner) {
@@ -285,6 +297,28 @@ export function ProfilePage() {
     setMessage(t(isEventNotificationSubscribed ? 'profile.creatorNotificationDisabled' : 'profile.creatorNotificationEnabled'))
   }
 
+  const toggleFollow = async () => {
+    if (!user || isOwner || !targetProfileId) return
+
+    const result = isFollowing
+      ? await supabase
+        .from('user_follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('followed_id', targetProfileId)
+      : await supabase
+        .from('user_follows')
+        .insert({ follower_id: user.id, followed_id: targetProfileId })
+
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+
+    setIsFollowing((current) => !current)
+    setMessage(t(isFollowing ? 'profile.userUnfollowed' : 'profile.userFollowed'))
+  }
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   const performDeleteAccount = async () => {
@@ -327,6 +361,14 @@ export function ProfilePage() {
                   <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
                     <button onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
                       <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void toggleFollow()}
+                      aria-pressed={isFollowing}
+                      title={isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                    >
+                      {isFollowing ? t('profile.unfollow') : t('profile.follow')}
                     </button>
                     <button
                       type="button"

@@ -79,7 +79,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="topbar">
         <div className="topbar-brand">
           <Link to="/">
-            <img src="/icons/icon-whole.png" alt="AkaAka" className="logo-img" />
+            <img src="/icons/icon-whole.png" alt="AkaAka" className="logo-img" style={{ width: '800px' }} />
           </Link>
         </div>
         {user ? (
