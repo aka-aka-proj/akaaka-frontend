@@ -267,6 +267,9 @@ export function EventDetailPage() {
 
   const handlePublicationChange = async (status: 'published' | 'closed') => {
     if (!eventItem || !user || !isHost) return
+    if (status === 'closed' && !confirm(t('eventDetail.unpublishConfirm'))) {
+      return
+    }
     const { data, error } = await supabase.rpc('set_event_publication', {
       p_event_id: eventItem.id,
       p_publication_status: status,
@@ -357,7 +360,8 @@ export function EventDetailPage() {
 
   return (
     <Layout>
-      <section className="card">
+      <div className="event-detail-layout">
+      <section className="card event-detail-hero">
         {eventItem ? (
           <>
             <h2>{eventItem.title}</h2>
@@ -436,7 +440,7 @@ export function EventDetailPage() {
                 </div>
               ) : null}
             </div>
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions">
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
               <button
                 type="button"
                 className="calendar-btn"
@@ -463,42 +467,6 @@ export function EventDetailPage() {
                 </button>
               ) : null}
             </div> : null}
-            {isHost ? (
-              <p>
-                {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
-                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('closed')}>
-                    {t('eventDetail.unpublishNow')}
-                  </button>
-                ) : (
-                  <button type="button" className="edit-event-link" onClick={() => void handlePublicationChange('published')}>
-                    {t('eventDetail.publishNow')}
-                  </button>
-                )}
-                {' | '}
-                <Link to={`/events/${eventItem.id}/edit`} className="edit-event-link">
-                  <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
-                </Link>
-                {' | '}
-                <button type="button" className="edit-event-link" style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: '#0d6efd', padding: 0 }} onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
-                  <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
-                </button>
-                {eventItem.registration_form_config && (
-                  <>
-                    {' | '}
-                    <button type="button" className="edit-event-link" style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: '#0d6efd', padding: 0 }}
-                      onClick={async () => {
-                        const { data } = await supabase
-                          .from('event_registration_responses')
-                          .select('*, registration:event_registrations!inner(profile_id)')
-                          .in('registration.event_id', [eventItem.id])
-                        if (data) setFormResponses(data as any)
-                      }}>
-                      <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
-                    </button>
-                  </>
-                )}
-              </p>
-            ) : null}
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>
@@ -507,7 +475,7 @@ export function EventDetailPage() {
 
       {/* Registration Section */}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost ? (
-        <section className="card">
+        <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {myRegistration ? (
             <div>
@@ -619,9 +587,52 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
+      {isHost && eventItem ? (
+        <section className="card event-admin-section" aria-labelledby="event-management-title">
+          <div className="section-heading-row">
+            <div>
+              <p className="eyebrow">{t('eventDetail.hostTools')}</p>
+              <h3 id="event-management-title">{t('eventDetail.managementConsole')}</h3>
+            </div>
+            <span className="chip chip-neutral">
+              {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
+            </span>
+          </div>
+          <div className="event-admin-actions">
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+              <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
+                {t('eventDetail.unpublishNow')}
+              </button>
+            ) : (
+              <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
+                {t('eventDetail.publishNow')}
+              </button>
+            )}
+            <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
+              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+            </Link>
+            <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
+              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
+            </button>
+            {eventItem.registration_form_config ? (
+              <button type="button" className="secondary-action" onClick={async () => {
+                const { data } = await supabase
+                  .from('event_registration_responses')
+                  .select('*, registration:event_registrations!inner(profile_id)')
+                  .in('registration.event_id', [eventItem.id])
+                if (data) setFormResponses(data as any)
+              }}>
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
+              </button>
+            ) : null}
+          </div>
+          <p className="danger-action-help">{t('eventDetail.unpublishWarning')}</p>
+        </section>
+      ) : null}
+
       {/* Host Review Section - All Registrations */}
       {isHost && registrations.length > 0 ? (
-        <section className="card">
+        <section className="card event-admin-section">
           <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
           {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending', 'cancellation_rejected'] as const).map((status) => {
             const filtered = registrations.filter((r) => r.status === status)
@@ -705,7 +716,7 @@ export function EventDetailPage() {
 
       {/* Attendees Section */}
       {isHost && attendees.length > 0 ? (
-        <section className="card">
+        <section className="card event-admin-section">
           <h3>{t('eventDetail.attendees')} ({attendees.length})</h3>
           <ul>
             {attendees.map((a) => (
@@ -724,7 +735,7 @@ export function EventDetailPage() {
       ) : null}
 
       {isHost && formResponses.length > 0 ? (
-        <section className="card">
+        <section className="card event-admin-section">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
           {formResponses.map((fr) => (
             <div key={fr.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
@@ -734,7 +745,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      <section className="card">
+      <section className="card event-discussion-section">
         <h3>{t('eventDetail.discussion')}</h3>
         <form onSubmit={postThread}>
           <textarea
@@ -779,6 +790,7 @@ export function EventDetailPage() {
           </ul>
         )}
       </section>
+      </div>
 
       {id ? (
         <section className="event-report-section" aria-label={t('report.title')}>
