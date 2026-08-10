@@ -729,6 +729,8 @@ const zhTW = {
     mfaVerify: '驗證並啟用',
     mfaEnabled: '雙重驗證已啟用。',
     mfaRemoved: '驗證器已移除。',
+    mfaAlreadyEnabled: '此帳號已啟用驗證器。若要重新設定，請先移除現有驗證器。',
+    mfaPending: '已有尚未完成驗證的驗證器設定。請完成或移除它後再重新設定。',
   },
 
   visibilityTooltip: {

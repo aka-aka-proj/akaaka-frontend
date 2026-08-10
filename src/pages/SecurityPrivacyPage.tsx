@@ -38,6 +38,8 @@ export function SecurityPrivacyPage() {
   const [mfaLoading, setMfaLoading] = useState(false)
   const [mfaMessage, setMfaMessage] = useState('')
   const [mfaError, setMfaError] = useState('')
+  const verifiedMfaFactors = mfaFactors.filter((factor) => factor.status === 'verified')
+  const pendingMfaFactors = mfaFactors.filter((factor) => factor.status === 'unverified')
 
   const loadMfaFactors = async () => {
     const { data, error } = await supabase.auth.mfa.listFactors()
@@ -152,7 +154,7 @@ export function SecurityPrivacyPage() {
         <p>{t('securityPrivacy.mfaDescription')}</p>
         {mfaError ? <p className="message" role="alert">{mfaError}</p> : null}
         {mfaMessage ? <p className="message" role="status">{mfaMessage}</p> : null}
-        {mfaFactors.filter((factor) => factor.status === 'verified').map((factor) => (
+        {verifiedMfaFactors.map((factor) => (
           <div key={factor.id} className="section-heading-row">
             <span>{factor.friendly_name || t('securityPrivacy.mfaAuthenticator')}</span>
             <button type="button" onClick={() => void removeMfaFactor(factor.id)} disabled={mfaLoading}>
@@ -160,10 +162,22 @@ export function SecurityPrivacyPage() {
             </button>
           </div>
         ))}
-        {!mfaEnrollment ? (
-          <button type="button" onClick={() => void beginMfaEnrollment()} disabled={mfaLoading}>
-            {mfaLoading ? t('common.loading') : t('securityPrivacy.mfaAdd')}
-          </button>
+        {verifiedMfaFactors.length > 0 ? (
+          <p role="status">{t('securityPrivacy.mfaAlreadyEnabled')}</p>
+        ) : !mfaEnrollment ? (
+          <>
+            {pendingMfaFactors.map((factor) => (
+              <div key={factor.id} className="section-heading-row">
+                <span>{t('securityPrivacy.mfaPending')}</span>
+                <button type="button" onClick={() => void removeMfaFactor(factor.id)} disabled={mfaLoading}>
+                  {t('securityPrivacy.mfaRemove')}
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => void beginMfaEnrollment()} disabled={mfaLoading || pendingMfaFactors.length > 0}>
+              {mfaLoading ? t('common.loading') : t('securityPrivacy.mfaAdd')}
+            </button>
+          </>
         ) : (
           <div className="card" style={{ marginTop: 12 }}>
             <p>{t('securityPrivacy.mfaScanPrompt')}</p>

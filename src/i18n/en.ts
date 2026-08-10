@@ -729,6 +729,8 @@ const en = {
     mfaVerify: 'Verify and enable',
     mfaEnabled: 'Multi-factor authentication enabled.',
     mfaRemoved: 'Authenticator removed.',
+    mfaAlreadyEnabled: 'An authenticator is already enabled for this account. Remove it before setting up a new one.',
+    mfaPending: 'An unverified authenticator setup already exists. Complete or remove it before starting again.',
   },
 
   visibilityTooltip: {
