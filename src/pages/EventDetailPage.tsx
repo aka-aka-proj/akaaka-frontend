@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { ShareButton } from '../components/ShareButton'
 import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
+import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -64,6 +65,7 @@ export function EventDetailPage() {
   const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [publicationConfirmOpen, setPublicationConfirmOpen] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isRegistrationClosed = eventItem?.registration_deadline
@@ -81,7 +83,16 @@ export function EventDetailPage() {
       return
     }
 
-    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }] =
+    const bookmarkQuery = user
+      ? supabase
+        .from('event_bookmarks')
+        .select('event_id')
+        .eq('profile_id', user.id)
+        .eq('event_id', id)
+        .maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+
+    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
       await Promise.all([
         supabase.from('events').select('*, creator:profiles(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
         supabase
@@ -89,6 +100,7 @@ export function EventDetailPage() {
           .select('*, profile:profiles(display_name)')
           .eq('event_id', id)
           .order('created_at', { ascending: true }),
+        bookmarkQuery,
       ])
 
     if (eventError || threadError) {
@@ -98,6 +110,7 @@ export function EventDetailPage() {
 
     setEventItem((eventData as EventItem | null) ?? null)
     setThreads((threadData as EventThread[]) ?? [])
+    setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
     if (eventData) {
@@ -449,6 +462,7 @@ export function EventDetailPage() {
               ) : null}
             </div>
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
+              <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} />
               <details className="calendar-menu">
                 <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
                 <div className="calendar-menu-items">
@@ -470,7 +484,7 @@ export function EventDetailPage() {
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}
-            </div> : null}
+            </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}><EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /></div> : null}
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>

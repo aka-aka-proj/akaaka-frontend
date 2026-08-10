@@ -1939,6 +1939,30 @@ dd {
   text-decoration: underline;
 }
 
+.event-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.event-bookmark-control {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.event-bookmark-button {
+  white-space: nowrap;
+}
+
+.event-bookmark-error {
+  color: #b42318;
+  font-size: 0.7rem;
+}
+
 .event-card-description {
   display: -webkit-box;
   margin: 0;

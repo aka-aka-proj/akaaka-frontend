@@ -107,6 +107,12 @@ export interface EventItem {
   creator?: Profile | null
 }
 
+export interface EventBookmark {
+  profile_id: string
+  event_id: string
+  created_at: string
+}
+
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlisted' | 'cancellation_pending' | 'cancellation_rejected'
 
 export interface Registration {

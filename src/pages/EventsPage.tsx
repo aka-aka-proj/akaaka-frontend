@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -27,6 +28,8 @@ export function EventsPage() {
   const [myEventsOnly, setMyEventsOnly] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
+  const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
+  const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
 
@@ -54,6 +57,18 @@ export function EventsPage() {
 
     void loadEvents()
   }, [])
+
+  useEffect(() => {
+    if (!userId) {
+      setBookmarkedEventIds([])
+      return
+    }
+    const loadBookmarks = async () => {
+      const { data } = await supabase.from('event_bookmarks').select('event_id').eq('profile_id', userId)
+      setBookmarkedEventIds(((data as { event_id: string }[] | null) ?? []).map((item) => item.event_id))
+    }
+    void loadBookmarks()
+  }, [userId])
 
   const eventTypes = useMemo(() => {
     const types = new Set<string>()
@@ -276,7 +291,14 @@ export function EventsPage() {
               return (
               <li key={event.id} className="event-list-item">
                 <article className="event-card">
-                <Link to={`/events/${event.id}`} className="event-card-title">{event.title}</Link>
+                <div className="event-card-heading">
+                  <Link to={`/events/${event.id}`} className="event-card-title">{event.title}</Link>
+                  <EventBookmarkButton
+                    eventId={event.id}
+                    isBookmarked={bookmarkedEventIds.includes(event.id)}
+                    onChange={(bookmarked) => setBookmarkedEventIds((current) => bookmarked ? [...new Set([...current, event.id])] : current.filter((id) => id !== event.id))}
+                  />
+                </div>
                 {eventTypes.length > 0 && (
                   <div className="chip-group" style={{ marginTop: '0.25rem' }}>
                     {eventTypes.map((type) => {
