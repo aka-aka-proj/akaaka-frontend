@@ -1147,6 +1147,36 @@ dd {
   color: #fff;
 }
 
+.safety-guidelines {
+  border-top: 1px solid #fde68a;
+  padding-top: 0.5rem;
+  color: #78350f;
+  font-size: 0.875rem;
+}
+
+.safety-guidelines summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.safety-guidelines ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.safety-guidelines li + li {
+  margin-top: 0.35rem;
+}
+
+.registration-hint {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid #d97706;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 0.875rem;
+}
+
 .event-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

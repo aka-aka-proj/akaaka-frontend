@@ -400,6 +400,15 @@ export function EventDetailPage() {
                   <span className="safety-banner-tag">SSC</span>
                   <span className="safety-banner-tag">RACK</span>
                 </div>
+                <details className="safety-guidelines">
+                  <summary>{t('eventDetail.safetyGuidelinesTitle')}</summary>
+                  <ul>
+                    <li>{t('eventDetail.safetyGuidelineConsent')}</li>
+                    <li>{t('eventDetail.safetyGuidelineBoundaries')}</li>
+                    <li>{t('eventDetail.safetyGuidelinePhotos')}</li>
+                    <li>{t('eventDetail.safetyGuidelineAlcohol')}</li>
+                  </ul>
+                </details>
               </div>
             )}
             <p className="event-meta">
@@ -477,6 +486,9 @@ export function EventDetailPage() {
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost ? (
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
+          {!myRegistration && isAtCapacity ? (
+            <p className="registration-hint">{t('eventDetail.waitlistHint')}</p>
+          ) : null}
           {myRegistration ? (
             <div>
               <p>{t('eventDetail.myRegistrationStatus')}: <strong>{registrationStatus(myRegistration.status)}</strong></p>
