@@ -497,6 +497,87 @@ dd {
   background: #fcfdff;
 }
 
+.profile-attributes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-attribute {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.attribute-label {
+  color: #656d76;
+  font-size: 0.875rem;
+}
+
+.profile-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid #d8ccfa;
+  border-radius: 999px;
+  background: #f5f1ff;
+  color: #4b2da3;
+  font-size: 0.8125rem;
+}
+
+.btn-link-inline {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: #5a3bb5;
+  text-decoration: underline;
+}
+
+.login-info-card > button {
+  align-self: flex-start;
+  width: fit-content;
+}
+
+.danger-zone {
+  border-color: #f3c4c0;
+  background: #fffafa;
+}
+
+.danger-zone h3 {
+  color: #9f1c1c;
+}
+
+.danger-zone .btn-danger,
+.modal-actions .danger {
+  border: 1px solid #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.danger-zone .btn-danger:hover,
+.modal-actions .danger:hover:not(:disabled) {
+  background: #8f1d14;
+}
+
+.modal-actions .danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.confirmation-input input {
+  width: 100%;
+  border: 1px solid #b42318;
+}
+
 .form-actions {
   display: flex;
   gap: 0.5rem;

@@ -25,6 +25,13 @@ function mapProfileRow(row: unknown): Profile {
   }
 }
 
+function maskEmail(email: string | undefined) {
+  if (!email) return ''
+  const [localPart, domain] = email.split('@')
+  if (!domain || localPart.length < 3) return email
+  return `${localPart.slice(0, 2)}***${localPart.slice(-1)}@${domain}`
+}
+
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -53,6 +60,7 @@ export function ProfilePage() {
   const [message, setMessage] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [showUserId, setShowUserId] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
 
   const xProfileUrl = useMemo(() => {
     if (isOwner && identities) {
@@ -428,22 +436,41 @@ export function ProfilePage() {
                   <span><Icon href="/action-icons.svg" name="action-thumbsup" size={15} /> {t('profile.joinedEvents')}</span>
                 </div>
               </div>
-              {profile.metadata?.gender_identity ? (
-                <p>
-                  {t('profile.genderIdentityLabel')}:{' '}
-                  {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
-                </p>
-              ) : null}
-              {profile.metadata?.bdsm_roles && profile.metadata.bdsm_roles.length > 0 ? (
-                <p>
-                  {t('profile.bdsmRolesLabel')}:{' '}
-                  {profile.metadata.bdsm_roles.map((r) => t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)).join(', ')}
-                </p>
-              ) : null}
+              <div className="profile-attributes">
+                {profile.metadata?.gender_identity ? (
+                  <div className="profile-attribute">
+                    <span className="attribute-label">{t('profile.genderIdentityLabel')}</span>
+                    <span className="profile-chip">
+                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
+                    </span>
+                  </div>
+                ) : null}
+                {profile.metadata?.bdsm_roles && profile.metadata.bdsm_roles.length > 0 ? (
+                  <div className="profile-attribute">
+                    <span className="attribute-label">{t('profile.bdsmRolesLabel')}</span>
+                    <div className="profile-chip-list">
+                      {profile.metadata.bdsm_roles.map((r) => (
+                        <span className="profile-chip" key={r}>
+                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <p>
                 {t('profile.bio')}:{' '}
                 {showBio
-                  ? profile.bio || t('profile.noBio')
+                  ? profile.bio ? profile.bio : (
+                    <>
+                      <span>{t('profile.noBio')}</span>
+                      {isOwner && (
+                        <button type="button" className="btn-link-inline" onClick={() => setIsEditing(true)}>
+                          {t('profile.addBio')}
+                        </button>
+                      )}
+                    </>
+                  )
                   : t('profile.hidden', { visibility: bioVisibility })}
               </p>
               <ul className="social-links-list">
@@ -494,7 +521,12 @@ export function ProfilePage() {
               </button>
             </dd>
             <dt>{t('profile.loginInfoEmail')}</dt>
-            <dd>{user?.email}</dd>
+            <dd className="sensitive-value">
+              <span>{showEmail ? user?.email : maskEmail(user?.email)}</span>
+              <button type="button" className="btn-quiet" onClick={() => setShowEmail((current) => !current)} aria-label={showEmail ? t('profile.hideEmail') : t('profile.showEmail')}>
+                <Icon href="/form-icons.svg" name={showEmail ? 'form-lock' : 'form-eye'} size={16} />
+              </button>
+            </dd>
             <dt>{t('profile.connectedAccounts')}</dt>
             <dd>
               {identities && identities.length > 0 
@@ -651,6 +683,10 @@ export function ProfilePage() {
           isOpen={isDeleteModalOpen}
           title={t('profile.deleteAccount')}
           description={t('profile.deleteAccountConfirm')}
+          confirmationPhrase="DELETE"
+          confirmationLabel={t('profile.deleteAccountConfirmationLabel')}
+          confirmationPlaceholder={t('profile.deleteAccountConfirmationPlaceholder')}
+          confirmLabel={t('profile.deleteAccount')}
           onConfirm={() => {
             setIsDeleteModalOpen(false)
             void performDeleteAccount()
