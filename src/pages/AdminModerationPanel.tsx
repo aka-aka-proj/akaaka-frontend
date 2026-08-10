@@ -189,10 +189,10 @@ export function AdminModerationPanel() {
                   placeholder='{"reason": "..."}'
                 />
               </label>
-              <button type="submit" disabled={isBusy || !report.target_profile_id}>
+              <button type="submit" disabled={isBusy || (!report.target_profile_id && !report.target_event_id)}>
                 {isBusy ? t('admin.moderation.submitting') : t('admin.moderation.applyAction')}
               </button>
-              {!report.target_profile_id ? (
+              {!report.target_profile_id && !report.target_event_id ? (
                 <p className="message">{t('admin.moderation.noTargetProfile')}</p>
               ) : null}
             </form>
