@@ -2,32 +2,26 @@ import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
-import { Icon } from '../components/Icon'
 import { SafetyCompactModal } from '../components/SafetyCompactModal'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { PRESET_AVATAR_PATHS } from '../lib/profile'
 import { supabase } from '../supabaseClient'
-import type { BdsmRole, GenderIdentity, SocialLink, Visibility } from '../types'
-
-const createSocialLink = (): SocialLink => ({ platform: 'facebook', url: '' })
+import type { BdsmRole, GenderIdentity, Visibility } from '../types'
 
 export function OnboardingPage() {
   const { user, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   
-  useEffect(() => {
-    console.log('OnboardingPage loaded, state:', location.state);
-  }, [location.state]);
-  
   const { t } = useT()
   const [agreed, setAgreed] = useState(false)
   const [compactOpen, setCompactOpen] = useState(true)
   const [displayName, setDisplayName] = useState('')
+  const [avatarPath, setAvatarPath] = useState('/default-avatar.svg')
   const [bio, setBio] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('public')
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
   const [genderIdentity, setGenderIdentity] = useState<GenderIdentity | ''>('')
   const [genderIdentityVisibility, setGenderIdentityVisibility] = useState<Visibility>('public')
   const [bdsmRoles, setBdsmRoles] = useState<BdsmRole[]>([])
@@ -42,27 +36,12 @@ export function OnboardingPage() {
       const fromState = (location.state as { from?: string } | null)?.from
       const from = fromQuery ?? fromState
       
-      console.log('OnboardingPage loaded, resolved from:', from);
       navigate(from ?? '/events', { replace: true })
     }
   }, [profile, navigate, location.search, location.state])
 
   if (profile) {
     return null
-  }
-
-  const updateLink = (index: number, patch: Partial<SocialLink>) => {
-    setSocialLinks((links) =>
-      links.map((link, current) => (index === current ? { ...link, ...patch } : link)),
-    )
-  }
-
-  const addLink = () => {
-    setSocialLinks((links) => [...links, createSocialLink()])
-  }
-
-  const removeLink = (index: number) => {
-    setSocialLinks((links) => links.filter((_link, current) => current !== index))
   }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -77,21 +56,19 @@ export function OnboardingPage() {
       return
     }
 
-    const sanitizedLinks = socialLinks.filter((link) => link.url.trim().length > 0)
-
     setSubmitting(true)
     const { error } = await supabase.from('profiles').upsert(
       {
         id: user.id,
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
-        external_social_links: sanitizedLinks,
         metadata: {
           visibility: {
             bio: visibility || 'public',
             gender_identity: genderIdentityVisibility || 'public',
             bdsm_roles: bdsmRolesVisibility || 'public',
           },
+          avatar_path: avatarPath === '/default-avatar.svg' ? null : avatarPath,
           gender_identity: genderIdentity || undefined,
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : undefined,
         },
@@ -125,25 +102,71 @@ export function OnboardingPage() {
       />
       {agreed && (
         <>
-          <form className="card" onSubmit={submit}>
-            <label>
-              {t('onboarding.displayNameLabel')}
-              <input
+          <div className="onboarding-shell">
+            <header className="onboarding-header">
+              <p className="eyebrow">{t('onboarding.step')}</p>
+              <h1>{t('onboarding.title')}</h1>
+              <p>{t('onboarding.intro')}</p>
+              <div className="onboarding-progress" aria-label={t('onboarding.progressLabel')}>
+                <span className="onboarding-progress-bar" />
+              </div>
+              <p className="onboarding-progress-copy">{t('onboarding.progress')}</p>
+            </header>
+            <form className="card onboarding-form" onSubmit={submit}>
+              <section className="onboarding-section">
+                <div className="onboarding-section-heading">
+                  <p className="eyebrow">01</p>
+                  <h2>{t('onboarding.basicInfoTitle')}</h2>
+                  <p>{t('onboarding.basicInfoDescription')}</p>
+                </div>
+                <fieldset>
+                  <legend>{t('onboarding.avatarLabel')}</legend>
+                  <div className="avatar-picker">
+                    <label className="avatar-option">
+                      <input
+                        type="radio"
+                        name="onboarding-avatar"
+                        value="/default-avatar.svg"
+                        checked={avatarPath === '/default-avatar.svg'}
+                        onChange={() => setAvatarPath('/default-avatar.svg')}
+                      />
+                      <img src="/default-avatar.svg" alt={t('onboarding.defaultAvatar')} className="avatar avatar-lg" />
+                      <span>{t('onboarding.defaultAvatar')}</span>
+                    </label>
+                    {PRESET_AVATAR_PATHS.map((path, index) => (
+                      <label className="avatar-option" key={path}>
+                        <input
+                          type="radio"
+                          name="onboarding-avatar"
+                          value={path}
+                          aria-label={t('onboarding.presetAvatar', { index: index + 1 })}
+                          checked={avatarPath === path}
+                          onChange={() => setAvatarPath(path)}
+                        />
+                        <img src={path} alt="" className="avatar avatar-lg" />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <label>
+                  {t('onboarding.displayNameLabel')}
+                <input
                 aria-label={t('onboarding.displayNameLabel')}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
               />
-            </label>
-            <label>
-              {t('onboarding.bioLabel')}
+                </label>
+                <label>
+                  {t('onboarding.bioLabel')}
               <textarea
                 aria-label={t('onboarding.bioLabel')}
                 value={bio}
                 onChange={(event) => setBio(event.target.value)}
               />
-            </label>
-              <label>
-                {t('onboarding.bioVisibilityLabel')}
+                </label>
+                <div className="onboarding-field-with-visibility">
+                  <label>
+                    <span className="form-label-row">{t('onboarding.bioVisibilityLabel')} <VisibilityTooltip fieldName="bio" /></span>
                 <select
                   aria-label={t('onboarding.bioVisibilityLabel')}
                   value={visibility}
@@ -152,11 +175,18 @@ export function OnboardingPage() {
                   <option value="public">{t('onboarding.public')}</option>
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
-                </select>
-                <VisibilityTooltip fieldName="bio" />
-              </label>
-              <label>
-                {t('onboarding.genderIdentityLabel')}
+                  </select>
+                  </label>
+                </div>
+              </section>
+              <section className="onboarding-section">
+                <div className="onboarding-section-heading">
+                  <p className="eyebrow">02</p>
+                  <h2>{t('onboarding.identityTitle')}</h2>
+                  <p>{t('onboarding.identityDescription')}</p>
+                </div>
+                <label>
+                  {t('onboarding.genderIdentityLabel')}
                 <select
                   aria-label={t('onboarding.genderIdentityLabel')}
                   value={genderIdentity}
@@ -176,9 +206,10 @@ export function OnboardingPage() {
                   <option value="questioning">{t('onboarding.genderIdentityQuestioning')}</option>
                   <option value="other">{t('onboarding.genderIdentityOther')}</option>
                 </select>
-              </label>
-              <label>
-                {t('onboarding.genderIdentityVisibilityLabel')}
+                </label>
+                <div className="onboarding-field-with-visibility">
+                  <label>
+                    <span className="form-label-row">{t('onboarding.genderIdentityVisibilityLabel')} <VisibilityTooltip fieldName="gender_identity" /></span>
                 <select
                   aria-label={t('onboarding.genderIdentityVisibilityLabel')}
                   value={genderIdentityVisibility}
@@ -187,13 +218,14 @@ export function OnboardingPage() {
                   <option value="public">{t('onboarding.public')}</option>
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
-                </select>
-                <VisibilityTooltip fieldName="gender_identity" />
-              </label>
-              <fieldset>
-                <legend>{t('onboarding.bdsmRolesLabel')}</legend>
+                  </select>
+                  </label>
+                </div>
+                <fieldset className="onboarding-role-fieldset">
+                  <legend>{t('onboarding.bdsmRolesLabel')}</legend>
+                  <div className="role-chips onboarding-role-chips">
                 {(['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging'] as BdsmRole[]).map((role) => (
-                  <label key={role} className="checkbox">
+                  <label key={role} className={`role-chip ${bdsmRoles.includes(role) ? 'selected' : ''}`}>
                     <input
                       type="checkbox"
                       checked={bdsmRoles.includes(role)}
@@ -208,9 +240,11 @@ export function OnboardingPage() {
                     {t(`onboarding.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
                   </label>
                 ))}
-              </fieldset>
-              <label>
-                {t('onboarding.bdsmRolesVisibilityLabel')}
+                  </div>
+                </fieldset>
+                <div className="onboarding-field-with-visibility">
+                  <label>
+                    <span className="form-label-row">{t('onboarding.bdsmRolesVisibilityLabel')} <VisibilityTooltip fieldName="bdsm_roles" /></span>
                 <select
                   aria-label={t('onboarding.bdsmRolesVisibilityLabel')}
                   value={bdsmRolesVisibility}
@@ -219,46 +253,19 @@ export function OnboardingPage() {
                   <option value="public">{t('onboarding.public')}</option>
                   <option value="connections_only">{t('onboarding.connectionsOnly')}</option>
                   <option value="private">{t('onboarding.private')}</option>
-                </select>
-                <VisibilityTooltip fieldName="bdsm_roles" />
-              </label>
-              <section>
-              <h3>{t('onboarding.externalSocialLinks')}</h3>
-              {socialLinks.map((link, index) => (
-                <div key={`social-link-${index}`} className="row">
-                  <select
-                    aria-label={t('onboarding.socialPlatform', { index: index + 1 })}
-                    value={link.platform}
-                    onChange={(event) =>
-                      updateLink(index, {
-                        platform: event.target.value as SocialLink['platform'],
-                      })
-                    }
-                  >
-                    <option value="facebook">facebook</option>
-                    <option value="instagram">instagram</option>
-                    <option value="x">x</option>
                   </select>
-                  <input
-                    aria-label={t('onboarding.socialUrl', { index: index + 1 })}
-                    placeholder="https://..."
-                    value={link.url}
-                    onChange={(event) => updateLink(index, { url: event.target.value })}
-                  />
-                  <button type="button" onClick={() => removeLink(index)}>
-                    <Icon href="/action-icons.svg" name="action-trash" size={16} /> {t('common.remove')}
-                  </button>
+                  </label>
                 </div>
-              ))}
-              <button type="button" onClick={addLink}>
-                <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('onboarding.addSocialLink')}
-              </button>
-            </section>
-            <button type="submit" disabled={submitting}>
-              {t('onboarding.completeOnboarding')}
-            </button>
-            {message ? <p className="message">{message}</p> : null}
-          </form>
+              </section>
+              <div className="onboarding-footer">
+                <p>{t('onboarding.socialLinksLater')}</p>
+                <button type="submit" className="primary onboarding-submit" disabled={submitting}>
+                  {t('onboarding.completeOnboarding')}
+                </button>
+                {message ? <p className="message" role="alert">{message}</p> : null}
+              </div>
+            </form>
+          </div>
         </>
       )}
     </Layout>

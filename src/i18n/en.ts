@@ -508,6 +508,18 @@ const en = {
   },
   onboarding: {
     title: 'Onboarding',
+    step: 'Create your AkaAka profile',
+    intro: 'Complete a few basics now. You can update them anytime from your profile.',
+    progressLabel: 'Onboarding progress: step 1 of 1',
+    progress: 'Step 1 of 1',
+    basicInfoTitle: 'Basic information',
+    basicInfoDescription: 'Tell other members what to call you and what you want to share about yourself.',
+    avatarLabel: 'Choose an avatar',
+    defaultAvatar: 'Default avatar',
+    presetAvatar: 'Preset avatar {index}',
+    identityTitle: 'Identity',
+    identityDescription: 'These fields are optional. Choose who can see each attribute.',
+    socialLinksLater: 'You can manage external social links later in profile settings. A manual URL is never identity-verified.',
 
     displayNameLabel: 'Display name',
     bioLabel: 'Bio',

@@ -84,7 +84,7 @@ describe('OnboardingPage', () => {
     expect(upsert).toHaveBeenCalled()
   })
 
-  it('accepts completion with at least one social link', async () => {
+  it('allows selecting a preset avatar and persists it in metadata', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter>
@@ -93,11 +93,30 @@ describe('OnboardingPage', () => {
     )
 
     await user.click(screen.getByRole('button', { name: '我同意' }))
-    await user.click(screen.getByRole('button', { name: '新增社群連結' }))
-    await user.type(screen.getByLabelText('社群網址 1'), 'https://instagram.com/user')
+    const avatar = screen.getByRole('radio', { name: '內建頭像 1' })
+    await user.click(avatar)
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
-    expect(upsert).toHaveBeenCalled()
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ avatar_path: expect.stringContaining('/avatar/') }),
+      }),
+      { onConflict: 'id' },
+    )
+  })
+
+  it('does not show social URL inputs during onboarding', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OnboardingPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '我同意' }))
+
+    expect(screen.queryByLabelText('社群網址 1')).toBeNull()
+    expect(screen.getByText(/外部社群連結可稍後/)).toBeTruthy()
   })
 
   it('does not submit when disagreeing with safety compact', async () => {

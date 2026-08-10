@@ -509,6 +509,18 @@ const zhTW = {
   },
   onboarding: {
     title: '新手導覽',
+    step: '建立你的 AkaAka 個人資料',
+    intro: '先完成幾項基本設定，之後仍可在個人資料頁隨時修改。',
+    progressLabel: '導覽進度：第 1 步，共 1 步',
+    progress: '步驟 1 / 1',
+    basicInfoTitle: '基本資料',
+    basicInfoDescription: '讓其他成員知道如何稱呼你，以及你想分享的自我介紹。',
+    avatarLabel: '選擇個人頭像',
+    defaultAvatar: '預設頭像',
+    presetAvatar: '內建頭像 {index}',
+    identityTitle: '身分認同',
+    identityDescription: '這些欄位都是選填的，你可以為每個屬性設定可見範圍。',
+    socialLinksLater: '外部社群連結可稍後在個人資料設定中管理；手動網址不會被視為已驗證身份。',
 
     displayNameLabel: '顯示名稱',
     bioLabel: '簡介',
