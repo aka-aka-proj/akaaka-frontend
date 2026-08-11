@@ -197,6 +197,7 @@ const en = {
     title: 'Messages',
     description: 'Private chats with users you are mutually connected with.',
     empty: 'No chats yet. Start after forming a mutual connection.',
+    startConversation: 'View people to chat with',
     unnamed: 'Unnamed user',
     noMessages: 'No messages yet.',
     unavailable: 'This chat is unavailable.',

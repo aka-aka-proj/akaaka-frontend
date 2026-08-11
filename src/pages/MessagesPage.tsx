@@ -57,7 +57,12 @@ export function MessagesPage() {
       <h2>{t('messages.title')}</h2>
       <p>{t('messages.description')}</p>
       {error ? <p className="message">{error}</p> : null}
-      {loading ? <p>{t('common.loading')}</p> : conversations.length === 0 ? <p>{t('messages.empty')}</p> : (
+      {loading ? <p>{t('common.loading')}</p> : conversations.length === 0 ? (
+        <div className="messages-empty-state">
+          <p>{t('messages.empty')}</p>
+          <Link to="/following" className="primary-action">{t('messages.startConversation')}</Link>
+        </div>
+      ) : (
         <ul className="conversation-list">
           {conversations.map((conversation) => <li key={conversation.id} className="conversation-item">
             <Link to={`/messages/${conversation.id}`}>

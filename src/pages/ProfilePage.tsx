@@ -327,7 +327,13 @@ export function ProfilePage() {
                       {isEventNotificationSubscribed ? '🔔' : '🔕'}
                     </button>
                     {canMessage && !isBlocked ? (
-                      <button type="button" onClick={() => navigate(`/messages/new?user=${targetProfileId}`)} title={t('profile.sendMessage')}>
+                      <button
+                        type="button"
+                        className="profile-message-action"
+                        onClick={() => navigate(`/messages/new?user=${targetProfileId}`)}
+                        title={t('profile.sendMessage')}
+                      >
+                        <Icon href="/nav-icons.svg" name="nav-message" size={18} />
                         {t('profile.sendMessage')}
                       </button>
                     ) : null}

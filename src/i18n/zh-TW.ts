@@ -196,6 +196,7 @@ const zhTW = {
     title: '聊天',
     description: '與已建立雙向連結的使用者私下聊天。',
     empty: '目前沒有聊天。請先與對方建立雙向連結。',
+    startConversation: '查看可聊天的使用者',
     unnamed: '未設定名稱的使用者',
     noMessages: '尚無訊息。',
     unavailable: '此聊天目前無法使用。',
