@@ -13,7 +13,7 @@ import { organizeEventIdea } from '../lib/event-ai-organizer'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
 import { TAIWAN_REGIONS } from '../types'
-import type { TaiwanRegion, EventCategory, RegistrationFormField } from '../types'
+import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode } from '../types'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -44,6 +44,7 @@ export function CreateEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('native')
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourcePreview, setSourcePreview] = useState<EventSourcePreview | null>(null)
@@ -87,15 +88,15 @@ export function CreateEventPage() {
           }
           setLocationRegion((data.location_region ?? '') as TaiwanRegion | '')
           setLocationDetail(data.location_detail ?? '')
-          setMaxCapacity(data.max_capacity?.toString() ?? '')
-          setRegistrationDeadline(data.registration_deadline ? data.registration_deadline.slice(0, 16) : '')
           setExternalRegistrationUrl(data.external_registration_url ?? '')
+          setRegistrationMode(data.external_registration_url ? 'external' : 'native')
+          setMaxCapacity(data.external_registration_url ? '' : data.max_capacity?.toString() ?? '')
+          setRegistrationDeadline(data.external_registration_url ? '' : data.registration_deadline ? data.registration_deadline.slice(0, 16) : '')
           setSourceUrl(data.source_url ?? '')
           setVisibilityType(data.visibility_settings?.type ?? 'public')
           setIsVenueHosted(data.is_venue_hosted ?? false)
-          if (data.registration_form_config) setFormFields(data.registration_form_config)
+          setFormFields(data.external_registration_url ? [] : data.registration_form_config ?? [])
           setStartTime('')
-          setRegistrationDeadline('')
         }
       })
     }
@@ -212,7 +213,7 @@ export function CreateEventPage() {
       return
     }
 
-    if (!isAllowedExternalRegistrationUrl(externalRegistrationUrl)) {
+    if (registrationMode === 'external' && (!externalRegistrationUrl.trim() || !isAllowedExternalRegistrationUrl(externalRegistrationUrl))) {
       setMessage(t('createEvent.externalRegistrationUrlInvalid'))
       return
     }
@@ -242,10 +243,10 @@ export function CreateEventPage() {
           location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
           is_venue_hosted: isVenueHosted,
           visibility_settings: { type: visibilityType },
-          max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
-          registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
-          registration_form_config: formFields.length > 0 ? formFields : null,
-          external_registration_url: externalRegistrationUrl.trim() || null,
+          max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+          registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+          registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+          external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
           source_url: sourceUrl.trim() || null,
           recurrence_rule: recurrenceRule,
         },
@@ -320,13 +321,16 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
           </span>
-          <input
-            aria-label={t('createEvent.titleLabel')}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
+          <input aria-label={t('createEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
-        <label className="form-field">
+        <fieldset className="form-field">
+          <legend>{t('createEvent.registrationModeLabel')}</legend>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="native" checked={registrationMode === 'native'} onChange={() => { setRegistrationMode('native'); setExternalRegistrationUrl('') }} /> {t('createEvent.registrationModeNative')}</label>
+          <small>{t('createEvent.registrationModeNativeHint')}</small>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="external" checked={registrationMode === 'external'} onChange={() => { setRegistrationMode('external'); setFormFields([]); setMaxCapacity(''); setRegistrationDeadline('') }} /> {t('createEvent.registrationModeExternal')}</label>
+          <small>{t('createEvent.registrationModeExternalHint')}</small>
+        </fieldset>
+        {registrationMode === 'external' ? <label className="form-field">
           <span className="form-label-row">{t('createEvent.externalRegistrationUrlLabel')}</span>
           <input
             type="url"
@@ -337,7 +341,7 @@ export function CreateEventPage() {
             onChange={(event) => setExternalRegistrationUrl(event.target.value)}
           />
           <small>{t('createEvent.externalRegistrationUrlHint')}</small>
-        </label>
+        </label> : null}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
@@ -433,7 +437,7 @@ export function CreateEventPage() {
             />
           </label>
         )}
-        <label className="form-field">
+        {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.maxCapacityLabel')}
           </span>
@@ -445,8 +449,8 @@ export function CreateEventPage() {
             value={maxCapacity}
             onChange={(event) => setMaxCapacity(event.target.value)}
           />
-        </label>
-        <label className="form-field">
+        </label> : null}
+        {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.registrationDeadlineLabel')}
           </span>
@@ -456,7 +460,7 @@ export function CreateEventPage() {
             value={registrationDeadline}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
-        </label>
+        </label> : null}
         {profile?.role_status === 'venue_approved' && (
           <label className="checkbox">
             <input
@@ -484,7 +488,7 @@ export function CreateEventPage() {
           </select>
         </label>
 
-        <fieldset className="card form-builder">
+        {registrationMode === 'native' ? <fieldset className="card form-builder">
           <div className="form-builder-heading">
             <div>
               <legend>{t('createEvent.formBuilderLabel')} ({formFields.length}/{MAX_FORM_FIELDS})</legend>
@@ -570,7 +574,7 @@ export function CreateEventPage() {
             </div>
           )}
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
-        </fieldset>
+        </fieldset> : null}
 
         {/* Recurrence */}
         <label className="checkbox">

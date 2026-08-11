@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField } from '../types'
+import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
@@ -27,6 +27,7 @@ export function EditEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('native')
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState('public')
@@ -79,13 +80,14 @@ export function EditEventPage() {
       setStartTime(event.start_time ? toLocalDatetime(event.start_time) : '')
       setLocationRegion((event.location_region ?? '') as TaiwanRegion | '')
       setLocationDetail(event.location_detail ?? '')
-      setMaxCapacity(event.max_capacity?.toString() ?? '')
-      setRegistrationDeadline(event.registration_deadline ? toLocalDatetime(event.registration_deadline) : '')
       setExternalRegistrationUrl(event.external_registration_url ?? '')
+      setRegistrationMode(event.external_registration_url ? 'external' : 'native')
+      setMaxCapacity(event.external_registration_url ? '' : event.max_capacity?.toString() ?? '')
+      setRegistrationDeadline(event.external_registration_url ? '' : event.registration_deadline ? toLocalDatetime(event.registration_deadline) : '')
       setIsVenueHosted(event.is_venue_hosted)
       setVisibilityType(event.visibility_settings?.type ?? 'public')
       setCategory(event.category || 'Social')
-      setFormFields(event.registration_form_config ?? [])
+      setFormFields(event.external_registration_url ? [] : event.registration_form_config ?? [])
       setPublicationStatus(event.publication_status ?? (event.lifecycle_status === 'draft' ? 'closed' : 'published'))
       setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
       setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
@@ -136,7 +138,7 @@ export function EditEventPage() {
       return
     }
 
-    if (!isAllowedExternalRegistrationUrl(externalRegistrationUrl)) {
+    if (registrationMode === 'external' && (!externalRegistrationUrl.trim() || !isAllowedExternalRegistrationUrl(externalRegistrationUrl))) {
       setMessage(t('editEvent.externalRegistrationUrlInvalid'))
       return
     }
@@ -169,12 +171,12 @@ export function EditEventPage() {
         location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,
         visibility_settings: { type: visibilityType },
-        max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
-        registration_deadline: registrationDeadline
+        max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+        registration_deadline: registrationMode === 'native' && registrationDeadline
           ? new Date(registrationDeadline).toISOString()
           : null,
-        registration_form_config: formFields.length > 0 ? formFields : null,
-        external_registration_url: externalRegistrationUrl.trim() || null,
+        registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+        external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
       })
       .eq('id', id)
 
@@ -216,20 +218,21 @@ export function EditEventPage() {
     <Layout>
       <form className="card" onSubmit={submit}>
         <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}
-          </span>
-          <input
-            aria-label={t('editEvent.titleLabel')}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
+          <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
-        <label className="form-field">
+        <fieldset className="form-field">
+          <legend>{t('editEvent.registrationModeLabel')}</legend>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="native" checked={registrationMode === 'native'} onChange={() => { setRegistrationMode('native'); setExternalRegistrationUrl('') }} /> {t('editEvent.registrationModeNative')}</label>
+          <small>{t('editEvent.registrationModeNativeHint')}</small>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="external" checked={registrationMode === 'external'} onChange={() => { setRegistrationMode('external'); setFormFields([]); setMaxCapacity(''); setRegistrationDeadline('') }} /> {t('editEvent.registrationModeExternal')}</label>
+          <small>{t('editEvent.registrationModeExternalHint')}</small>
+        </fieldset>
+        {registrationMode === 'external' ? <label className="form-field">
           <span className="form-label-row">{t('editEvent.externalRegistrationUrlLabel')}</span>
           <input type="url" inputMode="url" aria-label={t('editEvent.externalRegistrationUrlLabel')} placeholder={t('editEvent.externalRegistrationUrlPlaceholder')} value={externalRegistrationUrl} onChange={(event) => setExternalRegistrationUrl(event.target.value)} />
           <small>{t('editEvent.externalRegistrationUrlHint')}</small>
-        </label>
+        </label> : null}
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.publicationStatusLabel')}</span>
           <select
@@ -344,7 +347,7 @@ export function EditEventPage() {
             />
           </label>
         )}
-        <label className="form-field">
+        {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.maxCapacityLabel')}
           </span>
@@ -356,11 +359,11 @@ export function EditEventPage() {
             value={maxCapacity}
             onChange={(event) => setMaxCapacity(event.target.value)}
           />
-        </label>
+        </label> : null}
         {capacityWarning ? (
           <p className="message warning">{capacityWarning}</p>
         ) : null}
-        <label className="form-field">
+        {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.registrationDeadlineLabel')}
           </span>
@@ -370,7 +373,7 @@ export function EditEventPage() {
             value={registrationDeadline}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
-        </label>
+        </label> : null}
         {profile?.role_status === 'venue_approved' && (
           <label className="checkbox">
             <input
@@ -397,7 +400,7 @@ export function EditEventPage() {
             <option value="private">{t('editEvent.private')}</option>
           </select>
         </label>
-        <RegistrationFormBuilder fields={formFields} setFields={setFormFields} />
+        {registrationMode === 'native' ? <RegistrationFormBuilder fields={formFields} setFields={setFormFields} /> : null}
         <button type="submit" disabled={submitting}>
           <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}
         </button>

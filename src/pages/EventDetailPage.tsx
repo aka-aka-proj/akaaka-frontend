@@ -61,6 +61,7 @@ export function EventDetailPage() {
   const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
+  const [formValidationError, setFormValidationError] = useState('')
   const [previousFormData, setPreviousFormData] = useState<Record<string, unknown>>({})
   const [shareOpen, setShareOpen] = useState(false)
   const [attendeeShareOpen, setAttendeeShareOpen] = useState(false)
@@ -95,7 +96,7 @@ export function EventDetailPage() {
 
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
       await Promise.all([
-        supabase.from('events').select('*, creator:profiles(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
+        supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
         supabase
           .from('event_threads')
           .select('*, profile:profiles(display_name)')
@@ -135,19 +136,22 @@ export function EventDetailPage() {
         setBlockedUserIds(((blocksData as { blocked_id: string }[] | null) ?? []).map((item) => item.blocked_id))
       }
 
-      // Load my registration
-      const { data: myReg } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', id)
-        .eq('profile_id', user.id)
-        .neq('status', 'cancelled')
-        .maybeSingle()
-
-      setMyRegistration((myReg as Registration | null) ?? null)
-
       const currentEvent = eventData as EventItem | null
-      if (currentEvent?.registration_form_config) {
+      if (!currentEvent?.external_registration_url) {
+        const { data: myReg } = await supabase
+          .from('event_registrations')
+          .select('*')
+          .eq('event_id', id)
+          .eq('profile_id', user.id)
+          .neq('status', 'cancelled')
+          .maybeSingle()
+
+        setMyRegistration((myReg as Registration | null) ?? null)
+      } else {
+        setMyRegistration(null)
+      }
+
+      if (currentEvent?.registration_form_config && !currentEvent.external_registration_url) {
         const { data: pastRegistrations } = await supabase
           .from('event_registrations')
           .select('id')
@@ -173,13 +177,15 @@ export function EventDetailPage() {
       }
     }
 
-    // Load registrations (host can see all, others see count)
-    const { data: allRegs } = await supabase
-      .from('event_registrations')
-      .select('*')
-      .eq('event_id', id)
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: true })
+    // External events never expose native registration state or registrant profiles.
+    const allRegs = eventData && (eventData as EventItem).external_registration_url
+      ? []
+      : (await supabase
+        .from('event_registrations')
+        .select('*')
+        .eq('event_id', id)
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: true })).data
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
@@ -485,11 +491,6 @@ export function EventDetailPage() {
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}
-              {eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-                <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="calendar-btn">
-                  {t('eventDetail.externalRegistration')}
-                </a>
-              ) : null}
             </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}><EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /></div> : null}
           </>
         ) : (
@@ -498,7 +499,22 @@ export function EventDetailPage() {
       </section>
 
       {/* Registration Section */}
-      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost ? (
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
+        <section className="card event-registration-section">
+          <h3>{t('eventDetail.registration')}</h3>
+          <p className="registration-hint">{t('eventDetail.externalRegistrationNotice')}</p>
+          <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="primary-cta">
+            {t('eventDetail.externalRegistrationCta')}
+          </a>
+        </section>
+      ) : null}
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
+        <section className="card event-registration-section" role="status">
+          <h3>{t('eventDetail.registration')}</h3>
+          <p className="registration-hint">{t('eventDetail.externalRegistrationUnavailable')}</p>
+        </section>
+      ) : null}
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {!myRegistration && isAtCapacity ? (
@@ -545,26 +561,26 @@ export function EventDetailPage() {
                   <label key={field.id} className="form-field" style={{ marginBottom: '0.5rem' }}>
                     <span>{field.label}{field.required ? ' *' : ''}</span>
                     {field.type === 'text' && (
-                      <input value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} placeholder={field.placeholder} />
+                      <input value={(formData[field.id] as string) ?? ''} onChange={(e) => { setFormValidationError(''); setFormData({...formData, [field.id]: e.target.value}) }} placeholder={field.placeholder} />
                     )}
                     {field.type === 'textarea' && (
-                      <textarea value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} placeholder={field.placeholder} />
+                      <textarea value={(formData[field.id] as string) ?? ''} onChange={(e) => { setFormValidationError(''); setFormData({...formData, [field.id]: e.target.value}) }} placeholder={field.placeholder} />
                     )}
                     {field.type === 'select' && field.options && (
-                      <select value={(formData[field.id] as string) ?? ''} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})}>
+                      <select value={(formData[field.id] as string) ?? ''} onChange={(e) => { setFormValidationError(''); setFormData({...formData, [field.id]: e.target.value}) }}>
                         <option value="">--</option>
                         {field.options.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     )}
                     {field.type === 'checkbox' && (
                       <label className="checkbox">
-                        <input type="checkbox" checked={!!formData[field.id]} onChange={(e) => setFormData({...formData, [field.id]: e.target.checked})} />
+                        <input type="checkbox" checked={!!formData[field.id]} onChange={(e) => { setFormValidationError(''); setFormData({...formData, [field.id]: e.target.checked}) }} />
                         {field.label}
                       </label>
                     )}
                     {field.type === 'radio' && field.options?.map(o => (
                       <label key={o} className="checkbox">
-                        <input type="radio" name={field.id} value={o} checked={formData[field.id] === o} onChange={(e) => setFormData({...formData, [field.id]: e.target.value})} />
+                        <input type="radio" name={field.id} value={o} checked={formData[field.id] === o} onChange={(e) => { setFormValidationError(''); setFormData({...formData, [field.id]: e.target.value}) }} />
                         {o}
                       </label>
                     ))}
@@ -576,7 +592,7 @@ export function EventDetailPage() {
                     if (f.required) {
                       const val = formData[f.id]
                       if (val === undefined || val === null || val === '' || val === false) {
-                        showError(`"${f.label}" ${t('eventDetail.fillFormBeforeRegister')}`, null)
+                        setFormValidationError(`"${f.label}" ${t('eventDetail.fillFormBeforeRegister')}`)
                         return
                       }
                     }
@@ -587,14 +603,25 @@ export function EventDetailPage() {
                   })
                   setSubmitting(false)
                   if (error) {
-                    showError((error as any).context?.message || error.message, error)
+                    const response = (error as any).context as Response | undefined
+                    let responseBody: { error?: string; message?: string } | null = null
+                    if (response?.status === 400) {
+                      responseBody = await response.clone().json().catch(() => null)
+                    }
+                    if (response?.status === 400 && responseBody?.error === 'form_validation_error') {
+                      setFormValidationError(t('eventDetail.formValidationError'))
+                    } else {
+                      showError(responseBody?.message || (error as any).context?.message || error.message, error)
+                    }
                     return
                   }
+                  setFormValidationError('')
                   setShowForm(false)
                   await load()
                 }}>
                   {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
                 </button>
+                {formValidationError ? <p className="error-message" role="alert">{formValidationError}</p> : null}
                 <button type="button" onClick={() => setShowForm(false)}>{t('common.cancelReply')}</button>
               </div>
             ) : (
@@ -641,7 +668,7 @@ export function EventDetailPage() {
             <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
               <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
             </button>
-            {eventItem.registration_form_config ? (
+            {eventItem.registration_form_config && !eventItem.external_registration_url ? (
               <button type="button" className="secondary-action" onClick={async () => {
                 const { data } = await supabase
                   .from('event_registration_responses')

@@ -12,5 +12,11 @@ describe('isAllowedExternalRegistrationUrl', () => {
     expect(isAllowedExternalRegistrationUrl('https://evil.example/forms/example')).toBe(false)
     expect(isAllowedExternalRegistrationUrl('https://docs.google.com:8443/forms/example')).toBe(false)
     expect(isAllowedExternalRegistrationUrl('https://docs.google.com/forms.example')).toBe(false)
+    expect(isAllowedExternalRegistrationUrl('https://user:pass@docs.google.com/forms/example')).toBe(false)
+  })
+
+  it('allows form query parameters without allowing a host change', () => {
+    expect(isAllowedExternalRegistrationUrl('https://docs.google.com/forms/d/example/viewform?embedded=true')).toBe(true)
+    expect(isAllowedExternalRegistrationUrl('')).toBe(true)
   })
 })

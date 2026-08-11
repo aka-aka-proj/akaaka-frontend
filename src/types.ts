@@ -3,6 +3,7 @@ export type SocialPlatform = 'facebook' | 'instagram' | 'x'
 export type Visibility = 'public' | 'connections_only' | 'private'
 export type EventCategory = 'Social' | 'Practice'
 export type PublicationStatus = 'published' | 'closed'
+export type RegistrationMode = 'native' | 'external'
 
 export type TaiwanRegion = 'North' | 'Central' | 'South' | 'East' | 'Islands' | 'Online'
 
