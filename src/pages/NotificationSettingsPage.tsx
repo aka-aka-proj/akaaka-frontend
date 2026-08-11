@@ -4,6 +4,7 @@ import { EVENT_TYPES, PRACTICE_TAGS, SOCIAL_TAGS } from '../lib/event-types'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { disableWebPush, enableWebPush, getWebPushState, type WebPushState } from '../lib/web-push'
 
 type FollowedProfile = {
   id: string
@@ -20,6 +21,9 @@ export function NotificationSettingsPage() {
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [pushState, setPushState] = useState<WebPushState>('unsubscribed')
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushMessage, setPushMessage] = useState('')
 
   const categories = useMemo(() => [
     { key: 'practice', label: t('notifications.practiceCategory'), types: PRACTICE_TAGS },
@@ -79,6 +83,38 @@ export function NotificationSettingsPage() {
     })()
   }, [userId])
 
+  useEffect(() => {
+    if (!userId) return
+    void getWebPushState().then(setPushState).catch(() => setPushState('unsupported'))
+  }, [userId])
+
+  const toggleWebPush = async (enabled: boolean) => {
+    if (!user) return
+    setPushBusy(true)
+    setPushMessage('')
+    try {
+      if (enabled) {
+        await enableWebPush(user.id)
+        setPushState('subscribed')
+        setPushMessage(t('notifications.push.enabled'))
+      } else {
+        await disableWebPush(user.id)
+        setPushState('unsubscribed')
+        setPushMessage(t('notifications.push.disabled'))
+      }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'web_push_failed'
+      const messageKey = code === 'web_push_denied'
+        ? 'notifications.push.denied'
+        : code === 'web_push_unsupported'
+          ? 'notifications.push.unsupported'
+          : 'notifications.push.failed'
+      setPushMessage(t(messageKey))
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
   const updateTypes = async (eventTypes: readonly string[], enabled: boolean) => {
     if (!user) return
     setMessage('')
@@ -135,6 +171,20 @@ export function NotificationSettingsPage() {
         <h1>{t('notifications.settingsTitle')}</h1>
         <p>{t('notifications.settingsDescription')}</p>
         {message ? <p className="error-message">{message}</p> : null}
+        <section className="notification-category" aria-labelledby="push-notification-heading">
+          <h2 id="push-notification-heading">{t('notifications.push.title')}</h2>
+          <p>{t('notifications.push.description')}</p>
+          {pushMessage ? <p className="notification-status" role="status">{pushMessage}</p> : null}
+          {pushState === 'unsupported' ? <p className="notification-empty-search">{t('notifications.push.unsupported')}</p> : null}
+          {pushState === 'denied' ? <p className="error-message">{t('notifications.push.denied')}</p> : null}
+          {pushState !== 'unsupported' && pushState !== 'denied' ? (
+            <button type="button" disabled={pushBusy} onClick={() => void toggleWebPush(pushState !== 'subscribed')}>
+              {pushBusy
+                ? t('notifications.push.working')
+                : pushState === 'subscribed' ? t('notifications.push.disable') : t('notifications.push.enable')}
+            </button>
+          ) : null}
+        </section>
         <div className="notification-controls">
           <label className="notification-search">
             <span>{t('notifications.searchAllLabel')}</span>

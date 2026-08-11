@@ -171,6 +171,18 @@ const zhTW = {
     noSearchResults: '找不到符合的活動類型。',
     followedPeopleCategory: '我追蹤的人',
     noFollowedPeople: '目前沒有追蹤任何人。',
+    push: {
+      title: '瀏覽器通知',
+      description: '即使你沒有開啟 AkaAka，也可在此裝置收到新通知。',
+      enable: '啟用瀏覽器通知',
+      disable: '停用瀏覽器通知',
+      working: '處理中…',
+      enabled: '已啟用此裝置的瀏覽器通知。',
+      disabled: '已停用此裝置的瀏覽器通知。',
+      unsupported: '此瀏覽器或環境目前不支援 Web Push。',
+      denied: '通知權限已被拒絕，請從瀏覽器設定重新允許。',
+      failed: '瀏覽器通知設定失敗，請稍後再試。',
+    },
   },
   following: {
     title: '我的追蹤',

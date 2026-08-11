@@ -172,6 +172,18 @@ const en = {
     noSearchResults: 'No matching event types.',
     followedPeopleCategory: 'People I follow',
     noFollowedPeople: 'You are not following anyone yet.',
+    push: {
+      title: 'Browser notifications',
+      description: 'Receive new notifications on this device even when AkaAka is not open.',
+      enable: 'Enable browser notifications',
+      disable: 'Disable browser notifications',
+      working: 'Working…',
+      enabled: 'Browser notifications are enabled on this device.',
+      disabled: 'Browser notifications are disabled on this device.',
+      unsupported: 'Web Push is not supported in this browser or environment.',
+      denied: 'Notification permission was denied. Allow it again in browser settings.',
+      failed: 'Unable to update browser notification settings. Try again later.',
+    },
   },
   following: {
     title: 'My Following',
