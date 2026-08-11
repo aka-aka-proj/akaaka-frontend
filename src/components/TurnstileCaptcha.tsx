@@ -87,5 +87,5 @@ export function TurnstileCaptcha({ siteKey, resetSignal, onToken, onError }: Tur
     onTokenRef.current('')
   }, [resetSignal])
 
-  return <div ref={containerRef} aria-label="Turnstile security check" />
+  return <div ref={containerRef} role="group" aria-label="Turnstile security check" />
 }
