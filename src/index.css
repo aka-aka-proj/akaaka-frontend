@@ -51,13 +51,19 @@ body {
 }
 
 .privacy-notice__trigger {
-  width: 28px;
-  height: 28px;
+  box-sizing: border-box;
+  display: inline-grid;
+  width: var(--touch-target);
+  min-width: var(--touch-target);
+  height: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0;
   border: 1px solid var(--border-color, #ccc);
   border-radius: 50%;
   background: var(--card-background, #fff);
   color: var(--text-muted, #666);
   font-weight: 700;
+  place-items: center;
   cursor: pointer;
 }
 
