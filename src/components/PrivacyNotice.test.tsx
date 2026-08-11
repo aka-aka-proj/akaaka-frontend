@@ -19,6 +19,9 @@ describe('PrivacyNotice', () => {
     const trigger = screen.getByRole('button', { name: 'View privacy commitment' })
 
     expect(screen.queryByRole('status')).toBeNull()
+    expect(trigger.className).toContain('privacy-notice__trigger')
+    expect(trigger.querySelector('svg')).toBeTruthy()
+    expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
     await user.click(trigger)
     expect(screen.getByRole('status')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open Security & Privacy Center' }).getAttribute('href')).toBe('/settings/security-privacy')

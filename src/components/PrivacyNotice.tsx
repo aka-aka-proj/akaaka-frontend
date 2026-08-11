@@ -6,13 +6,16 @@ export function PrivacyNotice() {
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const popoverId = useId()
+  const containerRef = useRef<HTMLDivElement>(null)
   const openedByHoverRef = useRef(false)
   const toggleOpen = () => setOpen((value) => !value)
 
   return (
     <div
+      ref={containerRef}
       className="privacy-notice"
       onMouseLeave={() => {
+        if (containerRef.current?.contains(document.activeElement)) return
         openedByHoverRef.current = false
         setOpen(false)
       }}
@@ -48,7 +51,10 @@ export function PrivacyNotice() {
         }}
         title={t('privacyNotice.label')}
       >
-        i
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" focusable="false">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 10.5v5.25M12 7.75h.01" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+        </svg>
       </button>
       {open ? (
         <div id={popoverId} className="privacy-notice__popover" role="status">
