@@ -60,7 +60,7 @@ export function MessagesPage() {
       {loading ? <p>{t('common.loading')}</p> : conversations.length === 0 ? (
         <div className="messages-empty-state">
           <p>{t('messages.empty')}</p>
-          <Link to="/following" className="primary-action">{t('messages.startConversation')}</Link>
+          <Link to="/messages/new" className="primary-action">{t('messages.startConversation')}</Link>
         </div>
       ) : (
         <ul className="conversation-list">
