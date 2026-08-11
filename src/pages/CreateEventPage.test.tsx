@@ -216,4 +216,32 @@ describe('CreateEventPage', () => {
     expect((screen.getByLabelText('描述') as HTMLTextAreaElement).value).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
+
+  it('imports a Google Form as an external registration source', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: {
+        source_url: 'https://docs.google.com/forms/d/e/example/viewform',
+        provider: 'docs.google.com',
+        preview: { title: 'Google 表單活動', description: '請填寫報名表單' },
+      },
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('公開活動來源網址'), 'https://docs.google.com/forms/d/e/example/viewform')
+    await user.click(screen.getByRole('button', { name: '預覽來源' }))
+
+    expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform')
+    expect((screen.getByRole('radio', { name: /外部報名/ }) as HTMLInputElement).checked).toBe(true)
+  })
 })
