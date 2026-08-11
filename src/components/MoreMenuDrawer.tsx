@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -17,6 +17,14 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
   const navigate = useNavigate()
+  const drawerRef = useRef<HTMLElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const previousActiveElementRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
   const handleSignOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -30,23 +38,82 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
 
   useEffect(() => {
     if (!open) return
+
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'input:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',')
+
+    const focusCloseButton = () => closeButtonRef.current?.focus()
+    const focusInitialControl = window.requestAnimationFrame
+      ? window.requestAnimationFrame(focusCloseButton)
+      : window.setTimeout(focusCloseButton, 0)
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCloseRef.current()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+      const drawer = drawerRef.current
+      if (!drawer) return
+      const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(focusableSelector))
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
+
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (window.cancelAnimationFrame && typeof focusInitialControl === 'number') {
+        window.cancelAnimationFrame(focusInitialControl)
+      } else {
+        window.clearTimeout(focusInitialControl)
+      }
+      const previous = previousActiveElementRef.current
+      if (previous && document.contains(previous)) previous.focus()
+      previousActiveElementRef.current = null
+    }
+  }, [open])
 
   if (!open) return null
 
   return (
     <>
       <div className="more-drawer-overlay" onClick={onClose} aria-hidden="true" />
-      <aside className="more-drawer" aria-label={t('nav.more')} role="dialog" aria-modal="true">
+      <aside
+        ref={drawerRef}
+        className="more-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="more-drawer-title"
+      >
         <div className="more-drawer-header">
-          <h2>{t('nav.more')}</h2>
+          <h2 id="more-drawer-title">{t('nav.more')}</h2>
           <button
             type="button"
+            ref={closeButtonRef}
             className="more-drawer-close"
             onClick={onClose}
             aria-label={t('common.close')}
