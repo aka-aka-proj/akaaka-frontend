@@ -76,6 +76,7 @@ test.describe('public event discovery', () => {
 
   test('matches the reviewed anonymous authentication-boundary visual baseline', async ({ page }, testInfo) => {
     test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name), 'Visual baseline is intentionally limited to reviewed Chromium states')
+    test.skip(Boolean(process.env.PLAYWRIGHT_BASE_URL), 'External CAPTCHA widgets are excluded from deterministic visual baselines; production runs keep functional and axe coverage')
     await page.addInitScript(() => localStorage.setItem('akaaka-locale', 'en'))
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
