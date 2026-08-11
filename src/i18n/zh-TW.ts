@@ -626,6 +626,7 @@ const zhTW = {
     unlinkAccountTitle: '解除社群帳號連結',
     unlinkAccountConfirm: '確定要解除 {provider} 帳號連結嗎？解除後將無法再使用此帳號登入。',
     unlinkAccountSuccess: '已解除 {provider} 帳號連結。',
+    unlinkAccountAlreadyDone: '此帳號連結已經解除，已重新整理帳號清單。',
     unlinkAccountError: '無法解除此帳號連結，請稍後再試。',
     loginInfoPrivate: '僅供自己查看，其他人無法看見',
     recommendations: '推薦留言',

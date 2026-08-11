@@ -8,6 +8,7 @@ const mockUseAuth = vi.fn()
 const from = vi.fn()
 const functionsInvoke = vi.fn()
 const unlinkIdentity = vi.fn()
+const getUserIdentities = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -22,6 +23,7 @@ vi.mock('../supabaseClient', () => ({
     from: (...args: unknown[]) => from(...args),
     auth: {
       unlinkIdentity: (...args: unknown[]) => unlinkIdentity(...args),
+      getUserIdentities: (...args: unknown[]) => getUserIdentities(...args),
     },
     functions: {
       invoke: (...args: unknown[]) => functionsInvoke(...args),
@@ -50,6 +52,7 @@ function queryBuilder(response: QueryResponse) {
 describe('ProfilePage', () => {
   beforeEach(() => {
     unlinkIdentity.mockReset()
+    getUserIdentities.mockReset()
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile: vi.fn().mockResolvedValue(undefined),
@@ -83,6 +86,7 @@ describe('ProfilePage', () => {
       return queryBuilder({ data: null, error: null })
     })
     unlinkIdentity.mockResolvedValue({ error: null })
+    getUserIdentities.mockResolvedValue({ data: { identities: [primary, secondary] }, error: null })
     HTMLDialogElement.prototype.showModal = function showModal() {
       this.setAttribute('open', '')
     }

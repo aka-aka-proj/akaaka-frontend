@@ -44,6 +44,7 @@ export function ProfilePage() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
   const [connectedIdentities, setConnectedIdentities] = useState<UserIdentity[]>(identities ?? [])
   const [identityToUnlink, setIdentityToUnlink] = useState<UserIdentity | null>(null)
+  const [isUnlinkingIdentity, setIsUnlinkingIdentity] = useState(false)
   const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
   useEffect(() => {
@@ -313,17 +314,53 @@ export function ProfilePage() {
   }
 
   const unlinkIdentity = async () => {
-    if (!identityToUnlink || identityToUnlink.identity_id === primaryIdentity?.identity_id) return
+    if (!identityToUnlink || isUnlinkingIdentity) return
 
-    const { error } = await supabase.auth.unlinkIdentity(identityToUnlink)
-    if (error) {
-      setMessage(t('profile.unlinkAccountError'))
-      return
+    setIsUnlinkingIdentity(true)
+    const targetIdentityId = identityToUnlink.identity_id
+
+    try {
+      const { data: latestData, error: latestError } = await supabase.auth.getUserIdentities()
+      if (latestError) {
+        setMessage(t('profile.unlinkAccountError'))
+        return
+      }
+
+      const latestIdentities = latestData.identities
+      const latestPrimaryIdentity = latestIdentities.reduce<UserIdentity | null>((primary, identity) => {
+        if (!primary) return identity
+        if (!identity.created_at || !primary.created_at) return primary
+        return identity.created_at < primary.created_at ? identity : primary
+      }, null)
+      const latestTargetIdentity = latestIdentities.find(identity => identity.identity_id === targetIdentityId)
+
+      if (!latestTargetIdentity || latestTargetIdentity.identity_id === latestPrimaryIdentity?.identity_id) {
+        setConnectedIdentities(latestIdentities)
+        setIdentityToUnlink(null)
+        setMessage(t('profile.unlinkAccountAlreadyDone'))
+        return
+      }
+
+      const { error } = await supabase.auth.unlinkIdentity(latestTargetIdentity)
+      if (error) {
+        const { data: reconciledData } = await supabase.auth.getUserIdentities()
+        const stillExists = reconciledData?.identities.some(identity => identity.identity_id === targetIdentityId)
+        if (error.status === 404 && !stillExists) {
+          setConnectedIdentities(reconciledData?.identities ?? [])
+          setIdentityToUnlink(null)
+          setMessage(t('profile.unlinkAccountAlreadyDone'))
+        } else {
+          setMessage(t('profile.unlinkAccountError'))
+        }
+        return
+      }
+
+      setConnectedIdentities((current) => current.filter(identity => identity.identity_id !== targetIdentityId))
+      setMessage(t('profile.unlinkAccountSuccess', { provider: latestTargetIdentity.provider }))
+      setIdentityToUnlink(null)
+    } finally {
+      setIsUnlinkingIdentity(false)
     }
-
-    setConnectedIdentities((current) => current.filter(identity => identity.identity_id !== identityToUnlink.identity_id))
-    setMessage(t('profile.unlinkAccountSuccess', { provider: identityToUnlink.provider }))
-    setIdentityToUnlink(null)
   }
 
   return (
@@ -593,6 +630,7 @@ export function ProfilePage() {
           title={t('profile.unlinkAccountTitle')}
           description={t('profile.unlinkAccountConfirm', { provider: identityToUnlink?.provider ?? '' })}
           confirmLabel={t('profile.unlinkAccountAction')}
+          confirmDisabled={isUnlinkingIdentity}
           onConfirm={() => void unlinkIdentity()}
           onCancel={() => setIdentityToUnlink(null)}
         />

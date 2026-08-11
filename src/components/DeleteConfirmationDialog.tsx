@@ -8,6 +8,7 @@ interface DeleteConfirmationDialogProps {
   confirmationLabel?: string
   confirmationPlaceholder?: string
   confirmLabel?: string
+  confirmDisabled?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -20,6 +21,7 @@ export function DeleteConfirmationDialog({
   confirmationLabel,
   confirmationPlaceholder,
   confirmLabel = '刪除',
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: DeleteConfirmationDialogProps) {
@@ -98,7 +100,7 @@ export function DeleteConfirmationDialog({
             type="button"
             className="danger"
             onClick={onConfirm}
-            disabled={Boolean(confirmationPhrase && confirmationInput !== confirmationPhrase)}
+            disabled={confirmDisabled || Boolean(confirmationPhrase && confirmationInput !== confirmationPhrase)}
           >
             {confirmLabel}
           </button>

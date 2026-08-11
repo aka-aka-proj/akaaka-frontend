@@ -626,6 +626,7 @@ const en = {
     unlinkAccountTitle: 'Unlink social account',
     unlinkAccountConfirm: 'Unlink your {provider} account? You will no longer be able to sign in with it.',
     unlinkAccountSuccess: '{provider} account unlinked.',
+    unlinkAccountAlreadyDone: 'This account link was already removed. The account list has been refreshed.',
     unlinkAccountError: 'Unable to unlink this account. Please try again.',
     loginInfoPrivate: 'Visible only to you — others cannot see this',
     recommendations: 'Recommendation comments',
