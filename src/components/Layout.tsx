@@ -9,6 +9,7 @@ import { Icon } from './Icon'
 import { MoreMenuDrawer } from './MoreMenuDrawer'
 import { PrivacyNotice } from './PrivacyNotice'
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
+import { PageBackButton } from './PageBackButton'
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
@@ -188,6 +189,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </label>
         ) : null}
       </header>
+      <PageBackButton />
       {user ? <PrivacyNotice /> : null}
       {children}
       {user ? (

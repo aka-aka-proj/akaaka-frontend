@@ -3005,6 +3005,39 @@ dd {
 
 /* ── Back Button ── */
 
+.page-back-container {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.page-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem 0.5rem 0.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #374151;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.page-back-button:hover {
+  background: #f6f8fa;
+}
+
+.page-back-button:focus-visible {
+  outline: 3px solid rgba(13, 110, 253, 0.35);
+  outline-offset: 2px;
+}
+
+.page-back-button span:first-child {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
 .btn-back {
   display: inline-flex;
   align-items: center;

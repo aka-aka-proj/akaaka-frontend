@@ -7,6 +7,7 @@ const zhTW = {
     close: '關閉',
     remove: '移除',
     language: '語言',
+    back: '返回上一頁',
   },
   errorPopup: {
     title: '系統發生錯誤',

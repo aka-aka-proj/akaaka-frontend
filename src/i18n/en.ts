@@ -7,6 +7,7 @@ const en = {
     close: 'Close',
     remove: 'Remove',
     language: 'Language',
+    back: 'Back',
   },
   errorPopup: {
     title: 'An Error Occurred',
