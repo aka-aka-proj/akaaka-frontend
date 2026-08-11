@@ -236,7 +236,9 @@ export function AuthPage() {
               onToken={setCaptchaToken}
               onError={(reason) => setMessage(reason === 'expired' ? t('auth.captchaExpired') : t('auth.captchaError'))}
             />
-            <p id="auth-captcha-help" className="form-help">{t('auth.captchaHelp')}</p>
+            <p id="auth-captcha-help" className="form-help" aria-live="polite">
+              {captchaToken ? t('auth.captchaVerified') : t('auth.captchaHelp')}
+            </p>
           </div>
         ) : null}
         <button type="button" onClick={() => setIsSignUp((value) => !value)}>

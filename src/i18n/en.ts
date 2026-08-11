@@ -69,6 +69,7 @@ const en = {
     emailAlreadyRegistered: 'This email is already registered. Please sign in with the social login you originally used (Google, Facebook, or Apple).',
     captchaRequired: 'Complete the security check first.',
     captchaHelp: 'Complete the security check before signing in or signing up.',
+    captchaVerified: 'Security check complete. You can continue to sign in or sign up.',
     captchaExpired: 'The security check expired. Please complete it again.',
     captchaError: 'The security check could not load. Please try again later.',
   },

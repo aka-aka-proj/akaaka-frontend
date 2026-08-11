@@ -69,6 +69,7 @@ const zhTW = {
     emailAlreadyRegistered: '此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。',
     captchaRequired: '請先完成安全驗證。',
     captchaHelp: '完成安全驗證後才能繼續登入或註冊。',
+    captchaVerified: '安全驗證完成，可以繼續登入或註冊。',
     captchaExpired: '安全驗證已過期，請重新完成驗證。',
     captchaError: '安全驗證載入失敗，請稍後再試。',
   },
