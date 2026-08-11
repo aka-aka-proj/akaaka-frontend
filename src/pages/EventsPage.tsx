@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { canSeeEvent } from '../lib/event-visibility'
-import { parseEventTypes } from '../lib/event-utils'
+import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEffectiveCategory, getEventTypeI18nKey } from '../lib/event-types'
 import type { EventItem, EventCategory, TaiwanRegion } from '../types'
 import { TAIWAN_REGIONS } from '../types'
@@ -18,7 +18,7 @@ const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
 const EVENT_PAGE_SIZE = 50
 
 export function EventsPage() {
-  const { t } = useT()
+  const { t, locale } = useT()
   const { user } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [message, setMessage] = useState('')
@@ -152,7 +152,7 @@ export function EventsPage() {
 
       return true
     })
-  }, [events, search, selectedType, selectedRegion, timeFilter, myEventsOnly, user, categoryFilter])
+  }, [events, selectedType, selectedRegion, timeFilter, myEventsOnly, user, categoryFilter])
 
   return (
     <Layout>
@@ -346,6 +346,7 @@ export function EventsPage() {
                   </div>
                 )}
                 <p className="event-card-description">{event.description ?? t('events.noDescription')}</p>
+                <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-edit" size={16} /> <span>{t('events.attendanceFeeLabel')}: {getAttendanceFeeLabel(event.attendance_fee_type ?? 'free', event.attendance_fee_amount, locale)}</span></p>
                 <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> <span>{new Date(event.start_time).toLocaleString()}</span></p>
                 {event.location_region ? (
                   <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</span></p>
