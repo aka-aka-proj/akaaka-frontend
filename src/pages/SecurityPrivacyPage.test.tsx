@@ -18,7 +18,7 @@ vi.mock('../context/AuthContext', () => ({
 }))
 
 vi.mock('../supabaseClient', () => ({
-  supabase: {
+    supabase: {
     auth: {
       mfa: {
         listFactors: (...args: unknown[]) => listFactors(...args),
@@ -29,13 +29,16 @@ vi.mock('../supabaseClient', () => ({
         unenroll: (...args: unknown[]) => unenroll(...args),
       },
     },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({ limit: (...args: unknown[]) => auditLimit(...args) }),
-        }),
-      }),
-    }),
+    from: () => {
+      const query = {
+        eq: () => query,
+        is: () => query,
+        lt: () => query,
+        order: () => query,
+        limit: (...args: unknown[]) => auditLimit(...args),
+      }
+      return { select: () => query }
+    },
   },
 }))
 
