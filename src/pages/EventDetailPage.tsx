@@ -51,7 +51,10 @@ export function EventDetailPage() {
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
-  const [replyParentId, setReplyParentId] = useState<string | null>(null)
+  const [replyingToId, setReplyingToId] = useState<string | null>(null)
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+  const [postingThread, setPostingThread] = useState(false)
+  const [discussionStatus, setDiscussionStatus] = useState('')
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([])
   const [creatorReportCount, setCreatorReportCount] = useState<number>(0)
   const [myRegistration, setMyRegistration] = useState<Registration | null>(null)
@@ -80,6 +83,29 @@ export function EventDetailPage() {
     () => threads.filter((thread) => !blockedUserIds.includes(thread.profile_id)),
     [threads, blockedUserIds],
   )
+
+  const threadChildren = useMemo(() => {
+    const children = new Map<string, EventThread[]>()
+    for (const thread of visibleThreads) {
+      if (!thread.parent_id) continue
+      children.set(thread.parent_id, [...(children.get(thread.parent_id) ?? []), thread])
+    }
+    return children
+  }, [visibleThreads])
+
+  const rootThreads = useMemo(
+    () => visibleThreads.filter((thread) => !thread.parent_id || !visibleThreads.some((candidate) => candidate.id === thread.parent_id)),
+    [visibleThreads],
+  )
+
+  const relativeTime = (createdAt: string) => {
+    const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000))
+    if (elapsedMinutes < 1) return t('eventDetail.justNow')
+    if (elapsedMinutes < 60) return t('eventDetail.minutesAgo', { count: elapsedMinutes })
+    const elapsedHours = Math.floor(elapsedMinutes / 60)
+    if (elapsedHours < 24) return t('eventDetail.hoursAgo', { count: elapsedHours })
+    return t('eventDetail.daysAgo', { count: Math.floor(elapsedHours / 24) })
+  }
 
   const load = async () => {
     if (!id) {
@@ -347,23 +373,53 @@ export function EventDetailPage() {
       return
     }
 
+    setPostingThread(true)
+    setDiscussionStatus('')
     const { error } = await supabase.from('event_threads').insert([
       {
         event_id: id,
         profile_id: user.id,
         content: content.trim(),
-        parent_id: replyParentId,
+        parent_id: null,
       },
     ])
 
     if (error) {
+      setPostingThread(false)
       showError(error.message, error)
       return
     }
 
     setContent('')
-    setReplyParentId(null)
     await load()
+    setPostingThread(false)
+    setDiscussionStatus(t('eventDetail.commentPosted'))
+  }
+
+  const postReply = async (parentId: string, event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!id || !user || !replyDrafts[parentId]?.trim()) return
+
+    setPostingThread(true)
+    setDiscussionStatus('')
+    const { error } = await supabase.from('event_threads').insert([{
+      event_id: id,
+      profile_id: user.id,
+      content: replyDrafts[parentId].trim(),
+      parent_id: parentId,
+    }])
+
+    if (error) {
+      setPostingThread(false)
+      showError(error.message, error)
+      return
+    }
+
+    setReplyDrafts((drafts) => ({ ...drafts, [parentId]: '' }))
+    setReplyingToId(null)
+    await load()
+    setPostingThread(false)
+    setDiscussionStatus(t('eventDetail.commentPosted'))
   }
 
   const registrationStatus = (status: string) => {
@@ -376,6 +432,56 @@ export function EventDetailPage() {
       case 'cancellation_rejected': return t('eventDetail.regCancellationRejected')
       default: return status
     }
+  }
+
+  function renderThread(thread: EventThread, depth = 0) {
+    const displayName = thread.profile?.display_name || thread.profile_id
+    const isHostComment = eventItem?.creator_id === thread.profile_id
+    return (
+      <li key={thread.id} className={`discussion-item${depth > 0 ? ' discussion-item-reply' : ''}`}>
+        <article className="discussion-card">
+          <header className="discussion-header">
+            <img src={getAvatarPath(thread.profile)} alt="" width={36} height={36} className="avatar" />
+            <div className="discussion-author">
+              <Link to={`/profile/${thread.profile_id}`}>{displayName}</Link>
+              {isHostComment ? <span className="host-badge">{t('eventDetail.hostBadge')}</span> : null}
+              <time dateTime={thread.created_at}>{relativeTime(thread.created_at)}</time>
+            </div>
+          </header>
+          <p className="discussion-content">{thread.content}</p>
+          <div className="discussion-actions">
+            <button type="button" className="ghost-button" onClick={() => setReplyingToId(thread.id)}>
+              <Icon href="/action-icons.svg" name="action-reply" size={14} /> {t('eventDetail.reply')}
+            </button>
+          </div>
+          {replyingToId === thread.id ? (
+            <form className="inline-reply-form" onSubmit={(event) => void postReply(thread.id, event)}>
+              <textarea
+                autoFocus
+                aria-label={t('eventDetail.replyingToUser', { name: displayName })}
+                value={replyDrafts[thread.id] ?? ''}
+                onChange={(event) => setReplyDrafts((drafts) => ({ ...drafts, [thread.id]: event.target.value }))}
+                placeholder={t('eventDetail.replyingToUser', { name: displayName })}
+                rows={2}
+              />
+              <div className="discussion-form-actions">
+                <button type="button" className="ghost-button" onClick={() => setReplyingToId(null)}>
+                  {t('common.cancelReply')}
+                </button>
+                <button type="submit" className="primary-cta" disabled={postingThread || !replyDrafts[thread.id]?.trim()}>
+                  {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
+                </button>
+              </div>
+            </form>
+          ) : null}
+        </article>
+        {threadChildren.get(thread.id)?.length ? (
+          <ul className="discussion-replies">
+            {threadChildren.get(thread.id)?.map((child) => renderThread(child, depth + 1))}
+          </ul>
+        ) : null}
+      </li>
+    )
   }
 
   return (
@@ -805,46 +911,34 @@ export function EventDetailPage() {
       ) : null}
 
       <section className="card event-discussion-section">
-        <h3>{t('eventDetail.discussion')}</h3>
-        <form onSubmit={postThread}>
+        <div className="discussion-heading">
+          <div>
+            <p className="eyebrow">{t('eventDetail.discussionEyebrow')}</p>
+            <h3>{t('eventDetail.discussion')}</h3>
+          </div>
+          {discussionStatus ? <p className="discussion-status" role="status">{discussionStatus}</p> : null}
+        </div>
+        <form className="discussion-composer" onSubmit={postThread}>
           <textarea
             aria-label={t('eventDetail.discussion')}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder={replyParentId ? t('eventDetail.replyingTo', { id: replyParentId }) : t('eventDetail.postComment')}
+            placeholder={t('eventDetail.postComment')}
+            rows={3}
           />
-          <button type="submit"><Icon href="/action-icons.svg" name="action-reply" size={16} /> {t('eventDetail.post')}</button>
-          {replyParentId ? (
-            <button type="button" onClick={() => setReplyParentId(null)}>
-              {t('common.cancelReply')}
+          <div className="discussion-form-actions">
+            <button type="submit" className="primary-cta" disabled={postingThread || !content.trim()}>
+              <Icon href="/action-icons.svg" name="action-reply" size={16} /> {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
             </button>
-          ) : null}
+          </div>
         </form>
         {visibleThreads.length === 0 ? (
           <div className="empty-state">
-            <p>{t('eventDetail.postComment')}</p>
+            <p>{t('eventDetail.discussionEmpty')}</p>
           </div>
         ) : (
-          <ul>
-            {visibleThreads.map((thread) => (
-              <li key={thread.id} className="thread-item">
-                <div className="thread-header">
-                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
-                  <div>
-                    <p>{thread.content}</p>
-                    <small>
-                      <Link to={`/profile/${thread.profile_id}`}>{thread.profile?.display_name || thread.profile_id}</Link>{' '}
-                      {thread.parent_id ? t('eventDetail.replyTo', { id: thread.parent_id }) : ''}
-                    </small>
-                  </div>
-                </div>
-                <div>
-                  <button type="button" onClick={() => setReplyParentId(thread.id)}>
-                    <Icon href="/action-icons.svg" name="action-reply" size={14} /> {t('eventDetail.reply')}
-                  </button>
-                </div>
-              </li>
-            ))}
+          <ul className="discussion-list">
+            {rootThreads.map((thread) => renderThread(thread))}
           </ul>
         )}
       </section>

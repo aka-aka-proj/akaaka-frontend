@@ -2092,6 +2092,146 @@ dd {
   border-top: 3px solid #e5e7eb;
 }
 
+.discussion-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.discussion-heading h3,
+.discussion-heading p {
+  margin: 0;
+}
+
+.discussion-status {
+  color: #166534;
+  font-size: 0.875rem;
+}
+
+.discussion-composer,
+.inline-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.discussion-composer {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 0.65rem;
+  background: #f8fafc;
+}
+
+.discussion-composer textarea {
+  min-height: 3.25rem;
+  resize: vertical;
+}
+
+.discussion-composer textarea:focus {
+  min-height: 6rem;
+}
+
+.discussion-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.discussion-list,
+.discussion-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.discussion-item {
+  margin: 0;
+}
+
+.discussion-card {
+  padding: 0.85rem;
+  border: 1px solid #edf1f5;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.discussion-item-reply {
+  margin-left: 1.5rem;
+  padding-left: 0.85rem;
+  border-left: 2px solid #dbe3ef;
+}
+
+.discussion-replies {
+  margin: 0.75rem 0 0;
+}
+
+.discussion-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.discussion-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.discussion-author time {
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+.host-badge {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.discussion-content {
+  margin: 0.75rem 0;
+  white-space: pre-wrap;
+}
+
+.discussion-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.45rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.ghost-button:hover,
+.ghost-button:focus-visible {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.inline-reply-form {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #edf1f5;
+}
+
 .calendar-btn {
   display: inline-flex;
   align-items: center;
