@@ -100,6 +100,7 @@ const en = {
   },
   events: {
     startTimeLabel: 'Start time',
+    attendanceFeeLabel: 'Attendance fee',
     title: 'Events',
     exploreTitle: 'Explore events',
     createEvent: 'Create event',

@@ -100,6 +100,7 @@ const zhTW = {
   },
   events: {
     title: '活動',
+    attendanceFeeLabel: '參加費用',
     exploreTitle: '探索活動',
     createEvent: '建立活動',
     noDescription: '沒有描述',
