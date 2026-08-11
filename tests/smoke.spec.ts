@@ -83,6 +83,8 @@ test.describe('public event discovery', () => {
     await expect(page).toHaveScreenshot('auth-boundary.png', {
       fullPage: true,
       animations: 'disabled',
+      // Native select controls are rendered by the host browser/OS; functional coverage remains above.
+      mask: [page.getByRole('combobox')],
     })
   })
 })
