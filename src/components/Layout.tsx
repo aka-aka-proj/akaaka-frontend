@@ -46,6 +46,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
   const unreadNotificationCount = useUnreadNotificationCount(user?.id)
   const desktopMoreRef = useRef<HTMLDivElement>(null)
+  const desktopMoreButtonRef = useRef<HTMLButtonElement>(null)
+  const desktopMoreMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -56,6 +58,23 @@ export function Layout({ children }: { children: ReactNode }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!desktopMoreOpen) return
+
+    const firstMenuItem = desktopMoreMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')
+    firstMenuItem?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setDesktopMoreOpen(false)
+      desktopMoreButtonRef.current?.focus()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [desktopMoreOpen])
 
   const handleSignOut = async () => {
     try {
@@ -95,15 +114,17 @@ export function Layout({ children }: { children: ReactNode }) {
             <div className="desktop-more-wrapper" ref={desktopMoreRef}>
               <button
                 type="button"
+                ref={desktopMoreButtonRef}
                 className={`desktop-nav-more-btn${desktopMoreOpen ? ' active' : ''}`}
                 onClick={() => setDesktopMoreOpen((v) => !v)}
                 aria-haspopup="true"
                 aria-expanded={desktopMoreOpen}
+                aria-controls="desktop-more-menu"
               >
                 <Icon href="/nav-icons.svg" name="nav-more" size={16} /> {t('nav.more')}
               </button>
               {desktopMoreOpen && (
-                <div className="desktop-more-dropdown" role="menu">
+                <div id="desktop-more-menu" ref={desktopMoreMenuRef} className="desktop-more-dropdown" role="menu">
                   {DESKTOP_MORE_SECTIONS.map((section, index) => (
                     <div key={section.labelKey} className="desktop-more-section">
                       {index > 0 ? <div className="desktop-more-divider" /> : null}
