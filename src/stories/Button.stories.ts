@@ -14,10 +14,6 @@ const meta = {
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
-  // More on argTypes: https://storybook.js.org/docs/api/arg-types
-  argTypes: {
-    backgroundColor: { control: 'color' },
-  },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
   args: { onClick: fn() },
 } satisfies Meta<typeof Button>;
@@ -36,6 +32,28 @@ export const Primary: Story = {
 export const Secondary: Story = {
   args: {
     label: 'Button',
+  },
+};
+
+export const Danger: Story = {
+  args: {
+    variant: 'danger',
+    label: 'Delete event',
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    label: 'Unavailable',
+    disabled: true,
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    primary: true,
+    label: 'Saving',
+    loading: true,
   },
 };
 
