@@ -35,7 +35,7 @@ export function SafetyCompactModal({ open, onClose, onAgree }: SafetyCompactModa
     <dialog ref={dialogRef} className="modal" aria-label={t('onboarding.compactTitle')}>
       <div className="modal-content">
         <h2>{t('onboarding.compactTitle')}</h2>
-        <div className="modal-body">
+        <div className="modal-body" tabIndex={0}>
           <p>{t('onboarding.compactIntro')}</p>
 
           <h3>{t('onboarding.compactConsentTitle')}</h3>

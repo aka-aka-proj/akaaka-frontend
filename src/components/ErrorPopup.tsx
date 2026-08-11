@@ -79,7 +79,7 @@ export function ErrorPopup() {
     <dialog ref={dialogRef} className="modal" aria-label={t('errorPopup.title')}>
       <div className="modal-content" style={{ maxWidth: '100%' }}>
         <h2 style={{ color: '#b42318' }}>{t('errorPopup.title')}</h2>
-        <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <div className="modal-body" tabIndex={0} style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <p style={{ fontWeight: 'bold', fontSize: '1.05rem', margin: '0 0 0.5rem' }}>
             {error.message}
           </p>

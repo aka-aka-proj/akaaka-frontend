@@ -72,7 +72,7 @@ export function DeleteConfirmationDialog({
     >
       <div className="modal-content">
         <h2 id="delete-dialog-title">{title}</h2>
-        <div className="modal-body">
+        <div className="modal-body" tabIndex={0}>
           <p id="delete-dialog-description">{description}</p>
           {confirmationPhrase ? (
             <label className="confirmation-input">
