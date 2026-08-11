@@ -10,34 +10,41 @@ test.describe('public event discovery', () => {
   })
 
   test('preserves the authentication boundary for every protected route', async ({ page }) => {
+    test.setTimeout(60000)
     const protectedRoutes = [
       '/onboarding',
       '/events',
       '/events/new',
       '/events/bookmarks',
-      '/events/example/edit',
-      '/events/example',
+      '/events/synthetic-event/edit',
+      '/events/synthetic-event',
       '/profile/me',
       '/profile/me/edit',
       '/profile/me/feedback',
       '/profile/me/reports',
-      '/profile/example',
+      '/profile/synthetic-profile',
+      '/profile/synthetic-profile/feedback',
+      '/profile/synthetic-profile/reports',
       '/reports/me',
       '/registrations/me',
       '/notifications',
       '/messages',
+      '/messages/new',
+      '/messages/synthetic-conversation',
       '/following',
       '/settings/notifications',
       '/issues',
       '/issues/new',
+      '/issues/synthetic-issue',
       '/virtual-lovers',
       '/virtual-lovers/new',
+      '/virtual-lovers/synthetic-lover/chat',
       '/settings/security-privacy',
       '/settings/analytics',
     ]
 
     for (const route of protectedRoutes) {
-      await page.goto(route)
+      await page.goto(route, { waitUntil: 'domcontentloaded' })
       await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
     }
   })
