@@ -927,6 +927,18 @@ dd {
   margin-left: auto;
 }
 
+.profile-title-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--touch-target);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  text-decoration: none;
+}
+
 .profile-share-backdrop {
   position: fixed;
   inset: 0;

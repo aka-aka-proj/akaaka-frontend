@@ -443,10 +443,10 @@ export function ProfilePage() {
                 </h2>
                 {isOwner && (
                   <div className="profile-title-actions">
-                    <button type="button" className="btn-secondary" onClick={() => setIsShareModalOpen(true)}>
+                    <button type="button" className="btn-secondary profile-title-action" onClick={() => setIsShareModalOpen(true)}>
                       {t('profile.shareProfile')}
                     </button>
-                    <Link to="/profile/me/edit" className="btn-secondary profile-edit-trigger">
+                    <Link to="/profile/me/edit" className="btn-secondary profile-title-action profile-edit-trigger">
                       <Icon href="/action-icons.svg" name="action-edit" size={16} />
                       {t('profile.editProfile')}
                     </Link>
