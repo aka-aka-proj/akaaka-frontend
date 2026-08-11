@@ -7,6 +7,8 @@ import { useT } from './hooks/useT'
 import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AuthPage } from './pages/AuthPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { CreateEventPage } from './pages/CreateEventPage'
 import { DirectChatPage } from './pages/DirectChatPage'
 import { EditProfilePage } from './pages/EditProfilePage'
@@ -56,6 +58,8 @@ function App() {
     <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/onboarding"
         element={

@@ -10,6 +10,7 @@ import { TurnstileCaptcha } from '../components/TurnstileCaptcha'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_login_credentials: '電子郵件或密碼不正確',
+  'Invalid login credentials': '電子郵件或密碼不正確',
   email_not_confirmed: '電子郵件尚未驗證，請先完成驗證後再登入',
   signup_disabled: '註冊功能目前已關閉',
   too_many_requests: '登入嘗試次數過多，請稍後再試',
@@ -228,6 +229,11 @@ export function AuthPage() {
         <button type="submit" disabled={loading}>
           {isSignUp ? t('auth.createAccount') : t('auth.signIn')}
         </button>
+        {!isSignUp ? (
+          <button type="button" className="text-button" onClick={() => navigate('/auth/forgot-password')}>
+            {t('auth.forgotPassword')}
+          </button>
+        ) : null}
         {turnstileSiteKey ? (
           <div className="auth-captcha" aria-describedby="auth-captcha-help">
             <TurnstileCaptcha

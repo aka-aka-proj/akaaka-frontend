@@ -8,6 +8,7 @@ const mockUseAuth = vi.fn()
 const signInWithPassword = vi.fn()
 const signUp = vi.fn()
 const resend = vi.fn()
+const resetPasswordForEmail = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -19,6 +20,7 @@ vi.mock('../supabaseClient', () => ({
       signInWithPassword: (...args: unknown[]) => signInWithPassword(...args),
       signUp: (...args: unknown[]) => signUp(...args),
       resend: (...args: unknown[]) => resend(...args),
+      resetPasswordForEmail: (...args: unknown[]) => resetPasswordForEmail(...args),
     },
   },
 }))
@@ -29,6 +31,7 @@ describe('AuthPage', () => {
     signInWithPassword.mockResolvedValue({ error: null })
     signUp.mockResolvedValue({ error: null })
     resend.mockResolvedValue({ error: null })
+    resetPasswordForEmail.mockResolvedValue({ error: null })
     vi.useRealTimers()
   })
 
@@ -192,5 +195,33 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '登入' }))
 
     expect(screen.getByText('電子郵件或密碼不正確')).toBeTruthy()
+  })
+
+  it('localizes the provider-form invalid login message', async () => {
+    const user = userEvent.setup()
+    signInWithPassword.mockResolvedValue({ error: { message: 'Invalid login credentials' } })
+    resend.mockResolvedValue({ error: { message: 'User not found' } })
+
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('電子郵件'), 'admin-aal2@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'wrong-password')
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(screen.getByText('電子郵件或密碼不正確')).toBeTruthy()
+    expect(screen.queryByText('Invalid login credentials')).toBeNull()
+  })
+
+  it('shows the forgot-password entry point only on sign-in', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('button', { name: '忘記密碼？' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
+    expect(screen.queryByRole('button', { name: '忘記密碼？' })).toBeNull()
   })
 })
