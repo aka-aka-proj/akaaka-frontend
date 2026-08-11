@@ -7,6 +7,7 @@ import { ProfilePage } from './ProfilePage'
 const mockUseAuth = vi.fn()
 const from = vi.fn()
 const functionsInvoke = vi.fn()
+const unlinkIdentity = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -19,6 +20,9 @@ vi.mock('../context/LanguageContext', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    auth: {
+      unlinkIdentity: (...args: unknown[]) => unlinkIdentity(...args),
+    },
     functions: {
       invoke: (...args: unknown[]) => functionsInvoke(...args),
     },
@@ -45,10 +49,62 @@ function queryBuilder(response: QueryResponse) {
 
 describe('ProfilePage', () => {
   beforeEach(() => {
+    unlinkIdentity.mockReset()
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile: vi.fn().mockResolvedValue(undefined),
     })
+  })
+
+  it('keeps the original identity and allows unlinking a secondary identity', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'viewer-user',
+        role_status: 'general',
+        display_name: 'Self User',
+        bio: 'Own bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 1,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+    const primary = { identity_id: 'primary', provider: 'google', created_at: '2026-01-01T00:00:00Z' }
+    const secondary = { identity_id: 'secondary', provider: 'x', created_at: '2026-02-01T00:00:00Z' }
+    mockUseAuth.mockReturnValue({
+      user: { id: 'viewer-user' },
+      identities: [primary, secondary],
+      refreshProfile: vi.fn().mockResolvedValue(undefined),
+    })
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      return queryBuilder({ data: null, error: null })
+    })
+    unlinkIdentity.mockResolvedValue({ error: null })
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute('open', '')
+    }
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute('open')
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/profile/me']}>
+        <Routes>
+          <Route path="/profile/me" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByText('Self User')).toBeTruthy())
+    expect(screen.getByText('Main sign-in account · cannot unlink')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Unlink x account' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Unlink' }))
+
+    await waitFor(() => expect(unlinkIdentity).toHaveBeenCalledWith(secondary))
+    expect(screen.queryByRole('button', { name: 'Unlink x account' })).toBeNull()
   })
 
   it('blocks self recommendation actions on own profile', async () => {

@@ -10,6 +10,7 @@ import { useT } from '../hooks/useT'
 import { canViewBio, getAvatarPath, getBioVisibility, mapProfileRow } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
+import type { UserIdentity } from '@supabase/supabase-js'
 
 function maskEmail(email: string | undefined) {
   if (!email) return ''
@@ -41,11 +42,25 @@ export function ProfilePage() {
   const [showEmail, setShowEmail] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+  const [connectedIdentities, setConnectedIdentities] = useState<UserIdentity[]>(identities ?? [])
+  const [identityToUnlink, setIdentityToUnlink] = useState<UserIdentity | null>(null)
   const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
+  useEffect(() => {
+    setConnectedIdentities(identities ?? [])
+  }, [identities])
+
+  const primaryIdentity = useMemo(() => {
+    if (connectedIdentities.length === 0) return null
+    return connectedIdentities.reduce((primary, identity) => {
+      if (!identity.created_at || !primary.created_at) return primary
+      return identity.created_at < primary.created_at ? identity : primary
+    }, connectedIdentities[0])
+  }, [connectedIdentities])
+
   const xProfileUrl = useMemo(() => {
-    if (isOwner && identities) {
-      const twitterIdentity = identities.find(i => i.provider === 'twitter')
+    if (isOwner && connectedIdentities) {
+      const twitterIdentity = connectedIdentities.find(i => i.provider === 'twitter' || i.provider === 'x')
       return twitterIdentity?.identity_data?.user_name 
         ? `https://x.com/${twitterIdentity.identity_data.user_name}` 
         : null
@@ -53,7 +68,7 @@ export function ProfilePage() {
     
     const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
     return externalLink?.url ?? null
-  }, [isOwner, identities, profile])
+  }, [isOwner, connectedIdentities, profile])
 
   const bioVisibility = getBioVisibility(profile)
   const showBio = profile
@@ -297,6 +312,20 @@ export function ProfilePage() {
     navigate('/auth', { replace: true })
   }
 
+  const unlinkIdentity = async () => {
+    if (!identityToUnlink || identityToUnlink.identity_id === primaryIdentity?.identity_id) return
+
+    const { error } = await supabase.auth.unlinkIdentity(identityToUnlink)
+    if (error) {
+      setMessage(t('profile.unlinkAccountError'))
+      return
+    }
+
+    setConnectedIdentities((current) => current.filter(identity => identity.identity_id !== identityToUnlink.identity_id))
+    setMessage(t('profile.unlinkAccountSuccess', { provider: identityToUnlink.provider }))
+    setIdentityToUnlink(null)
+  }
+
   return (
     <Layout>
       <section className="card">
@@ -506,9 +535,30 @@ export function ProfilePage() {
             </dd>
             <dt>{t('profile.connectedAccounts')}</dt>
             <dd>
-              {identities && identities.length > 0 
-                ? identities.map(i => i.provider).join(', ') 
-                : t('profile.noConnectedAccounts')}
+              {connectedIdentities.length > 0 ? (
+                <ul className="connected-accounts-list">
+                  {connectedIdentities.map((identity) => {
+                    const isPrimary = identity.identity_id === primaryIdentity?.identity_id
+                    return (
+                      <li key={identity.identity_id}>
+                        <span>{identity.provider}</span>
+                        {isPrimary ? (
+                          <span className="connected-account-primary">{t('profile.primaryConnectedAccount')}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-quiet"
+                            onClick={() => setIdentityToUnlink(identity)}
+                            aria-label={t('profile.unlinkAccount', { provider: identity.provider })}
+                          >
+                            {t('profile.unlinkAccountAction')}
+                          </button>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : t('profile.noConnectedAccounts')}
             </dd>
           </dl>
           <button type="button" onClick={() => void handleSignOut()}>
@@ -535,6 +585,14 @@ export function ProfilePage() {
             void performDeleteAccount()
           }}
           onCancel={() => setIsDeleteModalOpen(false)}
+        />
+        <DeleteConfirmationDialog
+          isOpen={identityToUnlink !== null}
+          title={t('profile.unlinkAccountTitle')}
+          description={t('profile.unlinkAccountConfirm', { provider: identityToUnlink?.provider ?? '' })}
+          confirmLabel={t('profile.unlinkAccountAction')}
+          onConfirm={() => void unlinkIdentity()}
+          onCancel={() => setIdentityToUnlink(null)}
         />
         </>
       ) : (

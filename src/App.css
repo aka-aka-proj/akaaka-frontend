@@ -1212,6 +1212,26 @@ dd {
   width: fit-content;
 }
 
+.connected-accounts-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connected-accounts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.connected-account-primary {
+  color: #6b617a;
+  font-size: 0.875rem;
+}
+
 .danger-zone {
   border-color: #f3c4c0;
   background: #fffafa;
