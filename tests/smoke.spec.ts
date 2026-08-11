@@ -80,12 +80,24 @@ test.describe('public event discovery', () => {
     await page.addInitScript(() => localStorage.setItem('akaaka-locale', 'en'))
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
+    await page.evaluate(() => {
+      const mask = document.createElement('div')
+      mask.dataset.screenshotMask = 'native-language-control'
+      Object.assign(mask.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '175px',
+        width: '130px',
+        height: '70px',
+        zIndex: '2147483647',
+      })
+      document.body.append(mask)
+    })
     await expect(page).toHaveScreenshot('auth-boundary.png', {
       fullPage: true,
       animations: 'disabled',
-      // Native select controls are rendered by the host browser/OS; functional coverage remains above.
-      mask: [page.getByRole('combobox')],
-      style: 'select[aria-label="Language"] { width: 102px !important; }',
+      // Native language controls are rendered by the host browser/OS; functional coverage remains above.
+      mask: [page.locator('[data-screenshot-mask="native-language-control"]')],
     })
   })
 })
