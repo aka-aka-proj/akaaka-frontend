@@ -122,17 +122,9 @@ export function EventsPage() {
 
   const filtered = useMemo(() => {
     const now = Date.now()
-    const q = search.toLowerCase()
 
     return events.filter((event) => {
       if (!canSeeEvent(event, user?.id)) return false
-
-      if (q) {
-        const titleMatch = event.title.toLowerCase().includes(q)
-        const descMatch = (event.description ?? '').toLowerCase().includes(q)
-        const locDetailMatch = (event.location_detail ?? '').toLowerCase().includes(q)
-        if (!titleMatch && !descMatch && !locDetailMatch) return false
-      }
 
       if (selectedType !== null) {
         const eventTypes = parseEventTypes(event.event_type)
