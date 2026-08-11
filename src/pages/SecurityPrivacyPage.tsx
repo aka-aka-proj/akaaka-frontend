@@ -192,6 +192,22 @@ export function SecurityPrivacyPage() {
         </ul>
       </section>
 
+      <section className="card" aria-labelledby="privacy-data-flows-title">
+        <h2 id="privacy-data-flows-title" style={{ fontSize: 20, marginBottom: 8 }}>
+          {t('securityPrivacy.transparencyTitle')}
+        </h2>
+        <p>{t('securityPrivacy.transparencyIntro')}</p>
+        <ul style={{ paddingLeft: 20, lineHeight: 1.8 }}>
+          <li>{t('securityPrivacy.transparencyProfile')}</li>
+          <li>{t('securityPrivacy.transparencyEvents')}</li>
+          <li>{t('securityPrivacy.transparencyReports')}</li>
+          <li>{t('securityPrivacy.transparencyMessaging')}</li>
+          <li>{t('securityPrivacy.transparencyAi')}</li>
+          <li>{t('securityPrivacy.transparencyLifecycle')}</li>
+          <li>{t('securityPrivacy.transparencyLimits')}</li>
+        </ul>
+      </section>
+
       <section className="card" aria-labelledby="mfa-title">
         <h2 id="mfa-title" style={{ fontSize: 20, marginBottom: 8 }}>
           <Icon href="/form-icons.svg" name="form-lock" size={20} /> {t('securityPrivacy.mfaTitle')}

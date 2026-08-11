@@ -79,4 +79,14 @@ describe('SecurityPrivacyPage MFA', () => {
     expect(challenge).toHaveBeenCalledWith({ factorId: 'factor-1' })
     expect(screen.getByText('雙重驗證已啟用。')).toBeTruthy()
   })
+
+  it('renders the static privacy data-flow contract without private fixtures', async () => {
+    render(<MemoryRouter><SecurityPrivacyPage /></MemoryRouter>)
+
+    expect(await screen.findByRole('heading', { name: '各資料流程的實際邊界' })).toBeTruthy()
+    expect(screen.getByText(/這不是端對端加密/)).toBeTruthy()
+    expect(screen.getByText(/RLS 與產品權限不是加密/)).toBeTruthy()
+    expect(screen.queryByText(/user-1/)).toBeNull()
+    expect(screen.queryByText(/secret/)).toBeNull()
+  })
 })
