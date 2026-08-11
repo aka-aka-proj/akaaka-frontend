@@ -1,7 +1,7 @@
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthPage } from './AuthPage'
 
 const mockUseAuth = vi.fn()
@@ -25,6 +25,12 @@ vi.mock('../supabaseClient', () => ({
   },
 }))
 
+vi.mock('../components/TurnstileCaptcha', () => ({
+  TurnstileCaptcha: ({ onToken }: { onToken: (token: string) => void }) => (
+    <button type="button" onClick={() => onToken('test-turnstile-token')}>完成安全驗證</button>
+  ),
+}))
+
 describe('AuthPage', () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({ user: null })
@@ -33,6 +39,32 @@ describe('AuthPage', () => {
     resend.mockResolvedValue({ error: null })
     resetPasswordForEmail.mockResolvedValue({ error: null })
     vi.useRealTimers()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('requires CAPTCHA before auth and forwards the verified token', async () => {
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key')
+    const user = userEvent.setup()
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(screen.getByText('請先完成安全驗證。')).toBeTruthy()
+    expect(signInWithPassword).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '完成安全驗證' }))
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123',
+      options: { captchaToken: 'test-turnstile-token' },
+    })
   })
 
   it('renders sign-in and shows validation error on empty submit', async () => {
