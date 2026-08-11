@@ -85,6 +85,7 @@ test.describe('public event discovery', () => {
       animations: 'disabled',
       // Native select controls are rendered by the host browser/OS; functional coverage remains above.
       mask: [page.getByRole('combobox')],
+      style: 'select[aria-label="Language"] { width: 102px !important; }',
     })
   })
 })
