@@ -52,6 +52,8 @@ const en = {
     registrationResponses: 'Answers are visible to the event host for review and are retained according to the registration lifecycle. AkaAka does not promise operator-blind plaintext or deletion beyond the enforced policy.',
     reportDetails: 'Report details are sent to the safety workflow and may be retained for moderation and audit purposes. Do not include passwords, tokens, or unrelated private content.',
     directMessage: 'This message is readable by the participants in this conversation and is stored under messaging retention rules. Do not send secrets you cannot share with the other participant.',
+    notifications: 'Notifications contain metadata for your account and are refreshed from your authorized notification rows. Realtime events are refresh hints, not a separate data access path.',
+    aiConversation: 'AI messages may be sent to the configured model provider and stored in your conversation history. Review the AI retention and deletion limits before sharing sensitive information.',
   },
   auth: {
     title: 'AkaAka Auth',

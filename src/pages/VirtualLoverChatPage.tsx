@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface AiCharacter {
   id: string
@@ -440,6 +441,7 @@ export function VirtualLoverChatPage() {
         </div>
 
         <div className="chat-input-row">
+          <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.aiConversation')} learnMore={t('privacyDisclosure.learnMore')} />
           <textarea
             className="chat-input"
             aria-label={t('virtualLover.inputPlaceholder')}

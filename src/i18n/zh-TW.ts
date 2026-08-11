@@ -52,6 +52,8 @@ const zhTW = {
     registrationResponses: '報名答案會提供給活動主辦人審核，並依報名生命週期保存。AkaAka 不承諾維運者無法看到明文，也不承諾超出實際政策的刪除範圍。',
     reportDetails: '檢舉詳情會送至安全處理流程，可能為審核與稽核目的保存。請勿填入密碼、token 或無關的私人內容。',
     directMessage: '這則訊息可由對話參與者閱讀，並依訊息保存規則儲存。請勿傳送不應讓對方看到的秘密。',
+    notifications: '通知只包含您帳號可授權讀取的 metadata，並從您的通知資料重新查詢。Realtime 事件只是刷新提示，不是另一條資料存取途徑。',
+    aiConversation: 'AI 訊息可能會送至設定的模型提供者，並保存於您的對話歷史。分享敏感資訊前，請先查看 AI 的保存與刪除限制。',
   },
   auth: {
     title: 'AkaAka 登入',

@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface NotificationRow {
   id: string
@@ -86,6 +87,7 @@ export function NotificationsPage() {
           <div>
             <h1>{t('notifications.title')}</h1>
             <p>{t('notifications.description')}</p>
+            <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.notifications')} learnMore={t('privacyDisclosure.learnMore')} />
           </div>
           <button type="button" onClick={() => void markAllRead()} disabled={!notifications.some((item) => !item.read_at)}>
             {t('notifications.markAllRead')}
