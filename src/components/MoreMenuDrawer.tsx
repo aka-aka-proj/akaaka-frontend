@@ -147,6 +147,10 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
 
           <div className="more-drawer-divider" />
           <h3 className="more-drawer-section-title">{t('nav.notificationsGroup')}</h3>
+          <Link to="/notifications" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>{t('nav.notifications')}</span>
+          </Link>
           <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
             <span>{t('nav.notificationSettings')}</span>

@@ -23,6 +23,7 @@ const DESKTOP_MORE_ITEMS = [
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
   { to: '/events/bookmarks', icon: 'nav-heart', labelKey: 'nav.bookmarks' },
   { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
+  { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
   { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
   { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
@@ -31,9 +32,9 @@ const DESKTOP_MORE_ITEMS = [
 
 const DESKTOP_MORE_SECTIONS = [
   { labelKey: 'nav.activityGroup', items: DESKTOP_MORE_ITEMS.slice(0, 5) },
-  { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(5, 6) },
-  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(6, 7) },
-  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(7, 9) },
+  { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(5, 7) },
+  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(7, 8) },
+  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(8, 10) },
 ] as const
 
 export function Layout({ children }: { children: ReactNode }) {

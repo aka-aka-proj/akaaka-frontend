@@ -68,6 +68,8 @@ describe('Layout desktop More menu accessibility', () => {
     await user.click(moreButton)
     const menu = screen.getByRole('menu')
     const firstItem = screen.getByRole('menuitem', { name: 'Messages' })
+    expect(screen.getByRole('menuitem', { name: 'Notifications' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Notification settings' })).toBeTruthy()
     await waitFor(() => expect(document.activeElement).toBe(firstItem))
     expect(moreButton.getAttribute('aria-expanded')).toBe('true')
     expect(moreButton.getAttribute('aria-controls')).toBe('desktop-more-menu')

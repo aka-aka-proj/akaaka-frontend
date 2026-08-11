@@ -31,6 +31,7 @@ vi.mock('../hooks/useT', () => ({
       'common.language': 'Language',
       'nav.activityGroup': 'Activity',
       'nav.notificationsGroup': 'Notifications',
+      'nav.notifications': 'Notifications',
       'nav.accountGroup': 'Account',
       'nav.supportGroup': 'Support',
       'nav.messages': 'Messages',
@@ -96,5 +97,12 @@ describe('MoreMenuDrawer accessibility', () => {
     expect(screen.getByRole('dialog', { name: 'More' }).getAttribute('aria-modal')).toBe('true')
     await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('exposes the notification list separately from notification settings', () => {
+    render(<MoreMenuDrawer open onClose={vi.fn()} />)
+
+    expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications')
+    expect(screen.getByRole('link', { name: 'Notification settings' }).getAttribute('href')).toBe('/settings/notifications')
   })
 })
