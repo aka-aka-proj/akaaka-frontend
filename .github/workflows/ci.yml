@@ -37,6 +37,7 @@ jobs:
   browser-quality:
     name: Playwright browser quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,7 +55,7 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run browser smoke matrix
-        run: npm run test:e2e
+        run: npm run test:e2e -- --reporter=line
 
       - name: Upload Playwright artifacts
         if: always()
@@ -69,6 +70,7 @@ jobs:
   lighthouse-quality:
     name: Lighthouse anonymous quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
