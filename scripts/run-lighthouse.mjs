@@ -86,7 +86,17 @@ try {
       screenEmulation: { mobile: true, width: 390, height: 844, deviceScaleFactor: 1 },
     },
   ]) {
-    const chrome = await launch({ chromePath, chromeFlags: ['--headless=new', '--no-sandbox'] })
+    const chrome = await launch({
+      chromePath,
+      chromeFlags: [
+        '--headless=new',
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-default-browser-check',
+      ],
+    })
     try {
       const audit = await lighthouse(`${baseUrl}/auth`, {
         port: chrome.port,
