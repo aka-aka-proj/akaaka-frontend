@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --project unit --coverage",
     "test:browser": "vitest run --project storybook",
     "test:e2e": "playwright test",
+    "test:lighthouse": "node scripts/run-lighthouse.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -46,7 +47,9 @@
     "@types/react-dom": "^19.2.3",
     "@vitest/browser-playwright": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
+    "chrome-launcher": "^1.2.1",
     "jsdom": "^29.1.1",
+    "lighthouse": "^13.4.1",
     "oxlint": "^1.71.0",
     "playwright": "latest",
     "storybook": "^10.5.7",
