@@ -8,8 +8,8 @@
     <circle cx="13.333" cy="11.667" r="1" fill="#aa3bff"/>
   </symbol>
   <symbol id="nav-create" viewBox="0 0 20 20">
-    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
-    <path d="M10 6.25v7.5M6.25 10h7.5" fill="none" stroke="#aa3bff" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="10" cy="10" r="7.5" fill="none" stroke="#ffffff" stroke-width="1.35"/>
+    <path d="M10 6.25v7.5M6.25 10h7.5" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
   </symbol>
   <symbol id="nav-profile" viewBox="0 0 20 20">
     <circle cx="10" cy="6.667" r="3.333" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
