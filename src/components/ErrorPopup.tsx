@@ -78,7 +78,7 @@ export function ErrorPopup() {
   return createPortal(
     <dialog ref={dialogRef} className="modal" aria-label={t('errorPopup.title')}>
       <div className="modal-content" style={{ maxWidth: '100%' }}>
-        <h2 style={{ color: '#b42318' }}>{t('errorPopup.title')}</h2>
+        <h2 style={{ color: 'var(--color-danger)' }}>{t('errorPopup.title')}</h2>
         <div className="modal-body" tabIndex={0} style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <p style={{ fontWeight: 'bold', fontSize: '1.05rem', margin: '0 0 0.5rem' }}>
             {error.message}
@@ -89,7 +89,7 @@ export function ErrorPopup() {
               <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.25rem' }}>{t('errorPopup.response')}</h3>
               <pre
                 style={{
-                  background: '#f6f8fa',
+                  background: 'var(--color-surface-muted)',
                   padding: '0.5rem',
                   borderRadius: '0.375rem',
                   fontSize: '0.8rem',
@@ -111,7 +111,7 @@ export function ErrorPopup() {
               <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.25rem' }}>{t('errorPopup.debugInfo')}</h3>
               <pre
                 style={{
-                  background: '#f6f8fa',
+                  background: 'var(--color-surface-muted)',
                   padding: '0.5rem',
                   borderRadius: '0.375rem',
                   fontSize: '0.8rem',
@@ -129,13 +129,13 @@ export function ErrorPopup() {
           )}
 
           {submitSuccess && (
-            <p style={{ color: '#027a48', fontWeight: 'bold', marginTop: '0.75rem', margin: '0.75rem 0 0' }}>
+            <p style={{ color: 'var(--color-success)', fontWeight: 'bold', marginTop: '0.75rem', margin: '0.75rem 0 0' }}>
               {t('errorPopup.submitSuccess')}
             </p>
           )}
 
           {submitError && (
-            <p style={{ color: '#b42318', marginTop: '0.75rem', margin: '0.75rem 0 0' }}>
+            <p style={{ color: 'var(--color-danger)', marginTop: '0.75rem', margin: '0.75rem 0 0' }}>
               {t('errorPopup.submitError', { error: submitError })}
             </p>
           )}
@@ -151,9 +151,9 @@ export function ErrorPopup() {
               disabled={submitting}
               onClick={handleReportIssue}
               style={{
-                background: '#0d6efd',
-                borderColor: '#0d6efd',
-                color: '#fff',
+                background: 'var(--color-primary)',
+                borderColor: 'var(--color-primary)',
+                color: 'var(--color-text-on-primary)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.25rem',

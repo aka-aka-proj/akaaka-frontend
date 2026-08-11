@@ -68,7 +68,7 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'var(--color-overlay)',
           zIndex: 999,
         }}
       />
@@ -81,13 +81,13 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: '#fff',
+          background: 'var(--color-surface)',
           borderRadius: '0.75rem',
           padding: '1.5rem',
           zIndex: 1000,
           width: '90%',
           maxWidth: '480px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+          boxShadow: 'var(--shadow-modal)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -95,7 +95,7 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: '#666' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', color: 'var(--color-text-muted)' }}
             aria-label={t('common.close')}
           >
             ✕
@@ -109,7 +109,7 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
           style={{
             width: '100%',
             padding: '0.75rem',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--color-border)',
             borderRadius: '0.5rem',
             fontSize: '0.875rem',
             lineHeight: '1.5',
@@ -126,8 +126,8 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '0.375rem',
-              border: '1px solid #d1d5db',
-              background: '#fff',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-surface)',
               cursor: 'pointer',
             }}
           >
@@ -140,8 +140,8 @@ export function ShareToXModal({ open, onClose, templateType, data }: ShareToXMod
               padding: '0.5rem 1rem',
               borderRadius: '0.375rem',
               border: 'none',
-              background: '#000',
-              color: '#fff',
+              background: 'var(--color-brand-x)',
+              color: 'var(--color-text-on-primary)',
               cursor: 'pointer',
               fontWeight: 600,
             }}
