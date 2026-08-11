@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -137,6 +138,13 @@ export function CreateEventPage() {
     setSourcePreview(preview)
     if (preview.preview.title) setTitle(preview.preview.title)
     if (preview.preview.description) setDescription(preview.preview.description)
+    if (preview.provider === 'docs.google.com') {
+      setRegistrationMode('external')
+      setExternalRegistrationUrl(normalized)
+      setFormFields([])
+      setMaxCapacity('')
+      setRegistrationDeadline('')
+    }
     setAiMessage(t('createEvent.sourceImportPreview'))
   }
 
@@ -500,11 +508,13 @@ export function CreateEventPage() {
             {t('createEvent.venueHostedLabel')}
           </label>
         )}
-        <label className="form-field">
+        <div className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('createEvent.visibilityLabel')}
+            <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.eventVisibility')} learnMore={t('privacyDisclosure.learnMore')} />
           </span>
           <select
+            id="create-event-visibility"
             aria-label={t('createEvent.visibilityLabel')}
             value={visibilityType}
             onChange={(event) => setVisibilityType(event.target.value)}
@@ -513,7 +523,7 @@ export function CreateEventPage() {
             <option value="connections_only">{t('createEvent.connectionsOnly')}</option>
             <option value="private">{t('createEvent.private')}</option>
           </select>
-        </label>
+        </div>
 
         {registrationMode === 'native' ? <fieldset className="card form-builder">
           <div className="form-builder-heading">

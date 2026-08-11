@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { ShareButton } from '../components/ShareButton'
 import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
@@ -551,6 +552,7 @@ export function EventDetailPage() {
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
+                <p className="form-field"><PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.registrationResponses')} learnMore={t('privacyDisclosure.learnMore')} /> {t('privacyDisclosure.registrationResponses')}</p>
                 {Object.keys(previousFormData).length > 0 ? (
                   <button
                     type="button"

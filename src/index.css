@@ -84,6 +84,48 @@ body {
   margin: 6px 0 8px;
 }
 
+.privacy-disclosure {
+  display: inline-flex;
+  position: relative;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.privacy-disclosure__trigger {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.privacy-disclosure__trigger:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.privacy-disclosure__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
 a {
   color: var(--color-primary);
 }

@@ -4,6 +4,7 @@ import { Icon } from './Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { PrivacyDisclosure } from './PrivacyDisclosure'
 
 interface ReportFormProps {
   targetProfileId?: string
@@ -76,15 +77,18 @@ export function ReportForm({ targetProfileId, targetEventId, collapsible = false
           ))}
         </select>
       </label>
-      <label>
-        {t('report.detailsLabel')}
+      <div>
+        <span>{t('report.detailsLabel')}</span>
+        <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.reportDetails')} learnMore={t('privacyDisclosure.learnMore')} />
+        <label htmlFor="report-details" className="sr-only">{t('report.detailsLabel')}</label>
         <textarea
+          id="report-details"
           aria-label={t('report.detailsLabel')}
           value={details}
           onChange={(event) => setDetails(event.target.value)}
           placeholder={t('report.detailsPlaceholder')}
         />
-      </label>
+      </div>
       <button type="submit" disabled={submitting}>
         <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('report.submitReport')}
       </button>

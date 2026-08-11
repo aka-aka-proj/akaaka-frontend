@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RegistrationFormBuilder } from '../components/RegistrationFormBuilder'
 import { Icon } from '../components/Icon'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -408,11 +409,13 @@ export function EditEventPage() {
             {t('editEvent.venueHostedLabel')}
           </label>
         )}
-        <label className="form-field">
+        <div className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.visibilityLabel')}
+            <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.eventVisibility')} learnMore={t('privacyDisclosure.learnMore')} />
           </span>
           <select
+            id="edit-event-visibility"
             aria-label={t('editEvent.visibilityLabel')}
             value={visibilityType}
             onChange={(event) => setVisibilityType(event.target.value)}
@@ -421,7 +424,7 @@ export function EditEventPage() {
             <option value="connections_only">{t('editEvent.connectionsOnly')}</option>
             <option value="private">{t('editEvent.private')}</option>
           </select>
-        </label>
+        </div>
         {registrationMode === 'native' ? <RegistrationFormBuilder fields={formFields} setFields={setFormFields} /> : null}
         <button type="submit" disabled={submitting}>
           <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { DirectMessage, Profile } from '../types'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 export function DirectChatPage() {
   const { conversationId } = useParams()
@@ -92,6 +93,7 @@ export function DirectChatPage() {
           <div ref={endRef} />
         </div>
         <form className="chat-form" onSubmit={send}>
+          <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.directMessage')} learnMore={t('privacyDisclosure.learnMore')} />
           <textarea value={content} onChange={(event) => setContent(event.target.value)} maxLength={4000} placeholder={t('messages.placeholder')} aria-label={t('messages.placeholder')} />
           <button type="submit" disabled={sending || !content.trim()}>{sending ? t('messages.sending') : t('messages.send')}</button>
         </form>
