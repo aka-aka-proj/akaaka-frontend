@@ -40,6 +40,7 @@ export function ProfilePage() {
   const [showUserId, setShowUserId] = useState(false)
   const [showEmail, setShowEmail] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
   const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
   const xProfileUrl = useMemo(() => {
@@ -304,10 +305,7 @@ export function ProfilePage() {
             <img src={getAvatarPath(profile)} alt="" width={128} height={128} className={`avatar avatar-xl ${isOwner ? '' : 'avatar-other'}`} />
               <div className="profile-info">
                 {!isOwner && (
-                  <div className="profile-header-actions" style={{position: 'absolute', top: 0, right: 0}}>
-                    <button className="profile-secondary-action" onClick={toggleBlock} aria-label={isBlocked ? t('profile.unblock') : t('profile.block')} title={isBlocked ? t('profile.unblock') : t('profile.block')}>
-                      <Icon href="/icons.svg" name={isBlocked ? "unblock-icon" : "block-icon"} size={24} />
-                    </button>
+                  <div className="profile-header-actions">
                     <button
                       type="button"
                       onClick={() => void toggleFollow()}
@@ -323,8 +321,9 @@ export function ProfilePage() {
                       aria-pressed={isEventNotificationSubscribed}
                       className="profile-secondary-action profile-mute-action"
                       title={isEventNotificationSubscribed ? t('profile.disableCreatorNotifications') : t('profile.enableCreatorNotifications')}
+                      aria-label={isEventNotificationSubscribed ? t('profile.disableCreatorNotifications') : t('profile.enableCreatorNotifications')}
                     >
-                      {isEventNotificationSubscribed ? '🔔' : '🔕'}
+                      <Icon href="/action-icons.svg" name={isEventNotificationSubscribed ? 'action-bell' : 'action-bell-off'} size={20} />
                     </button>
                     {canMessage && !isBlocked ? (
                       <button
@@ -337,6 +336,31 @@ export function ProfilePage() {
                         {t('profile.sendMessage')}
                       </button>
                     ) : null}
+                    <div className="profile-more-menu">
+                      <button
+                        type="button"
+                        className="profile-secondary-action"
+                        aria-label={t('profile.moreOptions')}
+                        title={t('profile.moreOptions')}
+                        aria-expanded={isMoreMenuOpen}
+                        aria-controls="profile-more-options"
+                        onClick={() => setIsMoreMenuOpen((current) => !current)}
+                      >
+                        <Icon href="/nav-icons.svg" name="nav-more" size={20} />
+                      </button>
+                      {isMoreMenuOpen ? (
+                        <div id="profile-more-options" className="profile-more-menu__items" role="menu">
+                          <button type="button" role="menuitem" onClick={() => { setIsMoreMenuOpen(false); void toggleBlock() }}>
+                            <Icon href="/action-icons.svg" name="action-block" size={18} />
+                            {isBlocked ? t('profile.unblock') : t('profile.block')}
+                          </button>
+                          <Link role="menuitem" to={`/profile/${targetProfileId}/reports`} onClick={() => setIsMoreMenuOpen(false)}>
+                            <Icon href="/report-icons.svg" name="report-safety-risk" size={18} />
+                            {t('profile.reportUser')}
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 )}
                 <div className="profile-title-row">

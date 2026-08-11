@@ -527,6 +527,8 @@ const en = {
     userUnfollowed: 'User unfollowed.',
     block: 'Block user',
     unblock: 'Unblock user',
+    moreOptions: 'More options',
+    reportUser: 'Report user',
     signOutSuccess: 'Signed out.',
     role: 'Role',
     reputation: 'Reputation',

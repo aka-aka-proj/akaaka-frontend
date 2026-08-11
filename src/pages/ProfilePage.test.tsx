@@ -210,6 +210,45 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('button', { name: 'Unfollow' })).toBeTruthy()
   })
 
+  it('keeps secondary profile actions in the more menu', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user',
+        role_status: 'general',
+        display_name: 'Target User',
+        bio: 'Public bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 3,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'More options' })).toBeTruthy())
+    expect(screen.getByRole('button', { name: 'Notify me about this user’s new events' }).querySelector('svg')).toBeTruthy()
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Block user' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Report user' })).toBeTruthy()
+  })
+
   it('shows rate limit message when Edge Function returns 429', async () => {
     const profilesQuery = queryBuilder({
       data: {

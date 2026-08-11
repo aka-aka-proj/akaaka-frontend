@@ -527,6 +527,8 @@ const zhTW = {
     userUnfollowed: '已取消追蹤此使用者。',
     block: '封鎖用戶',
     unblock: '取消封鎖用戶',
+    moreOptions: '更多選項',
+    reportUser: '檢舉用戶',
     signOutSuccess: '已登出。',
     role: '角色',
     reputation: '聲望',
