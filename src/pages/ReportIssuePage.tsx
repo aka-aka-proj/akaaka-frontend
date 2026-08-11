@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -59,14 +60,19 @@ export function ReportIssuePage() {
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
-        <label>
-          {t('issues.descriptionLabel')}
+        <div className="form-field">
+          <span>
+            {t('issues.descriptionLabel')}{' '}
+            <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.issueDetails')} learnMore={t('privacyDisclosure.learnMore')} />
+          </span>
+          <label htmlFor="issue-description" className="sr-only">{t('issues.descriptionLabel')}</label>
           <textarea
+            id="issue-description"
             aria-label={t('issues.descriptionLabel')}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
-        </label>
+        </div>
         <label>
           {t('issues.logUrlLabel')}
           <input

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -134,12 +135,20 @@ export function IssueDetailPage() {
           )}
           {issue.status !== 'closed' ? (
             <form onSubmit={postComment}>
+              <div className="form-field">
+                <span>
+                  {t('issues.commentLabel')}{' '}
+                  <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.issueDetails')} learnMore={t('privacyDisclosure.learnMore')} />
+                </span>
+                <label htmlFor="issue-comment" className="sr-only">{t('issues.commentLabel')}</label>
               <textarea
+                id="issue-comment"
                 aria-label={t('issues.commentLabel')}
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
                 placeholder={t('issues.commentPlaceholder')}
               />
+              </div>
               <button type="submit">
                 <Icon href="/action-icons.svg" name="action-reply" size={16} /> {t('issues.postComment')}
               </button>
