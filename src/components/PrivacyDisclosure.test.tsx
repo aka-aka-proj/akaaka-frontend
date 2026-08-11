@@ -15,14 +15,23 @@ describe('PrivacyDisclosure', () => {
     const trigger = screen.getByRole('button', { name: 'View privacy details' })
 
     expect(screen.queryByRole('status')).toBeNull()
-    fireEvent.click(trigger)
+    await user.click(trigger)
     expect(screen.getByRole('status').textContent).toContain('Only participants can read this content.')
     expect(screen.getByRole('link', { name: 'Open Security & Privacy Center' }).getAttribute('href')).toBe('/settings/security-privacy')
 
-    fireEvent.click(trigger)
+    await user.click(trigger)
     expect(screen.queryByRole('status')).toBeNull()
-    trigger.focus()
-    await user.keyboard('{SPACE}')
+    fireEvent.keyDown(trigger, { key: ' ' })
     expect(screen.getByRole('status')).toBeTruthy()
+  })
+
+  it('opens on focus and closes with Escape', async () => {
+    const user = userEvent.setup()
+    render(<PrivacyDisclosure label="View privacy details" description="Only participants can read this content." learnMore="Open Security & Privacy Center" />)
+
+    await user.tab()
+    expect(screen.getByRole('status')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('status')).toBeNull()
   })
 })

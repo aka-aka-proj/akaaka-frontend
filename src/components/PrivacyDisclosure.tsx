@@ -11,6 +11,7 @@ interface PrivacyDisclosureProps {
 export function PrivacyDisclosure({ label, description, learnMore }: PrivacyDisclosureProps) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const openedByFocusRef = useRef(false)
   const popoverId = useId()
 
   useEffect(() => {
@@ -33,8 +34,31 @@ export function PrivacyDisclosure({ label, description, learnMore }: PrivacyDisc
         aria-label={label}
         aria-expanded={open}
         aria-controls={popoverId}
-        onClick={() => setOpen((current) => !current)}
-        onFocus={() => setOpen(true)}
+        onClick={(event) => {
+          if (event.detail > 0 && openedByFocusRef.current) {
+            openedByFocusRef.current = false
+            setOpen(true)
+            return
+          }
+          openedByFocusRef.current = false
+          setOpen((current) => !current)
+        }}
+        onFocus={() => {
+          openedByFocusRef.current = true
+          setOpen(true)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            openedByFocusRef.current = false
+            setOpen(false)
+          }
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openedByFocusRef.current = false
+            setOpen((current) => !current)
+          }
+        }}
       >
         i
       </button>
