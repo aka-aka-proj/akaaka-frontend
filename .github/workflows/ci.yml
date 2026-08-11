@@ -38,6 +38,9 @@ jobs:
     name: Playwright browser quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:9
+      VITE_SUPABASE_ANON_KEY: ci-public-test-key
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,6 +74,9 @@ jobs:
     name: Lighthouse anonymous quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:9
+      VITE_SUPABASE_ANON_KEY: ci-public-test-key
     steps:
       - name: Checkout
         uses: actions/checkout@v4
