@@ -95,6 +95,8 @@ export interface EventItem {
   unpublish_at: string | null
   event_type: string | null
   is_venue_hosted: boolean
+  attendance_fee_type: AttendanceFeeType
+  attendance_fee_amount: number | null
   visibility_settings: { type?: Visibility } | null
   registration_form_config: RegistrationFormField[] | null
   recurrence_rule: RecurrenceRule | null
@@ -109,6 +111,8 @@ export interface EventItem {
   created_at: string
   creator?: Profile | null
 }
+
+export type AttendanceFeeType = 'free' | 'fixed' | 'see_description'
 
 export interface EventBookmark {
   profile_id: string

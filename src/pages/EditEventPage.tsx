@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode } from '../types'
+import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
@@ -21,6 +21,8 @@ export function EditEventPage() {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [attendanceFeeType, setAttendanceFeeType] = useState<AttendanceFeeType>('free')
+  const [attendanceFeeAmount, setAttendanceFeeAmount] = useState('')
   const [eventType, setEventType] = useState<string[]>([])
   const [startTime, setStartTime] = useState('')
   const [locationRegion, setLocationRegion] = useState<TaiwanRegion | ''>('')
@@ -74,6 +76,8 @@ export function EditEventPage() {
 
       setTitle(event.title)
       setDescription(event.description ?? '')
+      setAttendanceFeeType(event.attendance_fee_type ?? 'free')
+      setAttendanceFeeAmount(event.attendance_fee_amount?.toString() ?? '')
       
       setEventType(parseEventTypes(event.event_type))
 
@@ -148,6 +152,12 @@ export function EditEventPage() {
       return
     }
 
+    const parsedFee = attendanceFeeAmount ? Number.parseInt(attendanceFeeAmount, 10) : null
+    if (attendanceFeeType === 'fixed' && (!parsedFee || parsedFee <= 0 || !Number.isInteger(parsedFee))) {
+      setMessage(t('editEvent.attendanceFeeInvalid'))
+      return
+    }
+
     setSubmitting(true)
     setMessage('')
 
@@ -164,6 +174,8 @@ export function EditEventPage() {
       .update({
         title: title.trim(),
         description: description.trim() || null,
+        attendance_fee_type: attendanceFeeType,
+        attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
         category,
         event_type: stringifyEventTypes(eventType),
         start_time: new Date(startTime).toISOString(),
@@ -220,6 +232,16 @@ export function EditEventPage() {
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
           <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.attendanceFeeLabel')}</span>
+          <select aria-label={t('editEvent.attendanceFeeLabel')} value={attendanceFeeType} onChange={(event) => { setAttendanceFeeType(event.target.value as AttendanceFeeType); if (event.target.value !== 'fixed') setAttendanceFeeAmount('') }}>
+            <option value="free">{t('editEvent.attendanceFeeFree')}</option>
+            <option value="fixed">{t('editEvent.attendanceFeeFixed')}</option>
+            <option value="see_description">{t('editEvent.attendanceFeeDescription')}</option>
+          </select>
+          {attendanceFeeType === 'fixed' ? <input aria-label={t('editEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('editEvent.attendanceFeeAmountPlaceholder')} value={attendanceFeeAmount} onChange={(event) => setAttendanceFeeAmount(event.target.value)} /> : null}
+          <small>{t('editEvent.attendanceFeeHint')}</small>
         </label>
         <fieldset className="form-field">
           <legend>{t('editEvent.registrationModeLabel')}</legend>

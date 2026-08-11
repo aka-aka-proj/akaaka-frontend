@@ -12,7 +12,7 @@ import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
-import { parseEventTypes } from '../lib/event-utils'
+import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
@@ -44,7 +44,7 @@ function getCompatibleFormData(
 export function EventDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { t } = useT()
+  const { t, locale } = useT()
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
@@ -467,6 +467,10 @@ export function EventDetailPage() {
                   <span><strong>{t('eventDetail.registrationDeadlineLabel')}</strong>{new Date(eventItem.registration_deadline).toLocaleString()}</span>
                 </div>
               ) : null}
+              <div className="event-summary-item">
+                <Icon href="/form-icons.svg" name="form-edit" size={18} />
+                <span><strong>{t('eventDetail.attendanceFeeLabel')}</strong>{getAttendanceFeeLabel(eventItem.attendance_fee_type ?? 'free', eventItem.attendance_fee_amount, locale)}</span>
+              </div>
             </div>
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
               <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} />

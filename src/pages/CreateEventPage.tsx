@@ -13,7 +13,7 @@ import { organizeEventIdea } from '../lib/event-ai-organizer'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
 import { TAIWAN_REGIONS } from '../types'
-import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode } from '../types'
+import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -37,6 +37,8 @@ export function CreateEventPage() {
   const fromEventId = searchParams.get('from_event_id')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [attendanceFeeType, setAttendanceFeeType] = useState<AttendanceFeeType>('free')
+  const [attendanceFeeAmount, setAttendanceFeeAmount] = useState('')
   const [category, setCategory] = useState<EventCategory>('Social')
   const [eventType, setEventType] = useState<string[]>([])
   const [startTime, setStartTime] = useState('')
@@ -79,6 +81,8 @@ export function CreateEventPage() {
         if (!error && data) {
           setTitle(data.title)
           setDescription(data.description ?? '')
+          setAttendanceFeeType(data.attendance_fee_type ?? 'free')
+          setAttendanceFeeAmount(data.attendance_fee_amount?.toString() ?? '')
           setCategory(data.category || 'Social')
           if (data.event_type) {
             try {
@@ -218,6 +222,17 @@ export function CreateEventPage() {
       return
     }
 
+    if (sourceUrl.trim() && !isAllowedEventSourceUrl(sourceUrl)) {
+      setMessage(t('createEvent.sourceUrlInvalid'))
+      return
+    }
+
+    const parsedFee = attendanceFeeAmount ? Number.parseInt(attendanceFeeAmount, 10) : null
+    if (attendanceFeeType === 'fixed' && (!parsedFee || parsedFee <= 0 || !Number.isInteger(parsedFee))) {
+      setMessage(t('createEvent.attendanceFeeInvalid'))
+      return
+    }
+
     setSubmitting(true)
     const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [getStartWeekday()]
     const recurrenceRule = recurrenceEnabled ? {
@@ -236,6 +251,8 @@ export function CreateEventPage() {
           lifecycle_status: 'draft',
           title: title.trim(),
           description: description.trim() || null,
+          attendance_fee_type: attendanceFeeType,
+          attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
           category,
           event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
           start_time: new Date(startTime).toISOString(),
@@ -322,6 +339,16 @@ export function CreateEventPage() {
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
           </span>
           <input aria-label={t('createEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
+          <select aria-label={t('createEvent.attendanceFeeLabel')} value={attendanceFeeType} onChange={(event) => { setAttendanceFeeType(event.target.value as AttendanceFeeType); if (event.target.value !== 'fixed') setAttendanceFeeAmount('') }}>
+            <option value="free">{t('createEvent.attendanceFeeFree')}</option>
+            <option value="fixed">{t('createEvent.attendanceFeeFixed')}</option>
+            <option value="see_description">{t('createEvent.attendanceFeeDescription')}</option>
+          </select>
+          {attendanceFeeType === 'fixed' ? <input aria-label={t('createEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('createEvent.attendanceFeeAmountPlaceholder')} value={attendanceFeeAmount} onChange={(event) => setAttendanceFeeAmount(event.target.value)} /> : null}
+          <small>{t('createEvent.attendanceFeeHint')}</small>
         </label>
         <fieldset className="form-field">
           <legend>{t('createEvent.registrationModeLabel')}</legend>
