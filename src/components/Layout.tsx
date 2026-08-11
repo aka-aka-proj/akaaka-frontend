@@ -81,12 +81,12 @@ export function Layout({ children }: { children: ReactNode }) {
             <img src="/icons/icon-whole.png" alt="AkaAka" className="logo-img" />
           </Link>
         </div>
-        {user ? (
-          <div className="topbar-actions">
-            <Link to="/notifications" className="topbar-notification" aria-label={t('nav.notifications')}>
-              <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
-              {unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
-            </Link>
+        <div className="topbar-actions">
+          <Link to="/notifications" className="topbar-notification" aria-label={t('nav.notifications')}>
+            <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            {user && unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
+          </Link>
+          {user ? (
             <nav className="nav desktop-nav">
               <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
               <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
@@ -145,8 +145,9 @@ export function Layout({ children }: { children: ReactNode }) {
               )}
             </div>
             </nav>
-          </div>
-        ) : (
+          ) : null}
+        </div>
+        {!user ? (
           <label className="lang-switch desktop-only">
             <Icon href="/nav-icons.svg" name="nav-language" size={16} />
             <select
@@ -163,7 +164,7 @@ export function Layout({ children }: { children: ReactNode }) {
               ))}
             </select>
           </label>
-        )}
+        ) : null}
       </header>
       {user ? <PrivacyNotice /> : null}
       {children}
