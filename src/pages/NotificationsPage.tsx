@@ -7,7 +7,9 @@ import { useT } from '../hooks/useT'
 
 interface NotificationRow {
   id: string
-  event_id: string
+  notification_type: 'new_event' | 'new_issue'
+  event_id: string | null
+  issue_id: string | null
   title: string
   read_at: string | null
   created_at: string
@@ -26,7 +28,7 @@ export function NotificationsPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('notifications')
-      .select('id, event_id, title, read_at, created_at')
+      .select('id, notification_type, event_id, issue_id, title, read_at, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -37,7 +39,7 @@ export function NotificationsPage() {
 
     const rows = (data ?? []) as NotificationRow[]
     setNotifications(rows)
-    const eventIds = [...new Set(rows.map((row) => row.event_id))]
+    const eventIds = [...new Set(rows.flatMap((row) => row.event_id ? [row.event_id] : []))]
     if (eventIds.length > 0) {
       const { data: events } = await supabase.from('events').select('id, title').in('id', eventIds)
       setEventTitles(Object.fromEntries((events ?? []).map((event) => [event.id, event.title])))
@@ -93,22 +95,45 @@ export function NotificationsPage() {
         {loading ? <p>{t('common.loading')}</p> : null}
         {!loading && notifications.length === 0 ? <p className="empty-state">{t('notifications.empty')}</p> : null}
         <div className="notification-list">
-          {notifications.map((notification) => (
-            <Link
-              key={notification.id}
-              to={`/events/${notification.event_id}`}
-              className={`notification-item${notification.read_at ? '' : ' unread'}`}
-              onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
-            >
-              <span className="notification-dot" aria-hidden="true" />
-              <span>
-                <strong>{eventTitles[notification.event_id] ?? notification.title}</strong>
-                <span className="notification-meta">
-                  {t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
+          {notifications.map((notification) => {
+            const content = (
+              <>
+                <span className="notification-dot" aria-hidden="true" />
+                <span>
+                  <strong>{notification.notification_type === 'new_issue' ? t('notifications.newIssue') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
+                  <span className="notification-meta">
+                    {notification.notification_type === 'new_issue' ? t('notifications.newIssue') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
+                  </span>
                 </span>
-              </span>
-            </Link>
-          ))}
+              </>
+            )
+            return notification.event_id ? (
+              <Link
+                key={notification.id}
+                to={`/events/${notification.event_id}`}
+                className={`notification-item${notification.read_at ? '' : ' unread'}`}
+                onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
+              >
+                {content}
+              </Link>
+            ) : (
+              <div
+                key={notification.id}
+                className={`notification-item${notification.read_at ? '' : ' unread'}`}
+                role="status"
+                tabIndex={0}
+                onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
+                onKeyDown={(event) => {
+                  if ((event.key === 'Enter' || event.key === ' ') && !notification.read_at) {
+                    event.preventDefault()
+                    void markRead(notification.id)
+                  }
+                }}
+              >
+                {content}
+              </div>
+            )
+          })}
         </div>
       </section>
     </Layout>

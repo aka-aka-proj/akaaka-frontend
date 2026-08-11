@@ -39,7 +39,10 @@ describe('NotificationsPage', () => {
         return {
           select: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({
-              data: [{ id: 'notification-1', event_id: 'event-1', title: 'Fallback title', read_at: null, created_at: '2026-08-10T00:00:00Z' }],
+              data: [
+                { id: 'notification-1', notification_type: 'new_event', event_id: 'event-1', issue_id: null, title: 'Fallback title', read_at: null, created_at: '2026-08-10T00:00:00Z' },
+                { id: 'notification-2', notification_type: 'new_issue', event_id: null, issue_id: 'issue-1', title: 'New issue report', read_at: null, created_at: '2026-08-10T01:00:00Z' },
+              ],
               error: null,
             }),
           }),
@@ -62,6 +65,13 @@ describe('NotificationsPage', () => {
 
     expect(await screen.findByText('Board game night')).toBeTruthy()
     expect(document.querySelector('.notification-item.unread')).toBeTruthy()
+  })
+
+  it('renders issue notifications without an event link', async () => {
+    render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
+
+    expect(await screen.findByText('新問題回報')).toBeTruthy()
+    expect(screen.getByRole('status')).toBeTruthy()
   })
 
   it('marks all unread notifications as read', async () => {
