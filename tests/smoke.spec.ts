@@ -52,6 +52,21 @@ test.describe('public event discovery', () => {
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth)
   })
 
+  test('supports keyboard focus and validation on the authentication form', async ({ page }) => {
+    await page.goto('/events')
+    const email = page.getByRole('textbox', { name: /電子郵件|email/i })
+    const password = page.getByLabel(/密碼|password/i)
+    const signIn = page.getByRole('button', { name: /^(登入|sign in)$/i })
+
+    await email.focus()
+    await page.keyboard.press('Tab')
+    await expect(password).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(signIn).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByText(/請輸入電子郵件和密碼|email.*password/i)).toBeVisible()
+  })
+
   test('has no automated axe violations on the authentication boundary', async ({ page }) => {
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
