@@ -221,6 +221,7 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Target User')).toBeTruthy()
     })
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
+    expect(document.querySelectorAll('.social-link-item')).toHaveLength(1)
   })
 
   it('follows another user from their profile', async () => {

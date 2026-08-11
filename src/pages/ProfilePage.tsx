@@ -480,13 +480,15 @@ export function ProfilePage() {
                   : t('profile.hidden', { visibility: bioVisibility })}
               </p>
               <ul className="social-links-list">
-                {profile.external_social_links.map((link) => (
+                {profile.external_social_links
+                  .filter((link) => link.platform !== 'x' || !xProfileUrl)
+                  .map((link) => (
                   <li key={`${link.platform}-${link.url}`} className="social-link-item">
                     <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.platform}>
                       <Icon href="/social-icons.svg" name={`social-${link.platform}`} size={32} />
                     </a>
                   </li>
-                ))}
+                  ))}
                 {xProfileUrl && (
                   <li className="social-link-item">
                     <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label="X">
