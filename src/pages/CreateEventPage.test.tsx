@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,6 +9,7 @@ const from = vi.fn()
 const insert = vi.fn()
 const select = vi.fn()
 const single = vi.fn()
+const functionsInvoke = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -17,11 +18,13 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    functions: { invoke: (...args: unknown[]) => functionsInvoke(...args) },
   },
 }))
 
 describe('CreateEventPage', () => {
   beforeEach(() => {
+    functionsInvoke.mockResolvedValue({ data: null, error: null })
     single.mockResolvedValue({ data: { id: 'event-1' }, error: null })
     select.mockReturnValue({ single })
     insert.mockReturnValue({ select })
@@ -153,5 +156,64 @@ describe('CreateEventPage', () => {
         })],
       }),
     ])
+  })
+
+  it('creates an event with a Google Form as external registration', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('radio', { name: /外部報名/ }))
+    fireEvent.change(screen.getByLabelText('外部報名網址（選填）'), { target: { value: 'https://docs.google.com/forms/d/e/1FAIpQLSdSNh1EbK-smx53wUFvxCgX7odDvoJXw4Q87Iiu7PueQwofVg/viewform' } })
+    await user.type(screen.getByLabelText('標題'), 'Google Form 活動')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        external_registration_url: 'https://docs.google.com/forms/d/e/1FAIpQLSdSNh1EbK-smx53wUFvxCgX7odDvoJXw4Q87Iiu7PueQwofVg/viewform',
+        registration_form_config: null,
+        max_capacity: null,
+      }),
+    ])
+  })
+
+  it('previews a BDSM calendar URL and applies editable metadata', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: {
+        source_url: 'https://todo.smertw.com/events/6382',
+        provider: 'todo.smertw.com',
+        preview: { title: '來源活動', description: '來源描述' },
+      },
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
+    await user.click(screen.getByRole('button', { name: '預覽來源' }))
+
+    expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
+    expect((screen.getByLabelText('標題') as HTMLInputElement).value).toBe('來源活動')
+    expect((screen.getByLabelText('描述') as HTMLTextAreaElement).value).toBe('來源描述')
+    expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
 })
