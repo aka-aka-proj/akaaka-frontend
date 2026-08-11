@@ -73,4 +73,15 @@ test.describe('public event discovery', () => {
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
   })
+
+  test('matches the reviewed anonymous authentication-boundary visual baseline', async ({ page }, testInfo) => {
+    test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name), 'Visual baseline is intentionally limited to reviewed Chromium states')
+    await page.addInitScript(() => localStorage.setItem('akaaka-locale', 'en'))
+    await page.goto('/events')
+    await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
+    await expect(page).toHaveScreenshot('auth-boundary.png', {
+      fullPage: true,
+      animations: 'disabled',
+    })
+  })
 })
