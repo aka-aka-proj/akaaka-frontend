@@ -113,6 +113,7 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
+    await user.click(screen.getByRole('button', { name: '使用 AI／來源工具' }))
     await user.type(screen.getByLabelText('活動發想'), '週末桌遊聚會\n台北北部一起認識新朋友')
     await user.click(screen.getByRole('button', { name: 'AI 整理' }))
 
@@ -208,6 +209,7 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
+    await user.click(screen.getByRole('button', { name: '使用 AI／來源工具' }))
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
@@ -238,6 +240,7 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
+    await user.click(screen.getByRole('button', { name: '使用 AI／來源工具' }))
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://docs.google.com/forms/d/e/example/viewform')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
