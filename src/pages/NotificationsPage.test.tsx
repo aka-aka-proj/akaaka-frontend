@@ -42,6 +42,7 @@ describe('NotificationsPage', () => {
               data: [
                 { id: 'notification-1', notification_type: 'new_event', event_id: 'event-1', issue_id: null, title: 'Fallback title', read_at: null, created_at: '2026-08-10T00:00:00Z' },
                 { id: 'notification-2', notification_type: 'new_issue', event_id: null, issue_id: 'issue-1', title: 'New issue report', read_at: null, created_at: '2026-08-10T01:00:00Z' },
+                { id: 'notification-3', notification_type: 'new_follow', event_id: null, issue_id: null, actor_profile_id: 'user-2', title: 'New follower', read_at: null, created_at: '2026-08-10T02:00:00Z' },
               ],
               error: null,
             }),
@@ -54,6 +55,23 @@ describe('NotificationsPage', () => {
           select: vi.fn().mockReturnValue({
             in: vi.fn().mockResolvedValue({ data: [{ id: 'event-1', title: 'Board game night' }], error: null }),
           }),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [{ id: 'user-2', display_name: 'Alice' }], error: null }),
+          }),
+        }
+      }
+      if (table === 'user_follows') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              in: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+          insert: vi.fn().mockResolvedValue({ error: null }),
         }
       }
       return {}
@@ -83,5 +101,24 @@ describe('NotificationsPage', () => {
 
     await waitFor(() => expect(update).toHaveBeenCalledWith({ read_at: expect.any(String) }))
     expect((button as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('lets the recipient follow back from a follow notification', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
+
+    await user.click(await screen.findByRole('button', { name: '回追' }))
+
+    await waitFor(() => expect(screen.getByText('已回追此使用者。')).toBeTruthy())
+    expect((screen.getByRole('button', { name: '已回追' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('can ignore a follow notification by marking it read', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
+
+    await user.click(await screen.findByRole('button', { name: '忽略' }))
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ read_at: expect.any(String) }))
   })
 })

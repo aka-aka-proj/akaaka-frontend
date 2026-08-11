@@ -2719,6 +2719,36 @@ dd {
   background: var(--surface-muted, #f6f7f8);
 }
 
+.notification-follow-item {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.notification-actions button {
+  min-height: 2.5rem;
+}
+
+@media (max-width: 560px) {
+  .notification-follow-item {
+    flex-wrap: wrap;
+  }
+
+  .notification-actions {
+    width: 100%;
+    padding-left: 1.3rem;
+  }
+
+  .notification-actions button {
+    flex: 1;
+  }
+}
+
 .notification-item.unread {
   background: #eef7ff;
   font-weight: 600;
