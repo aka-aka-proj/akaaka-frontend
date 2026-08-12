@@ -67,8 +67,12 @@ export function MessagesPage() {
           {conversations.map((conversation) => <li key={conversation.id} className="conversation-item">
             <Link to={`/messages/${conversation.id}`}>
               <strong>{conversation.other_profile?.display_name || t('messages.unnamed')}</strong>
+              <span className="conversation-profile-id">{conversation.other_profile?.id || t('messages.unnamed')}</span>
               <span>{conversation.latest_message?.content || t('messages.noMessages')}</span>
             </Link>
+            {conversation.other_profile?.id ? <Link className="conversation-profile-link" to={`/profile/${conversation.other_profile.id}`}>
+              {t('messages.viewProfile')}
+            </Link> : null}
           </li>)}
         </ul>
       )}

@@ -708,6 +708,8 @@ button {
 .conversation-item { border-bottom: 1px solid var(--border-color, #ddd); }
 .conversation-item a { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 0; color: inherit; text-decoration: none; }
 .conversation-item span { color: var(--muted-text, #666); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-item .conversation-profile-id { color: var(--color-text-muted, #595959); font-size: .8rem; }
+.conversation-item .conversation-profile-link { color: var(--color-primary, #7c3aed); display: inline-flex; font-size: .875rem; padding: 0 0 1rem; text-decoration: underline; }
 .direct-chat-page { border-radius: 1rem; }
 .chat-header { align-items: center; display: flex; gap: .75rem; }
 .chat-header h2, .chat-header p { margin: 0; }
