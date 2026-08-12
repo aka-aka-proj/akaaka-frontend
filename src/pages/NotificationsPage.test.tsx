@@ -8,6 +8,8 @@ import { NotificationsPage } from './NotificationsPage'
 const mockUseAuth = vi.fn()
 const from = vi.fn()
 const update = vi.fn()
+const rpc = vi.fn()
+const functionsInvoke = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -20,12 +22,20 @@ vi.mock('../components/Layout', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    rpc: (...args: unknown[]) => rpc(...args),
+    functions: { invoke: (...args: unknown[]) => functionsInvoke(...args) },
   },
 }))
 
 describe('NotificationsPage', () => {
   beforeEach(() => {
-    mockUseAuth.mockReturnValue({ user: { id: 'user-1' } })
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1', app_metadata: { role: 'admin' } } })
+    functionsInvoke.mockResolvedValue({ data: { success: true }, error: null, response: null })
+    rpc.mockImplementation((_name: string, args: { target_profile_id?: string }) => ({
+      maybeSingle: vi.fn().mockResolvedValue(args.target_profile_id === 'user-3'
+        ? { data: { id: 'user-3', display_name: 'Venue applicant', role_status: 'venue_pending' }, error: null }
+        : { data: null, error: null }),
+    }))
     update.mockReturnValue({
       eq: vi.fn().mockImplementation((column: string) => {
         if (column === 'recipient_profile_id') {
@@ -121,5 +131,19 @@ describe('NotificationsPage', () => {
     await user.click(await screen.findByRole('button', { name: '忽略' }))
 
     await waitFor(() => expect(update).toHaveBeenCalledWith({ read_at: expect.any(String) }))
+  })
+
+  it('lets an admin open the applicant profile and approve the application', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
+
+    expect((await screen.findByRole('link', { name: '查看申請人: Venue applicant' })).getAttribute('href')).toBe('/profile/user-3')
+    await user.click(screen.getByRole('button', { name: '核准申請' }))
+
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledWith('review-venue-application', {
+      body: { target_user_id: 'user-3', new_role: 'venue_approved' },
+    }))
+    expect(await screen.findByText('已核准場地方申請。')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '核准申請' })).toBeNull()
   })
 })

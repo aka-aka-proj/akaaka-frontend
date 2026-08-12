@@ -82,11 +82,10 @@ export function ProfilePage() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', targetProfileId)
-      .maybeSingle()
+    const isAdminViewer = Boolean(user?.app_metadata?.role === 'admin' && !isOwner)
+    const { data, error } = isAdminViewer
+      ? await supabase.rpc('get_public_profile', { target_profile_id: targetProfileId }).maybeSingle()
+      : await supabase.from('profiles').select('*').eq('id', targetProfileId).maybeSingle()
 
     if (error) {
       setMessage(error.message)

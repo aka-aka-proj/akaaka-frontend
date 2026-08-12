@@ -18,6 +18,12 @@ interface NotificationRow {
   created_at: string
 }
 
+interface PublicProfileSummary {
+  id: string
+  display_name: string | null
+  role_status: 'general' | 'venue_pending' | 'venue_approved'
+}
+
 export function NotificationsPage() {
   const { user } = useAuth()
   const { t } = useT()
@@ -25,6 +31,8 @@ export function NotificationsPage() {
   const [eventTitles, setEventTitles] = useState<Record<string, string>>({})
   const [actorNames, setActorNames] = useState<Record<string, string>>({})
   const [followedBackIds, setFollowedBackIds] = useState<Set<string>>(new Set())
+  const [applicationProfiles, setApplicationProfiles] = useState<Record<string, PublicProfileSummary>>({})
+  const [processingApplicationId, setProcessingApplicationId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -46,6 +54,7 @@ export function NotificationsPage() {
     setNotifications(rows)
     const eventIds = [...new Set(rows.flatMap((row) => row.event_id ? [row.event_id] : []))]
     const actorIds = [...new Set(rows.flatMap((row) => row.actor_profile_id ? [row.actor_profile_id] : []))]
+    const applicationIds = [...new Set(rows.flatMap((row) => row.venue_application_profile_id ? [row.venue_application_profile_id] : []))]
     if (eventIds.length > 0) {
       const { data: events } = await supabase.from('events').select('id, title').in('id', eventIds)
       setEventTitles(Object.fromEntries((events ?? []).map((event) => [event.id, event.title])))
@@ -62,6 +71,15 @@ export function NotificationsPage() {
     } else {
       setActorNames({})
       setFollowedBackIds(new Set())
+    }
+    if (applicationIds.length > 0) {
+      const results = await Promise.all(applicationIds.map(async (profileId) => {
+        const { data: profile } = await supabase.rpc('get_public_profile', { target_profile_id: profileId }).maybeSingle()
+        return profile ? [profileId, profile as PublicProfileSummary] as const : null
+      }))
+      setApplicationProfiles(Object.fromEntries(results.filter((entry): entry is readonly [string, PublicProfileSummary] => entry !== null)))
+    } else {
+      setApplicationProfiles({})
     }
     setLoading(false)
   }
@@ -95,6 +113,28 @@ export function NotificationsPage() {
     setFollowedBackIds((current) => new Set(current).add(notification.actor_profile_id!))
     setMessage(t('notifications.followBackSuccess'))
     if (!notification.read_at) void markRead(notification.id)
+  }
+
+  const reviewVenueApplication = async (notification: NotificationRow, newRole: 'general' | 'venue_approved') => {
+    const targetUserId = notification.venue_application_profile_id
+    if (!user || user.app_metadata?.role !== 'admin' || !targetUserId || processingApplicationId) return
+    setProcessingApplicationId(notification.id)
+    setMessage('')
+    const { error, response } = await supabase.functions.invoke('review-venue-application', {
+      body: { target_user_id: targetUserId, new_role: newRole },
+    })
+    if (error) {
+      setMessage(response?.status === 403 ? t('notifications.venueApplicationAal2Required') : t('notifications.venueApplicationReviewError'))
+      setProcessingApplicationId(null)
+      return
+    }
+    setApplicationProfiles((current) => ({
+      ...current,
+      [targetUserId]: { ...(current[targetUserId] ?? { id: targetUserId, display_name: null }), role_status: newRole },
+    }))
+    setMessage(newRole === 'venue_approved' ? t('notifications.venueApplicationApproved') : t('notifications.venueApplicationDenied'))
+    if (!notification.read_at) await markRead(notification.id)
+    setProcessingApplicationId(null)
   }
 
   const markAllRead = async () => {
@@ -131,6 +171,7 @@ export function NotificationsPage() {
           {notifications.map((notification) => {
             const isFollowNotification = notification.notification_type === 'new_follow'
             const isVenueApplicationNotification = notification.notification_type === 'venue_application'
+            const applicationProfile = notification.venue_application_profile_id ? applicationProfiles[notification.venue_application_profile_id] : undefined
             const actorName = actorNames[notification.actor_profile_id ?? ''] ?? notification.title
             const content = (
               <>
@@ -162,6 +203,39 @@ export function NotificationsPage() {
                   <button type="button" className="secondary-button" onClick={() => { if (!notification.read_at) void markRead(notification.id) }} disabled={Boolean(notification.read_at)}>
                     {t('notifications.ignoreFollow')}
                   </button>
+                </span>
+              </div>
+            ) : isVenueApplicationNotification ? (
+              <div
+                key={notification.id}
+                className={`notification-item notification-venue-application-item${notification.read_at ? '' : ' unread'}`}
+                role="status"
+                onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
+              >
+                {content}
+                <span className="notification-application-details">
+                  {notification.venue_application_profile_id ? (
+                    <Link
+                      to={`/profile/${notification.venue_application_profile_id}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {t('notifications.viewApplicant')}: {applicationProfile?.display_name || notification.venue_application_profile_id}
+                    </Link>
+                  ) : null}
+                  {user?.app_metadata?.role === 'admin' && applicationProfile?.role_status === 'venue_pending' ? (
+                    <span className="notification-actions">
+                      <button type="button" onClick={() => void reviewVenueApplication(notification, 'venue_approved')} disabled={processingApplicationId === notification.id}>
+                        {processingApplicationId === notification.id ? t('notifications.reviewingVenueApplication') : t('notifications.approveVenueApplication')}
+                      </button>
+                      <button type="button" className="secondary-button" onClick={() => void reviewVenueApplication(notification, 'general')} disabled={processingApplicationId === notification.id}>
+                        {t('notifications.denyVenueApplication')}
+                      </button>
+                    </span>
+                  ) : applicationProfile?.role_status === 'venue_approved' ? (
+                    <span className="notification-application-status">{t('notifications.venueApplicationApprovedStatus')}</span>
+                  ) : applicationProfile?.role_status === 'general' ? (
+                    <span className="notification-application-status">{t('notifications.venueApplicationDeniedStatus')}</span>
+                  ) : null}
                 </span>
               </div>
             ) : (
