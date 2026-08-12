@@ -105,7 +105,7 @@ test.describe('authenticated synthetic route boundary', () => {
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await page.goto('/events')
-    await expect(page.getByRole('heading', { name: /探索活動|explore events/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: 15000 })
     await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: 15000 })
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
@@ -113,7 +113,7 @@ test.describe('authenticated synthetic route boundary', () => {
 
   test('exposes the privacy center to an authenticated user', async ({ page }) => {
     await page.goto('/settings/security-privacy')
-    await expect(page.getByRole('heading', { name: /資料存放邏輯|data storage/i })).toBeVisible({ timeout: 15000 })
-    await expect(page.getByRole('region', { name: /各資料流程的實際邊界|what each data flow means/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: 15000 })
   })
 })

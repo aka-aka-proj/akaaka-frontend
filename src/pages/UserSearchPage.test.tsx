@@ -29,8 +29,8 @@ function queryBuilder(response: { data?: unknown; error?: { message: string } | 
     neq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue(response),
-    ilike: vi.fn().mockResolvedValue(response),
-    eq: vi.fn().mockResolvedValue(response),
+    ilike: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
   }
 }
 
