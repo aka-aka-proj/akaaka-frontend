@@ -32,26 +32,22 @@ export function UserSearchPage() {
       setLoading(true)
       setError('')
       const trimmed = query.trim()
-      const { data: connectionRows, error: connectionError } = await supabase
-        .from('connections')
-        .select('requester_id, receiver_id, status')
-        .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .eq('status', 'accepted')
+      const [{ data: outgoingRows, error: outgoingError }, { data: incomingRows, error: incomingError }] = await Promise.all([
+        supabase.from('user_follows').select('followed_id').eq('follower_id', user.id),
+        supabase.from('user_follows').select('follower_id').eq('followed_id', user.id),
+      ])
 
       if (cancelled) return
-      if (connectionError) {
-        setError(connectionError.message)
+      const relationshipError = outgoingError ?? incomingError
+      if (relationshipError) {
+        setError(relationshipError.message)
         setProfiles([])
         setLoading(false)
         return
       }
 
-      const outgoing = new Set<string>()
-      const incoming = new Set<string>()
-      for (const row of connectionRows ?? []) {
-        if (row.requester_id === user.id) outgoing.add(String(row.receiver_id))
-        if (row.receiver_id === user.id) incoming.add(String(row.requester_id))
-      }
+      const outgoing = new Set((outgoingRows ?? []).map((row) => String(row.followed_id)))
+      const incoming = new Set((incomingRows ?? []).map((row) => String(row.follower_id)))
       const eligibleIds = [...outgoing].filter((id) => incoming.has(id))
       if (eligibleIds.length === 0) {
         setProfiles([])

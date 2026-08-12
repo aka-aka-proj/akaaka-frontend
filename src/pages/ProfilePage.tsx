@@ -142,8 +142,8 @@ export function ProfilePage() {
 
       if (!isOwner) {
         const [{ data: outgoingConnection }, { data: incomingConnection }] = await Promise.all([
-          supabase.from('connections').select('requester_id, receiver_id, status').eq('requester_id', user.id).eq('receiver_id', targetProfileId).eq('status', 'accepted').maybeSingle(),
-          supabase.from('connections').select('requester_id, receiver_id, status').eq('requester_id', targetProfileId).eq('receiver_id', user.id).eq('status', 'accepted').maybeSingle(),
+          supabase.from('user_follows').select('followed_id').eq('follower_id', user.id).eq('followed_id', targetProfileId).maybeSingle(),
+          supabase.from('user_follows').select('follower_id').eq('follower_id', targetProfileId).eq('followed_id', user.id).maybeSingle(),
         ])
         setCanMessage(Boolean(outgoingConnection && incomingConnection))
 

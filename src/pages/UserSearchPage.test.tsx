@@ -38,11 +38,8 @@ function queryBuilder(response: { data?: unknown; error?: { message: string } | 
 
 describe('UserSearchPage', () => {
   beforeEach(() => {
-    from.mockImplementation((table: string) => table === 'connections'
-      ? queryBuilder({ data: [
-          { requester_id: 'viewer-user', receiver_id: 'user-a', status: 'accepted' },
-          { requester_id: 'user-a', receiver_id: 'viewer-user', status: 'accepted' },
-        ], error: null }, true)
+    from.mockImplementation((table: string) => table === 'user_follows'
+      ? queryBuilder({ data: [{ followed_id: 'user-a' }, { follower_id: 'user-a' }], error: null }, true)
       : queryBuilder({
           data: [{ id: 'user-a', display_name: 'Alice', metadata: {} }],
           error: null,
