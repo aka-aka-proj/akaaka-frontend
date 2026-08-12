@@ -368,9 +368,16 @@ export function VirtualLoverChatPage() {
             🧠 {character.memory}
           </p>
         ) : null} */}
-        <button type="button" onClick={startNewConversation} style={{ flexShrink: 0 }}>
-          + {t('virtualLover.newConversation')}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <PrivacyDisclosure
+            label={t('privacyDisclosure.aiLabel')}
+            description={t('privacyDisclosure.aiConversation')}
+            learnMore={t('privacyDisclosure.learnMore')}
+          />
+          <button type="button" onClick={startNewConversation} style={{ flexShrink: 0 }}>
+            + {t('virtualLover.newConversation')}
+          </button>
+        </div>
       </div>
       <div>
         {t('virtualLover.nameLabel')}: <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.name}</span>

@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface AiCharacter {
   id: string
@@ -71,7 +72,14 @@ export function VirtualLoversPage() {
     <Layout>
       <section className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2>{t('virtualLover.myCharacters')}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <h2 style={{ margin: 0 }}>{t('virtualLover.myCharacters')}</h2>
+            <PrivacyDisclosure
+              label={t('privacyDisclosure.aiLabel')}
+              description={t('privacyDisclosure.aiConversation')}
+              learnMore={t('privacyDisclosure.learnMore')}
+            />
+          </div>
           <button type="button" onClick={() => navigate('/virtual-lovers/new')}>
             <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('virtualLover.createNew')}
           </button>

@@ -48,6 +48,7 @@ const en = {
   },
   privacyDisclosure: {
     label: 'View privacy details',
+    aiLabel: 'View Virtual Lover privacy details',
     learnMore: 'Open Security & Privacy Center',
     eventVisibility: 'The selected audience controls who can discover this event. Draft and private access remain enforced by database policies; this control does not grant access.',
     registrationResponses: 'Answers are visible to the event host for review and are retained according to the registration lifecycle. AkaAka does not promise operator-blind plaintext or deletion beyond the enforced policy.',
@@ -55,7 +56,7 @@ const en = {
     issueDetails: 'Issue descriptions, log links, and follow-up comments are sent to the support workflow and may be retained for triage and audit. Do not include passwords, tokens, or unrelated private content.',
     directMessage: 'This message is readable by the participants in this conversation and is stored under messaging retention rules. Do not send secrets you cannot share with the other participant.',
     notifications: 'Notifications contain metadata for your account and are refreshed from your authorized notification rows. Realtime events are refresh hints, not a separate data access path.',
-    aiConversation: 'AI messages may be sent to the configured model provider and stored in your conversation history. Review the AI retention and deletion limits before sharing sensitive information.',
+    aiConversation: 'These AI conversations are not provided to other AkaAka users, but they are currently stored in your conversation history and character memory and sent to the configured model provider for processing. Review retention, provider-processing, and deletion limits before sharing sensitive information.',
   },
   auth: {
     title: 'AkaAka Auth',

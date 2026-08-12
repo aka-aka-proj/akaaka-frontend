@@ -110,13 +110,18 @@ body {
 }
 
 .privacy-disclosure__trigger {
-  width: 22px;
-  height: 22px;
+  box-sizing: border-box;
+  display: inline-grid;
+  width: var(--touch-target, 44px);
+  min-width: var(--touch-target, 44px);
+  height: var(--touch-target, 44px);
+  min-height: var(--touch-target, 44px);
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background: transparent;
   color: var(--color-text-muted);
+  place-items: center;
   cursor: pointer;
 }
 

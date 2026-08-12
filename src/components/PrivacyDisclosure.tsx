@@ -60,7 +60,10 @@ export function PrivacyDisclosure({ label, description, learnMore }: PrivacyDisc
           }
         }}
       >
-        i
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" focusable="false">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 10.5v5.25M12 7.75h.01" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+        </svg>
       </button>
       {open ? (
         <span id={popoverId} className="privacy-disclosure__popover" role="status">
