@@ -6,6 +6,8 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { DirectMessage, Profile } from '../types'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
+import { ConversationSidebar } from '../components/ConversationSidebar'
+import { getAvatarPath } from '../lib/profile'
 
 export function DirectChatPage() {
   const { conversationId } = useParams()
@@ -120,14 +122,21 @@ export function DirectChatPage() {
   const formatMessageTime = (createdAt: string) => new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(createdAt))
 
   return <Layout showPageBack={false}>
-    <section className="card direct-chat-page">
+    <section className="messages-workspace messages-workspace--active card">
+      <ConversationSidebar activeConversationId={conversationId} />
+      <section className="direct-chat-page chat-panel">
       <header className="chat-header">
         <Link to="/messages" className="chat-back-link" aria-label={t('messages.back')}>&larr;</Link>
+        {otherProfile?.id ? <Link to={`/profile/${otherProfile.id}`} className="chat-header-profile-link">
+          <img src={getAvatarPath(otherProfile)} alt="" className="chat-header-avatar" />
+        </Link> : <span className="chat-header-profile-link"><img src={getAvatarPath(otherProfile)} alt="" className="chat-header-avatar" /></span>}
         <div>
           <h2>{otherProfile?.display_name || t('messages.title')}</h2>
-          <p>{t('messages.privateChat')}</p>
+          <p>{t('messages.privateChat')} · {otherProfile?.id ? <Link to={`/profile/${otherProfile.id}`}>{t('messages.viewProfile')}</Link> : null}</p>
         </div>
-        <span className="chat-header-spacer" aria-hidden="true" />
+        <div className="chat-header-actions">
+          <button type="button" aria-label={t('messages.moreOptions')} className="chat-header-action">⋯</button>
+        </div>
       </header>
       {error ? <p className="message">{error}</p> : null}
       {loading ? <p>{t('common.loading')}</p> : <>
@@ -157,6 +166,7 @@ export function DirectChatPage() {
           </label>
         </form>
       </>}
+      </section>
     </section>
   </Layout>
 }

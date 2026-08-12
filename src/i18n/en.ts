@@ -225,6 +225,12 @@ const en = {
   messages: {
     title: 'Messages',
     description: 'Private chats with users who follow each other.',
+    searchLabel: 'Search chats',
+    searchPlaceholder: 'Search',
+    selectConversation: 'Select a conversation',
+    selectConversationDescription: 'Choose a chat from the list or start a new conversation.',
+    moreOptions: 'More chat options',
+    you: 'You',
     empty: 'No chats yet. Follow each other to start a chat.',
     startConversation: 'View people to chat with',
     findUsers: 'Find users',

@@ -224,6 +224,12 @@ const zhTW = {
   messages: {
     title: '聊天',
     description: '與互相追蹤的使用者私下聊天。',
+    searchLabel: '搜尋聊天',
+    searchPlaceholder: '搜尋',
+    selectConversation: '選擇一個對話',
+    selectConversationDescription: '從左側選擇聊天，或開始新的對話。',
+    moreOptions: '更多聊天選項',
+    you: '你',
     empty: '目前沒有聊天。請先互相追蹤對方。',
     startConversation: '查看可聊天的使用者',
     findUsers: '尋找使用者',
