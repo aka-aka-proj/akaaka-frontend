@@ -153,4 +153,37 @@ describe('EditProfilePage', () => {
       expect(screen.getByText('Profile destination')).toBeTruthy()
     })
   })
+
+  it('opens an accessible avatar picker and restores focus when closed', async () => {
+    const loadQuery = queryBuilder({
+      data: {
+        id: 'viewer-user',
+        display_name: 'Self User',
+        metadata: {},
+      },
+      error: null,
+    })
+    from.mockReturnValue(loadQuery)
+
+    render(
+      <MemoryRouter initialEntries={['/profile/me/edit']}>
+        <Routes>
+          <Route path="/profile/me/edit" element={<EditProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const user = userEvent.setup()
+    await waitFor(() => expect(screen.getByDisplayValue('Self User')).toBeTruthy())
+    const changeButton = screen.getByRole('button', { name: 'Change avatar' })
+    await user.click(changeButton)
+
+    expect(screen.getByRole('dialog', { name: 'Choose an avatar' })).toBeTruthy()
+    expect(screen.getAllByRole('radio')).toHaveLength(16)
+    expect(screen.getByRole('radio', { name: 'Default avatar' })).toBeTruthy()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(changeButton))
+  })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -10,6 +10,10 @@ import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Visibility } from '../types'
 
 const BDSM_ROLES: BdsmRole[] = ['dom', 'sub', 'switch', 'master', 'slave', 'owner', 'pet', 'brat', 'rigging']
+
+function visibilityIcon(value: Visibility) {
+  return value === 'private' ? '🔒' : value === 'connections_only' ? '🔗' : '🌐'
+}
 
 export function EditProfilePage() {
   const { user, refreshProfile } = useAuth()
@@ -26,6 +30,30 @@ export function EditProfilePage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false)
+  const avatarPickerTriggerRef = useRef<HTMLButtonElement>(null)
+  const avatarPickerFirstOptionRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!avatarPickerOpen) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAvatarPickerOpen(false)
+        window.setTimeout(() => avatarPickerTriggerRef.current?.focus(), 0)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    requestAnimationFrame(() => avatarPickerFirstOptionRef.current?.focus())
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [avatarPickerOpen])
+
+  const closeAvatarPicker = () => {
+    setAvatarPickerOpen(false)
+    window.setTimeout(() => avatarPickerTriggerRef.current?.focus(), 0)
+  }
 
   useEffect(() => {
     if (!user) {
@@ -117,55 +145,72 @@ export function EditProfilePage() {
             <h1>{t('profile.editProfile')}</h1>
             <p>{t('profile.editProfileDescription')}</p>
           </div>
-          <Link to="/profile/me" className="btn-secondary">
-            {t('profile.cancelEdit')}
-          </Link>
         </div>
         {loading ? <p>{t('common.loading')}</p> : null}
         {message ? <p className="message">{message}</p> : null}
         {!loading ? (
           <>
-            <label>
-              {t('profile.displayNameLabel')}
+            <section className="profile-edit-section" aria-labelledby="profile-basic-heading">
+              <h2 id="profile-basic-heading">{t('profile.basicInfoHeading')}</h2>
+              <label>
+                {t('profile.displayNameLabel')}
               <input
                 aria-label={t('profile.displayNameLabel')}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
               />
-            </label>
-            <fieldset>
-              <legend>{t('profile.avatarLabel')}</legend>
-              <div className="avatar-picker">
-                <label className="avatar-option">
-                  <input
-                    type="radio"
-                    name="profile-avatar"
-                    value="/default-avatar.svg"
-                    checked={avatarPath === '/default-avatar.svg'}
-                    onChange={() => setAvatarPath('/default-avatar.svg')}
-                  />
-                  <img src="/default-avatar.svg" alt={t('profile.defaultAvatar')} className="avatar avatar-lg" />
-                  <span>{t('profile.defaultAvatar')}</span>
-                </label>
-                {PRESET_AVATAR_PATHS.map((path) => (
-                  <label className="avatar-option" key={path}>
-                    <input
-                      type="radio"
-                      name="profile-avatar"
-                      value={path}
-                      checked={avatarPath === path}
-                      onChange={() => setAvatarPath(path)}
-                    />
-                    <img src={path} alt="" className="avatar avatar-lg" />
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <label>
-              {t('profile.bioLabel')}
-              <label>
-                {t('profile.bioVisibilityLabel')}
               </label>
+              <div className="avatar-current-picker">
+                <img src={avatarPath} alt={t('profile.currentAvatar')} className="avatar avatar-lg" />
+                <div>
+                  <p className="form-field-label">{t('profile.avatarLabel')}</p>
+                  <button ref={avatarPickerTriggerRef} type="button" className="btn-secondary" onClick={() => setAvatarPickerOpen(true)}>
+                    {t('profile.changeAvatar')}
+                  </button>
+                </div>
+              </div>
+            </section>
+            {avatarPickerOpen ? (
+              <div className="avatar-picker-backdrop" role="presentation" onMouseDown={(event) => {
+                if (event.target === event.currentTarget) closeAvatarPicker()
+              }}>
+                <section className="avatar-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="avatar-picker-heading">
+                  <div className="avatar-picker-sheet-header">
+                    <h2 id="avatar-picker-heading">{t('profile.avatarPickerTitle')}</h2>
+                    <button type="button" className="icon-button" aria-label={t('profile.closeAvatarPicker')} onClick={closeAvatarPicker}>×</button>
+                  </div>
+                  <div className="avatar-picker">
+                    {['/default-avatar.svg', ...PRESET_AVATAR_PATHS].map((path, index) => {
+                      const label = index === 0 ? t('profile.defaultAvatar') : `${t('profile.presetAvatar')} ${index}`
+                      return (
+                        <label className="avatar-option" htmlFor={`profile-avatar-${index}`} key={path}>
+                          <input
+                            ref={index === 0 ? avatarPickerFirstOptionRef : undefined}
+                            id={`profile-avatar-${index}`}
+                            type="radio"
+                            name="profile-avatar"
+                            value={path}
+                            checked={avatarPath === path}
+                            aria-label={label}
+                            onChange={() => {
+                              setAvatarPath(path)
+                              closeAvatarPicker()
+                            }}
+                          />
+                          <img src={path} alt={label} className="avatar avatar-lg" />
+                          <span>{label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </section>
+              </div>
+            ) : null}
+            <section className="profile-edit-section" aria-labelledby="profile-details-heading">
+              <h2 id="profile-details-heading">{t('profile.detailsHeading')}</h2>
+              <div className="profile-edit-field">
+                <div className="form-label-row"><label htmlFor="profile-bio">{t('profile.bioLabel')}</label><VisibilityTooltip fieldName="bio" /></div>
+              <span className="visibility-select-icon" aria-hidden="true">{visibilityIcon(visibility)}</span>
               <select
                 aria-label={t('profile.bioVisibilityLabel')}
                 value={visibility}
@@ -175,15 +220,15 @@ export function EditProfilePage() {
                 <option value="connections_only">{t('profile.connectionsOnly')}</option>
                 <option value="private">{t('profile.private')}</option>
               </select>
-              <VisibilityTooltip fieldName="bio" />
               <textarea
+                id="profile-bio"
                 aria-label={t('profile.bioLabel')}
                 value={bio}
                 onChange={(event) => setBio(event.target.value)}
               />
-            </label>
-            <label>
-              {t('profile.genderIdentityLabel')}
+              </div>
+              <label>
+                {t('profile.genderIdentityLabel')}
               <select
                 aria-label={t('profile.genderIdentityLabel')}
                 value={genderIdentity}
@@ -203,10 +248,12 @@ export function EditProfilePage() {
                 <option value="questioning">{t('profile.genderIdentityQuestioning')}</option>
                 <option value="other">{t('profile.genderIdentityOther')}</option>
               </select>
-            </label>
-            <label>
-              {t('profile.genderIdentityVisibilityLabel')}
+              </label>
+              <div className="profile-edit-field">
+                <div className="form-label-row"><label htmlFor="profile-gender-visibility">{t('profile.genderIdentityVisibilityLabel')}</label><VisibilityTooltip fieldName="gender_identity" /></div>
+              <span className="visibility-select-icon" aria-hidden="true">{visibilityIcon(genderIdentityVisibility)}</span>
               <select
+                id="profile-gender-visibility"
                 aria-label={t('profile.genderIdentityVisibilityLabel')}
                 value={genderIdentityVisibility}
                 onChange={(event) => setGenderIdentityVisibility(event.target.value as Visibility)}
@@ -215,9 +262,11 @@ export function EditProfilePage() {
                 <option value="connections_only">{t('profile.connectionsOnly')}</option>
                 <option value="private">{t('profile.private')}</option>
               </select>
-              <VisibilityTooltip fieldName="gender_identity" />
-            </label>
-            <fieldset>
+              </div>
+            </section>
+            <section className="profile-edit-section" aria-labelledby="profile-identity-heading">
+              <h2 id="profile-identity-heading">{t('profile.identityHeading')}</h2>
+              <fieldset>
               <legend>{t('profile.bdsmRolesLabel')}</legend>
               <div className="role-chips">
                 {BDSM_ROLES.map((role) => (
@@ -237,10 +286,12 @@ export function EditProfilePage() {
                   </label>
                 ))}
               </div>
-            </fieldset>
-            <label>
-              {t('profile.bdsmRolesVisibilityLabel')}
+              </fieldset>
+              <div className="profile-edit-field">
+                <div className="form-label-row"><label htmlFor="profile-roles-visibility">{t('profile.bdsmRolesVisibilityLabel')}</label><VisibilityTooltip fieldName="bdsm_roles" /></div>
+              <span className="visibility-select-icon" aria-hidden="true">{visibilityIcon(bdsmRolesVisibility)}</span>
               <select
+                id="profile-roles-visibility"
                 aria-label={t('profile.bdsmRolesVisibilityLabel')}
                 value={bdsmRolesVisibility}
                 onChange={(event) => setBdsmRolesVisibility(event.target.value as Visibility)}
@@ -249,17 +300,15 @@ export function EditProfilePage() {
                 <option value="connections_only">{t('profile.connectionsOnly')}</option>
                 <option value="private">{t('profile.private')}</option>
               </select>
-              <VisibilityTooltip fieldName="bdsm_roles" />
-            </label>
-            <div className="form-actions">
-              <button type="submit" disabled={submitting}>
-                {submitting ? t('profile.savingProfile') : t('profile.saveProfile')}
-              </button>
-              <Link to="/profile/me" className="btn-secondary">
-                {t('profile.cancelEdit')}
-              </Link>
-            </div>
+              </div>
+            </section>
           </>
+        ) : null}
+        {!loading ? (
+          <div className="profile-edit-actions">
+            <Link to="/profile/me" className="btn-secondary">{t('profile.cancelEdit')}</Link>
+            <button type="submit" disabled={submitting}>{submitting ? t('profile.savingProfile') : t('profile.saveProfile')}</button>
+          </div>
         ) : null}
       </form>
     </Layout>
