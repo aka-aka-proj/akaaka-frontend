@@ -53,6 +53,7 @@ describe('ProfilePage', () => {
   beforeEach(() => {
     unlinkIdentity.mockReset()
     getUserIdentities.mockReset()
+    functionsInvoke.mockReset()
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile: vi.fn().mockResolvedValue(undefined),
@@ -150,6 +151,42 @@ describe('ProfilePage', () => {
     expect(screen.queryByRole('button', { name: 'Give Recommendation' })).toBeNull()
     expect(screen.queryByLabelText('Display name')).toBeNull()
     expect(screen.getByRole('link', { name: 'Edit profile' }).getAttribute('href')).toBe('/profile/me/edit')
+  })
+
+  it('submits a venue application from the owner profile', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'viewer-user',
+        role_status: 'general',
+        display_name: 'Self User',
+        bio: 'Own bio',
+        external_social_links: [],
+        metadata: { visibility: { bio: 'public' } },
+        reputation_score: 1,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      return queryBuilder({ data: null, error: null })
+    })
+    functionsInvoke.mockResolvedValue({ data: { success: true, role_status: 'venue_pending' }, error: null })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/me']}>
+        <Routes>
+          <Route path="/profile/me" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const button = await screen.findByRole('button', { name: 'Submit venue application' })
+    await userEvent.click(button)
+
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledWith('request-venue-application'))
+    expect(await screen.findByText('Application submitted. Admins have been notified.')).toBeTruthy()
   })
 
   it('opens the profile share dialog for the owner', async () => {

@@ -22,7 +22,7 @@ function maskEmail(email: string | undefined) {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, identities } = useAuth()
+  const { user, identities, refreshProfile } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
   const isOwner = user?.id === targetProfileId
@@ -45,6 +45,7 @@ export function ProfilePage() {
   const [connectedIdentities, setConnectedIdentities] = useState<UserIdentity[]>(identities ?? [])
   const [identityToUnlink, setIdentityToUnlink] = useState<UserIdentity | null>(null)
   const [isUnlinkingIdentity, setIsUnlinkingIdentity] = useState(false)
+  const [isSubmittingVenueApplication, setIsSubmittingVenueApplication] = useState(false)
   const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
   useEffect(() => {
@@ -203,6 +204,23 @@ export function ProfilePage() {
     setRecommendComment('')
     setMessage(t('profile.recommendationSubmitted'))
     await loadProfile()
+  }
+
+  const requestVenueApplication = async () => {
+    if (!user || !isOwner || profile?.role_status !== 'general') return
+    setIsSubmittingVenueApplication(true)
+    setMessage('')
+    const { error, response } = await supabase.functions.invoke('request-venue-application')
+    if (error) {
+      if (response?.status === 409) setMessage(t('profile.venueApplicationAlreadyPending'))
+      else setMessage(t('profile.venueApplicationError'))
+      setIsSubmittingVenueApplication(false)
+      return
+    }
+    setMessage(t('profile.venueApplicationSubmitted'))
+    await refreshProfile()
+    await loadProfile()
+    setIsSubmittingVenueApplication(false)
   }
 
   const toggleBlock = async () => {
@@ -457,6 +475,21 @@ export function ProfilePage() {
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
                 <span className="role-badge">{t('profile.role')}: {profile.role_status}</span>
               </p>
+              {isOwner && profile.role_status !== 'venue_approved' ? (
+                <section className="venue-application-card" aria-labelledby="venue-application-heading">
+                  <h3 id="venue-application-heading">{t('profile.venueApplicationHeading')}</h3>
+                  <p>
+                    {profile.role_status === 'venue_pending'
+                      ? t('profile.venueApplicationPendingDescription')
+                      : t('profile.venueApplicationDescription')}
+                  </p>
+                  {profile.role_status === 'general' ? (
+                    <button type="button" onClick={() => void requestVenueApplication()} disabled={isSubmittingVenueApplication}>
+                      {isSubmittingVenueApplication ? t('profile.venueApplicationSubmitting') : t('profile.venueApplicationButton')}
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
               <div className="profile-metrics" aria-label={t('profile.profileStats')}>
                 <Link to={`/profile/${targetProfileId}/feedback`} className="metric-card">
                   <strong>{profile.reputation_score}</strong>

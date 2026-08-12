@@ -8,9 +8,10 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface NotificationRow {
   id: string
-  notification_type: 'new_event' | 'new_issue' | 'new_follow'
+  notification_type: 'new_event' | 'new_issue' | 'new_follow' | 'venue_application'
   event_id: string | null
   issue_id: string | null
+  venue_application_profile_id: string | null
   actor_profile_id: string | null
   title: string
   read_at: string | null
@@ -32,7 +33,7 @@ export function NotificationsPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('notifications')
-      .select('id, notification_type, event_id, issue_id, actor_profile_id, title, read_at, created_at')
+      .select('id, notification_type, event_id, issue_id, actor_profile_id, venue_application_profile_id, title, read_at, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -129,14 +130,15 @@ export function NotificationsPage() {
         <div className="notification-list">
           {notifications.map((notification) => {
             const isFollowNotification = notification.notification_type === 'new_follow'
+            const isVenueApplicationNotification = notification.notification_type === 'venue_application'
             const actorName = actorNames[notification.actor_profile_id ?? ''] ?? notification.title
             const content = (
               <>
                 <span className="notification-dot" aria-hidden="true" />
                 <span>
-                  <strong>{isFollowNotification ? `${t('notifications.newFollow')}: ${actorName}` : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
-                  <span className="notification-meta">
-                    {isFollowNotification ? t('notifications.newFollow') : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
+                <strong>{isFollowNotification ? `${t('notifications.newFollow')}: ${actorName}` : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
+                <span className="notification-meta">
+                    {isFollowNotification ? t('notifications.newFollow') : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
                   </span>
                 </span>
               </>

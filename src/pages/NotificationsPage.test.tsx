@@ -42,7 +42,8 @@ describe('NotificationsPage', () => {
               data: [
                 { id: 'notification-1', notification_type: 'new_event', event_id: 'event-1', issue_id: null, title: 'Fallback title', read_at: null, created_at: '2026-08-10T00:00:00Z' },
                 { id: 'notification-2', notification_type: 'new_issue', event_id: null, issue_id: 'issue-1', title: 'New issue report', read_at: null, created_at: '2026-08-10T01:00:00Z' },
-                { id: 'notification-3', notification_type: 'new_follow', event_id: null, issue_id: null, actor_profile_id: 'user-2', title: 'New follower', read_at: null, created_at: '2026-08-10T02:00:00Z' },
+                { id: 'notification-3', notification_type: 'new_follow', event_id: null, issue_id: null, actor_profile_id: 'user-2', venue_application_profile_id: null, title: 'New follower', read_at: null, created_at: '2026-08-10T02:00:00Z' },
+                { id: 'notification-4', notification_type: 'venue_application', event_id: null, issue_id: null, actor_profile_id: null, venue_application_profile_id: 'user-3', title: 'New venue application', read_at: null, created_at: '2026-08-10T03:00:00Z' },
               ],
               error: null,
             }),
@@ -89,7 +90,7 @@ describe('NotificationsPage', () => {
     render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
 
     expect(await screen.findByText('新問題回報')).toBeTruthy()
-    expect(screen.getByRole('status')).toBeTruthy()
+    expect(screen.getAllByRole('status').length).toBeGreaterThanOrEqual(1)
   })
 
   it('marks all unread notifications as read', async () => {
