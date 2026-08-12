@@ -56,18 +56,28 @@ export function FollowingPage() {
       return
     }
 
-    const { data: profileRows, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, role_status, display_name, bio, external_social_links, metadata, reputation_score')
-      .in('id', followedIds)
+    let profileRows: unknown[] = []
+    if (user.app_metadata?.role === 'admin') {
+      const resolvedProfiles = await Promise.all(followedIds.map(async (profileId) => {
+        const { data: profile, error: profileError } = await supabase.rpc('get_public_profile', { target_profile_id: profileId }).maybeSingle()
+        return profileError ? null : profile
+      }))
+      profileRows = resolvedProfiles.filter(Boolean)
+    } else {
+      const { data, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role_status, display_name, bio, external_social_links, metadata, reputation_score')
+        .in('id', followedIds)
 
-    if (profilesError) {
-      setMessage(profilesError.message)
-      setLoading(false)
-      return
+      if (profilesError) {
+        setMessage(profilesError.message)
+        setLoading(false)
+        return
+      }
+      profileRows = data ?? []
     }
 
-    const profileMap = new Map((profileRows ?? []).map((row) => [String(row.id), mapProfile(row as Record<string, unknown>)]))
+    const profileMap = new Map(profileRows.map((row) => [String((row as Record<string, unknown>).id), mapProfile(row as Record<string, unknown>)]))
     setProfiles(followedIds.map((id) => profileMap.get(id)).filter((profile): profile is Profile => Boolean(profile)))
     setSelectedIds(new Set())
     setLoading(false)

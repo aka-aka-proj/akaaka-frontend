@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FollowingPage } from './FollowingPage'
 
 const from = vi.fn()
+const rpc = vi.fn()
+const mockUseAuth = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'viewer-user' } }),
+  useAuth: () => mockUseAuth(),
 }))
 
 vi.mock('../context/LanguageContext', () => ({
@@ -16,7 +18,7 @@ vi.mock('../context/LanguageContext', () => ({
 }))
 
 vi.mock('../supabaseClient', () => ({
-  supabase: { from: (...args: unknown[]) => from(...args) },
+  supabase: { from: (...args: unknown[]) => from(...args), rpc: (...args: unknown[]) => rpc(...args) },
 }))
 
 vi.mock('../components/Layout', () => ({
@@ -36,6 +38,8 @@ function queryBuilder(response: { data?: unknown; error?: { message: string } | 
 describe('FollowingPage', () => {
   beforeEach(() => {
     from.mockClear()
+    rpc.mockClear()
+    mockUseAuth.mockReturnValue({ user: { id: 'viewer-user' } })
     from.mockImplementation((table: string) => {
       if (table === 'user_follows') {
         return queryBuilder({ data: [{ followed_id: 'user-a' }, { followed_id: 'user-b' }], error: null })
@@ -81,5 +85,21 @@ describe('FollowingPage', () => {
     await user.click(screen.getByText('取消'))
     expect(screen.queryByText('Are you sure you want to unfollow Alice?')).toBeNull()
     expect(from).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolves followed profiles for an admin through the public profile resolver', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'viewer-user', app_metadata: { role: 'admin' } } })
+    rpc.mockImplementation((_name: string, args: { target_profile_id?: string }) => ({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: args.target_profile_id, display_name: args.target_profile_id === 'user-a' ? 'Alice' : 'Bob', role_status: 'general', external_social_links: [], metadata: {}, reputation_score: 0 },
+        error: null,
+      }),
+    }))
+
+    render(<MemoryRouter><FollowingPage /></MemoryRouter>)
+
+    await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())
+    expect(rpc).toHaveBeenCalledWith('get_public_profile', { target_profile_id: 'user-a' })
+    expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/profile/user-a')
   })
 })
