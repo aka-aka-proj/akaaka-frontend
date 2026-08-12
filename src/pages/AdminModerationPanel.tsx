@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
@@ -151,7 +151,11 @@ export function AdminModerationPanel() {
             </div>
             {report.target_profile_id ? (
               <p>
-                <strong>{t('admin.moderation.target')}:</strong> {report.target_profile_id}
+                <strong>{t('admin.moderation.target')}:</strong>{' '}
+                <span>{report.target_profile_id}</span>{' '}
+                <Link to={`/profile/${report.target_profile_id}`}>
+                  {t('admin.moderation.viewProfile')}
+                </Link>
               </p>
             ) : null}
             {report.target_event_id ? (

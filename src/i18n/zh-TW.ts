@@ -929,6 +929,7 @@ const zhTW = {
       noReports: '沒有待處理或分類中的檢舉。',
       reporter: '檢舉人',
       target: '對象',
+      viewProfile: '查看個人頁',
       event: '活動',
       details: '詳細說明',
       submitted: '提交時間',

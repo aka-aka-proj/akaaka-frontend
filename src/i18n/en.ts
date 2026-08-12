@@ -929,6 +929,7 @@ const en = {
       noReports: 'No open or triaging reports.',
       reporter: 'Reporter',
       target: 'Target',
+      viewProfile: 'View profile',
       event: 'Event',
       details: 'Details',
       submitted: 'Submitted',
