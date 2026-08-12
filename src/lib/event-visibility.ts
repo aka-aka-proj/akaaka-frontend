@@ -23,8 +23,8 @@ export function canSeeEvent(
   if (visibility === 'public') return true
   if (visibility === 'private') return false
 
-  // connections_only: RLS 已處理完整檢查，前端僅做粗略過濾
+  // connections_only: RLS 已處理 mutual follow 與 block 檢查，前端僅做粗略過濾
   // 當 viewer 非建立者且 visibility 為 connections_only 時，預設不可見
-  // 完整的 connections 查詢由 RLS 在 DB 層級執行
+  // 完整的 user_follows 查詢由 RLS 在 DB 層級執行
   return false
 }
