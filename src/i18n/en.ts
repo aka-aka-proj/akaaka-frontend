@@ -218,6 +218,7 @@ const en = {
     searchUsersPlaceholder: 'Enter a display name…',
     noUsers: 'No other users found.',
     noSearchResults: 'No matching users found.',
+    viewProfile: 'View profile',
     unnamed: 'Unnamed user',
     noMessages: 'No messages yet.',
     unavailable: 'This chat is unavailable.',

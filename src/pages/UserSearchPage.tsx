@@ -32,10 +32,37 @@ export function UserSearchPage() {
       setLoading(true)
       setError('')
       const trimmed = query.trim()
+      const { data: connectionRows, error: connectionError } = await supabase
+        .from('connections')
+        .select('requester_id, receiver_id, status')
+        .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .eq('status', 'accepted')
+
+      if (cancelled) return
+      if (connectionError) {
+        setError(connectionError.message)
+        setProfiles([])
+        setLoading(false)
+        return
+      }
+
+      const outgoing = new Set<string>()
+      const incoming = new Set<string>()
+      for (const row of connectionRows ?? []) {
+        if (row.requester_id === user.id) outgoing.add(String(row.receiver_id))
+        if (row.receiver_id === user.id) incoming.add(String(row.requester_id))
+      }
+      const eligibleIds = [...outgoing].filter((id) => incoming.has(id))
+      if (eligibleIds.length === 0) {
+        setProfiles([])
+        setLoading(false)
+        return
+      }
+
       const createQuery = () => supabase
         .from('profiles')
         .select('id, display_name, metadata')
-        .neq('id', user.id)
+        .in('id', eligibleIds)
         .order('display_name', { ascending: true, nullsFirst: false })
 
       const result = trimmed
@@ -95,10 +122,11 @@ export function UserSearchPage() {
             return <li key={profile.id} className="user-search-item">
               <img src={getAvatarPath(avatarProfile)} alt="" width={48} height={48} className="avatar" />
               <span className="user-search-profile-copy">
-                <Link to={`/profile/${profile.id}`}>
+                <Link to={`/messages/new?user=${profile.id}`} className="user-search-chat-link">
                   <strong>{profile.display_name || t('messages.unnamed')}</strong>
                 </Link>
                 <small title={profile.id}>{profile.id}</small>
+                <Link to={`/profile/${profile.id}`} className="link-small">{t('messages.viewProfile')}</Link>
               </span>
             </li>
           })}

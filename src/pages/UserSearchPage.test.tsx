@@ -23,23 +23,30 @@ vi.mock('../components/Layout', () => ({
   Layout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
-function queryBuilder(response: { data?: unknown; error?: { message: string } | null }) {
+function queryBuilder(response: { data?: unknown; error?: { message: string } | null }, terminalEq = false) {
   return {
     select: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     neq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue(response),
     ilike: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
+    eq: terminalEq ? vi.fn().mockResolvedValue(response) : vi.fn().mockReturnThis(),
   }
 }
 
 describe('UserSearchPage', () => {
   beforeEach(() => {
-    from.mockImplementation(() => queryBuilder({
-      data: [{ id: 'user-a', display_name: 'Alice', metadata: {} }],
-      error: null,
-    }))
+    from.mockImplementation((table: string) => table === 'connections'
+      ? queryBuilder({ data: [
+          { requester_id: 'viewer-user', receiver_id: 'user-a', status: 'accepted' },
+          { requester_id: 'user-a', receiver_id: 'viewer-user', status: 'accepted' },
+        ], error: null }, true)
+      : queryBuilder({
+          data: [{ id: 'user-a', display_name: 'Alice', metadata: {} }],
+          error: null,
+        }))
   })
 
   it('lists other profiles and filters by display name', async () => {
@@ -47,7 +54,8 @@ describe('UserSearchPage', () => {
     const user = userEvent.setup()
 
     await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())
-    expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/profile/user-a')
+    expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/messages/new?user=user-a')
+    expect(screen.getByRole('link', { name: 'View profile' }).getAttribute('href')).toBe('/profile/user-a')
 
     await user.type(screen.getByRole('searchbox'), 'Alice')
     await waitFor(() => expect(from).toHaveBeenCalled())

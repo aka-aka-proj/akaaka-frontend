@@ -217,6 +217,7 @@ const zhTW = {
     searchUsersPlaceholder: '輸入顯示名稱…',
     noUsers: '目前找不到其他使用者。',
     noSearchResults: '找不到符合的使用者。',
+    viewProfile: '查看個人檔案',
     unnamed: '未設定名稱的使用者',
     noMessages: '尚無訊息。',
     unavailable: '此聊天目前無法使用。',
