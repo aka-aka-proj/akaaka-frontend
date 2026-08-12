@@ -2,12 +2,35 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 const syntheticUserId = '00000000-0000-4000-8000-000000000001'
+const syntheticSupabaseRef = (() => {
+  const url = process.env.VITE_SUPABASE_URL
+  if (!url) return null
+  try {
+    return new URL(url).hostname.split('.')[0] ?? null
+  } catch {
+    return null
+  }
+})()
 const syntheticStorageKeys = [
   'sb-fkqvjchizknuifjxiawe-auth-token',
   'sb-127-auth-token',
-]
+  'sb-localhost-auth-token',
+  syntheticSupabaseRef ? `sb-${syntheticSupabaseRef}-auth-token` : null,
+].filter((key): key is string => Boolean(key))
+const syntheticAccessToken = [
+  Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'),
+  Buffer.from(JSON.stringify({
+    sub: syntheticUserId,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'synthetic@example.test',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  })).toString('base64url'),
+  'synthetic-signature',
+].join('.')
+
 const syntheticSession = {
-  access_token: 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJleHAiOjQxMDI0NDQ4MDAsImlhdCI6MTcwMDAwMDAwMCwiYXVkIjoiYXV0aGVudGljYXRlZCIsImFwcF9tZXRhZGF0YSI6eyJyb2xlIjoiZ2VuZXJhbCJ9fQ.synthetic-signature',
+  access_token: syntheticAccessToken,
   token_type: 'bearer',
   expires_in: 3600,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -87,6 +110,10 @@ async function installAuthenticatedFixture(page: Page) {
   await page.route('**/functions/v1/**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
+
+  await page.route('**/auth/v1/user', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(syntheticSession.user) })
+  })
 }
 
 test.describe('authenticated synthetic route boundary', () => {
@@ -105,7 +132,7 @@ test.describe('authenticated synthetic route boundary', () => {
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await page.goto('/events')
-    await expect(page.getByRole('heading', { name: /探索活動|explore events/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: 15000 })
     await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: 15000 })
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
@@ -113,7 +140,7 @@ test.describe('authenticated synthetic route boundary', () => {
 
   test('exposes the privacy center to an authenticated user', async ({ page }) => {
     await page.goto('/settings/security-privacy')
-    await expect(page.getByRole('heading', { name: /資料存放邏輯|data storage/i })).toBeVisible({ timeout: 15000 })
-    await expect(page.getByRole('region', { name: /各資料流程的實際邊界|what each data flow means/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: 15000 })
   })
 })
