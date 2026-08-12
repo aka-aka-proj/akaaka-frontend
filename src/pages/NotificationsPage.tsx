@@ -34,6 +34,7 @@ export function NotificationsPage() {
   const [applicationProfiles, setApplicationProfiles] = useState<Record<string, PublicProfileSummary>>({})
   const [processingApplicationId, setProcessingApplicationId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [mfaAssuranceLevel, setMfaAssuranceLevel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadNotifications = async () => {
@@ -88,6 +89,13 @@ export function NotificationsPage() {
     void loadNotifications()
   }, [user?.id])
 
+  useEffect(() => {
+    if (user?.app_metadata?.role !== 'admin') return
+    void supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
+      if (!error) setMfaAssuranceLevel(data?.currentLevel ?? 'aal1')
+    })
+  }, [user?.id, user?.app_metadata?.role])
+
   const markRead = async (id: string) => {
     const { error } = await supabase
       .from('notifications')
@@ -124,6 +132,7 @@ export function NotificationsPage() {
       body: { target_user_id: targetUserId, new_role: newRole },
     })
     if (error) {
+      if (response?.status === 403) setMfaAssuranceLevel('aal1')
       setMessage(response?.status === 403 ? t('notifications.venueApplicationAal2Required') : t('notifications.venueApplicationReviewError'))
       setProcessingApplicationId(null)
       return
@@ -133,6 +142,7 @@ export function NotificationsPage() {
       [targetUserId]: { ...(current[targetUserId] ?? { id: targetUserId, display_name: null }), role_status: newRole },
     }))
     setMessage(newRole === 'venue_approved' ? t('notifications.venueApplicationApproved') : t('notifications.venueApplicationDenied'))
+    setMfaAssuranceLevel('aal2')
     if (!notification.read_at) await markRead(notification.id)
     setProcessingApplicationId(null)
   }
@@ -151,6 +161,12 @@ export function NotificationsPage() {
     setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })))
   }
 
+  const hasPendingVenueApplication = notifications.some((notification) => (
+    notification.notification_type === 'venue_application'
+    && notification.venue_application_profile_id
+    && applicationProfiles[notification.venue_application_profile_id]?.role_status === 'venue_pending'
+  ))
+
   return (
     <Layout>
       <section className="card notification-page">
@@ -164,6 +180,17 @@ export function NotificationsPage() {
             {t('notifications.markAllRead')}
           </button>
         </div>
+        {user?.app_metadata?.role === 'admin' && hasPendingVenueApplication && mfaAssuranceLevel !== 'aal2' ? (
+          <aside className="card" style={{ marginTop: 16 }} aria-labelledby="notification-mfa-guide-title">
+            <h2 id="notification-mfa-guide-title" style={{ fontSize: 18, marginBottom: 8 }}>
+              {t('notifications.venueApplicationMfaGuideTitle')}
+            </h2>
+            <p>{t('notifications.venueApplicationMfaGuideDescription')}</p>
+            <Link className="primary-action" to="/settings/security-privacy">
+              {t('notifications.venueApplicationMfaGuideLink')}
+            </Link>
+          </aside>
+        ) : null}
         {message ? <p className="error-message">{message}</p> : null}
         {loading ? <p>{t('common.loading')}</p> : null}
         {!loading && notifications.length === 0 ? <p className="empty-state">{t('notifications.empty')}</p> : null}

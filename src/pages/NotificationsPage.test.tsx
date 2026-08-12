@@ -10,6 +10,7 @@ const from = vi.fn()
 const update = vi.fn()
 const rpc = vi.fn()
 const functionsInvoke = vi.fn()
+const getAuthenticatorAssuranceLevel = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -21,6 +22,7 @@ vi.mock('../components/Layout', () => ({
 
 vi.mock('../supabaseClient', () => ({
   supabase: {
+    auth: { mfa: { getAuthenticatorAssuranceLevel: (...args: unknown[]) => getAuthenticatorAssuranceLevel(...args) } },
     from: (...args: unknown[]) => from(...args),
     rpc: (...args: unknown[]) => rpc(...args),
     functions: { invoke: (...args: unknown[]) => functionsInvoke(...args) },
@@ -30,6 +32,7 @@ vi.mock('../supabaseClient', () => ({
 describe('NotificationsPage', () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({ user: { id: 'user-1', app_metadata: { role: 'admin' } } })
+    getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal1' }, error: null })
     functionsInvoke.mockResolvedValue({ data: { success: true }, error: null, response: null })
     rpc.mockImplementation((_name: string, args: { target_profile_id?: string }) => ({
       maybeSingle: vi.fn().mockResolvedValue(args.target_profile_id === 'user-3'
@@ -138,6 +141,7 @@ describe('NotificationsPage', () => {
     render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
 
     expect((await screen.findByRole('link', { name: '查看申請人: Venue applicant' })).getAttribute('href')).toBe('/profile/user-3')
+    expect((await screen.findByRole('link', { name: '前往安全與隱私設定' })).getAttribute('href')).toBe('/settings/security-privacy')
     await user.click(screen.getByRole('button', { name: '核准申請' }))
 
     await waitFor(() => expect(functionsInvoke).toHaveBeenCalledWith('review-venue-application', {
