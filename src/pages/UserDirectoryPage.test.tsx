@@ -11,7 +11,7 @@ vi.mock('../supabaseClient', () => ({ supabase: { from: (...args: unknown[]) => 
 vi.mock('../components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <div>{children}</div> }))
 
 describe('UserDirectoryPage', () => {
-  beforeEach(() => from.mockReturnValue({ select: vi.fn().mockReturnThis(), neq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [{ id: 'user-a', role_status: 'general', display_name: 'Alice', metadata: {} }], error: null }) }))
+  beforeEach(() => from.mockReturnValue({ select: vi.fn().mockReturnThis(), neq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [{ id: 'user-a', display_name: 'Alice', avatar_path: null }], error: null }) }))
   it('browses other profiles', async () => {
     render(<MemoryRouter><UserDirectoryPage /></MemoryRouter>)
     await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())

@@ -8,7 +8,7 @@ import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
 
 function mapProfile(row: Record<string, unknown>): Profile {
-  return { id: String(row.id ?? ''), role_status: (row.role_status as Profile['role_status']) ?? 'general', display_name: (row.display_name as string | null) ?? null, bio: null, external_social_links: normalizeSocialLinks(null), metadata: (row.metadata as Profile['metadata']) ?? null, reputation_score: 0 }
+  return { id: String(row.id ?? ''), role_status: 'general', display_name: (row.display_name as string | null) ?? null, bio: null, external_social_links: normalizeSocialLinks(null), metadata: row.avatar_path ? { avatar_path: String(row.avatar_path) } : null, reputation_score: 0 }
 }
 
 export function UserDirectoryPage() {
@@ -25,7 +25,7 @@ export function UserDirectoryPage() {
     const load = async () => {
       setLoading(true)
       setError('')
-      const { data, error: queryError } = await supabase.from('profiles').select('id, role_status, display_name, metadata').neq('id', user.id).order('display_name', { ascending: true, nullsFirst: false }).limit(100)
+      const { data, error: queryError } = await supabase.from('public_profiles').select('id, display_name, avatar_path').neq('id', user.id).order('display_name', { ascending: true, nullsFirst: false }).limit(100)
       if (cancelled) return
       if (queryError) { setError(queryError.message); setProfiles([]) } else setProfiles((data ?? []).map((row) => mapProfile(row as Record<string, unknown>)))
       setLoading(false)
