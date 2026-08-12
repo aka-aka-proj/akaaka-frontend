@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
@@ -20,7 +20,9 @@ export function DirectChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [enterToSend, setEnterToSend] = useState(() => localStorage.getItem('akaaka:messages:enter-to-send') !== 'false')
   const endRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -71,7 +73,18 @@ export function DirectChatPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
 
-  const send = async (event: FormEvent) => {
+  useEffect(() => {
+    localStorage.setItem('akaaka:messages:enter-to-send', String(enterToSend))
+  }, [enterToSend])
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`
+  }, [content])
+
+  const send = async (event: FormEvent | KeyboardEvent) => {
     event.preventDefault()
     const trimmed = content.trim()
     if (!conversationId || !user || !trimmed || trimmed.length > 4000) return
@@ -82,20 +95,50 @@ export function DirectChatPage() {
     setSending(false)
   }
 
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey || !enterToSend) return
+    event.preventDefault()
+    if (!sending && content.trim()) void send(event)
+  }
+
+  const formatMessageTime = (createdAt: string) => new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(createdAt))
+
   return <Layout>
     <section className="card direct-chat-page">
-      <p><Link to="/messages">← {t('messages.back')}</Link></p>
-      <h2>{otherProfile?.display_name || t('messages.title')}</h2>
+      <header className="chat-header">
+        <Link to="/messages" className="chat-back-link" aria-label={t('messages.back')}>&larr;</Link>
+        <div>
+          <h2>{otherProfile?.display_name || t('messages.title')}</h2>
+          <p>{t('messages.privateChat')}</p>
+        </div>
+        <span className="chat-header-spacer" aria-hidden="true" />
+      </header>
       {error ? <p className="message">{error}</p> : null}
       {loading ? <p>{t('common.loading')}</p> : <>
         <div className="chat-messages" aria-live="polite">
-          {messages.length === 0 ? <p>{t('messages.noMessages')}</p> : messages.map((message) => <div key={message.id} className={`chat-message ${message.sender_id === user?.id ? 'mine' : ''}`}><span>{message.content}</span><small>{new Date(message.created_at).toLocaleString()}</small></div>)}
+          {messages.length === 0 ? <p>{t('messages.noMessages')}</p> : messages.map((message) => {
+            const isMine = message.sender_id === user?.id
+            return <div key={message.id} className={`chat-message ${isMine ? 'mine' : ''}`}>
+              {!isMine ? <small className="chat-message-sender">{otherProfile?.display_name || t('messages.title')}</small> : null}
+              <span>{message.content}</span>
+              <small className="chat-message-meta"><time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>{isMine ? <span aria-label={t('messages.sentStatus')}> ✓</span> : null}</small>
+            </div>
+          })}
           <div ref={endRef} />
         </div>
         <form className="chat-form" onSubmit={send}>
           <PrivacyDisclosure label={t('privacyDisclosure.label')} description={t('privacyDisclosure.directMessage')} learnMore={t('privacyDisclosure.learnMore')} />
-          <textarea value={content} onChange={(event) => setContent(event.target.value)} maxLength={4000} placeholder={t('messages.placeholder')} aria-label={t('messages.placeholder')} />
-          <button type="submit" disabled={sending || !content.trim()}>{sending ? t('messages.sending') : t('messages.send')}</button>
+          <div className="chat-input-row">
+            <textarea ref={textareaRef} value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={handleInputKeyDown} maxLength={4000} placeholder={t('messages.placeholder')} aria-label={t('messages.placeholder')} rows={1} />
+            <button className="chat-send-button" type="submit" disabled={sending || !content.trim()} aria-label={sending ? t('messages.sending') : t('messages.send')}>
+              <span aria-hidden="true">➤</span><span className="chat-send-label">{sending ? t('messages.sending') : t('messages.send')}</span>
+            </button>
+          </div>
+          <label className="chat-enter-setting">
+            <input type="checkbox" checked={enterToSend} onChange={(event) => setEnterToSend(event.target.checked)} />
+            <span>{t('messages.enterToSend')}</span>
+            <small>{enterToSend ? t('messages.enterToSendHint') : t('messages.enterToLineBreakHint')}</small>
+          </label>
         </form>
       </>}
     </section>
