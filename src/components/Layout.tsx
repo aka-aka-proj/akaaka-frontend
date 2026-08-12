@@ -20,6 +20,7 @@ const BOTTOM_NAV_ITEMS = [
 
 const DESKTOP_MORE_ITEMS = [
   { to: '/messages', icon: 'nav-message', labelKey: 'nav.messages' },
+  { to: '/users', icon: 'nav-profile', labelKey: 'nav.browseUsers' },
   { to: '/following', icon: 'nav-profile', labelKey: 'nav.following' },
   { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
   { to: '/events/bookmarks', icon: 'nav-heart', labelKey: 'nav.bookmarks' },
@@ -32,10 +33,10 @@ const DESKTOP_MORE_ITEMS = [
 ] as const
 
 const DESKTOP_MORE_SECTIONS = [
-  { labelKey: 'nav.activityGroup', items: DESKTOP_MORE_ITEMS.slice(0, 5) },
-  { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(5, 7) },
-  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(7, 8) },
-  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(8, 10) },
+  { labelKey: 'nav.activityGroup', items: DESKTOP_MORE_ITEMS.slice(0, 6) },
+  { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(6, 8) },
+  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(8, 9) },
+  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(9, 11) },
 ] as const
 
 export function Layout({ children }: { children: ReactNode }) {

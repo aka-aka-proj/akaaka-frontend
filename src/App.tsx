@@ -23,6 +23,7 @@ import { MyReportsPage } from './pages/MyReportsPage'
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage'
 import { MessagesPage } from './pages/MessagesPage'
 import { NewMessagePage } from './pages/NewMessagePage'
+import { UserDirectoryPage } from './pages/UserDirectoryPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -196,6 +197,10 @@ function App() {
       <Route
         path="/following"
         element={<ProtectedRoute><FollowingPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/users"
+        element={<ProtectedRoute><UserDirectoryPage /></ProtectedRoute>}
       />
       <Route
         path="/settings/notifications"

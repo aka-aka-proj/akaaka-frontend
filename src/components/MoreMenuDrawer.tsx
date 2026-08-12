@@ -128,6 +128,10 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
             <Icon href="/nav-icons.svg" name="nav-message" size={20} />
             <span>{t('nav.messages')}</span>
           </Link>
+          <Link to="/users" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
+            <span>{t('nav.browseUsers')}</span>
+          </Link>
           <Link to="/following" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
             <span>{t('nav.following')}</span>
