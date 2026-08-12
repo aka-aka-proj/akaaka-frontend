@@ -124,6 +124,8 @@ describe('EditProfilePage', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('Self User')).toBeTruthy()
     })
+    expect(screen.getByRole('link', { name: 'Cancel editing' }).classList.contains('profile-edit-action')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Save profile' }).classList.contains('profile-edit-action')).toBe(true)
 
     await user.clear(screen.getByLabelText('Display name'))
     await user.type(screen.getByLabelText('Display name'), 'Updated User')

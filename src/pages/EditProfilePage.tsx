@@ -306,8 +306,8 @@ export function EditProfilePage() {
         ) : null}
         {!loading ? (
           <div className="profile-edit-actions">
-            <Link to="/profile/me" className="btn-secondary">{t('profile.cancelEdit')}</Link>
-            <button type="submit" disabled={submitting}>{submitting ? t('profile.savingProfile') : t('profile.saveProfile')}</button>
+            <Link to="/profile/me" className="btn-secondary profile-edit-action">{t('profile.cancelEdit')}</Link>
+            <button type="submit" className="profile-edit-action" disabled={submitting}>{submitting ? t('profile.savingProfile') : t('profile.saveProfile')}</button>
           </div>
         ) : null}
       </form>

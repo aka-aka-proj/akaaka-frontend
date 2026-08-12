@@ -1449,6 +1449,44 @@ dd {
   backdrop-filter: blur(8px);
 }
 
+.profile-edit-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 9rem;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.profile-edit-action.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.profile-edit-action:not(.btn-secondary) {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.profile-edit-action:hover:not(:disabled),
+.profile-edit-action:focus-visible {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+  color: var(--color-surface);
+}
+
+.profile-edit-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 @media (max-width: 560px) {
   .avatar-current-picker {
     align-items: flex-start;
@@ -1460,6 +1498,7 @@ dd {
 
   .profile-edit-actions > * {
     flex: 1;
+    min-width: 0;
     justify-content: center;
     text-align: center;
   }
