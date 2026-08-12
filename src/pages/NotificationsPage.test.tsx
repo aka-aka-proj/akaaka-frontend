@@ -37,6 +37,8 @@ describe('NotificationsPage', () => {
     rpc.mockImplementation((_name: string, args: { target_profile_id?: string }) => ({
       maybeSingle: vi.fn().mockResolvedValue(args.target_profile_id === 'user-3'
         ? { data: { id: 'user-3', display_name: 'Venue applicant', role_status: 'venue_pending' }, error: null }
+        : args.target_profile_id === 'user-2'
+          ? { data: { id: 'user-2', display_name: 'Alice', role_status: 'general' }, error: null }
         : { data: null, error: null }),
     }))
     update.mockReturnValue({
@@ -125,6 +127,13 @@ describe('NotificationsPage', () => {
 
     await waitFor(() => expect(screen.getByText('已回追此使用者。')).toBeTruthy())
     expect((screen.getByRole('button', { name: '已回追' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('links the follower name to the follower profile', async () => {
+    render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
+
+    const followerLink = await screen.findByRole('link', { name: 'Alice' })
+    expect(followerLink.getAttribute('href')).toBe('/profile/user-2')
   })
 
   it('can ignore a follow notification by marking it read', async () => {

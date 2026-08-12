@@ -63,11 +63,18 @@ export function NotificationsPage() {
       setEventTitles({})
     }
     if (actorIds.length > 0) {
-      const [{ data: profiles }, { data: follows }] = await Promise.all([
-        supabase.from('profiles').select('id, display_name').in('id', actorIds),
+      const actorProfileRequest = user.app_metadata?.role === 'admin'
+        ? Promise.all(actorIds.map(async (profileId) => {
+          const { data: profile } = await supabase.rpc('get_public_profile', { target_profile_id: profileId }).maybeSingle()
+          const publicProfile = profile as { display_name?: string } | null
+          return publicProfile ? { id: profileId, display_name: publicProfile.display_name ?? null } : null
+        }))
+        : supabase.from('profiles').select('id, display_name').in('id', actorIds).then(({ data }) => data ?? [])
+      const [{ data: follows }, actorProfiles] = await Promise.all([
         supabase.from('user_follows').select('followed_id').eq('follower_id', user.id).in('followed_id', actorIds),
+        actorProfileRequest,
       ])
-      setActorNames(Object.fromEntries((profiles ?? []).map((profile) => [profile.id, profile.display_name || profile.id])))
+      setActorNames(Object.fromEntries(actorProfiles.filter(Boolean).map((profile) => [profile!.id, profile!.display_name || profile!.id])))
       setFollowedBackIds(new Set((follows ?? []).map((follow) => String(follow.followed_id))))
     } else {
       setActorNames({})
@@ -199,12 +206,13 @@ export function NotificationsPage() {
             const isFollowNotification = notification.notification_type === 'new_follow'
             const isVenueApplicationNotification = notification.notification_type === 'venue_application'
             const applicationProfile = notification.venue_application_profile_id ? applicationProfiles[notification.venue_application_profile_id] : undefined
-            const actorName = actorNames[notification.actor_profile_id ?? ''] ?? notification.title
+            const actorId = notification.actor_profile_id
+            const actorName = actorNames[actorId ?? ''] ?? actorId ?? notification.title
             const content = (
               <>
                 <span className="notification-dot" aria-hidden="true" />
                 <span>
-                <strong>{isFollowNotification ? `${t('notifications.newFollow')}: ${actorName}` : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
+                <strong>{isFollowNotification ? <>{t('notifications.newFollow')}: {actorId ? <Link to={`/profile/${actorId}`}>{actorName}</Link> : actorName}</> : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
                 <span className="notification-meta">
                     {isFollowNotification ? t('notifications.newFollow') : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
                   </span>
