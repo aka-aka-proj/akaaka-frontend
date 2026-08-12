@@ -2,12 +2,35 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 const syntheticUserId = '00000000-0000-4000-8000-000000000001'
+const syntheticSupabaseRef = (() => {
+  const url = process.env.VITE_SUPABASE_URL
+  if (!url) return null
+  try {
+    return new URL(url).hostname.split('.')[0] ?? null
+  } catch {
+    return null
+  }
+})()
 const syntheticStorageKeys = [
   'sb-fkqvjchizknuifjxiawe-auth-token',
   'sb-127-auth-token',
-]
+  'sb-localhost-auth-token',
+  syntheticSupabaseRef ? `sb-${syntheticSupabaseRef}-auth-token` : null,
+].filter((key): key is string => Boolean(key))
+const syntheticAccessToken = [
+  Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'),
+  Buffer.from(JSON.stringify({
+    sub: syntheticUserId,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'synthetic@example.test',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  })).toString('base64url'),
+  'synthetic-signature',
+].join('.')
+
 const syntheticSession = {
-  access_token: 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJleHAiOjQxMDI0NDQ4MDAsImlhdCI6MTcwMDAwMDAwMCwiYXVkIjoiYXV0aGVudGljYXRlZCIsImFwcF9tZXRhZGF0YSI6eyJyb2xlIjoiZ2VuZXJhbCJ9fQ.synthetic-signature',
+  access_token: syntheticAccessToken,
   token_type: 'bearer',
   expires_in: 3600,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -86,6 +109,10 @@ async function installAuthenticatedFixture(page: Page) {
 
   await page.route('**/functions/v1/**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+
+  await page.route('**/auth/v1/user', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(syntheticSession.user) })
   })
 }
 
