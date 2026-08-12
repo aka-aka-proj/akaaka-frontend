@@ -39,7 +39,7 @@ const DESKTOP_MORE_SECTIONS = [
   { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(9, 11) },
 ] as const
 
-export function Layout({ children }: { children: ReactNode }) {
+export function Layout({ children, showPageBack = true }: { children: ReactNode; showPageBack?: boolean }) {
   const { user } = useAuth()
   const { locale, setLocale } = useLanguage()
   const { t } = useT()
@@ -191,7 +191,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </label>
         ) : null}
       </header>
-      <PageBackButton />
+      {showPageBack ? <PageBackButton /> : null}
       {user ? <PrivacyNotice /> : null}
       {children}
       {user ? (

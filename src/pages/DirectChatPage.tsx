@@ -103,7 +103,7 @@ export function DirectChatPage() {
 
   const formatMessageTime = (createdAt: string) => new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(createdAt))
 
-  return <Layout>
+  return <Layout showPageBack={false}>
     <section className="card direct-chat-page">
       <header className="chat-header">
         <Link to="/messages" className="chat-back-link" aria-label={t('messages.back')}>&larr;</Link>

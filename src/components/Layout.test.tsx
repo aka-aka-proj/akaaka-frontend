@@ -90,4 +90,14 @@ describe('Layout desktop More menu accessibility', () => {
     expect(screen.getByRole('link', { name: 'Notifications' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Notifications' }).textContent).toContain('Notifications')
   })
+
+  it('can hide the global back button when a page owns its own navigation', () => {
+    render(
+      <MemoryRouter initialEntries={['/messages/conversation-1']}>
+        <Layout showPageBack={false}><p>Content</p></Layout>
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('button', { name: /back/i })).toBeNull()
+  })
 })
