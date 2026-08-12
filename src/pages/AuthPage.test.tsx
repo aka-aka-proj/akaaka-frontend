@@ -112,6 +112,26 @@ describe('AuthPage', () => {
     expect(screen.getByRole('button', { name: /重新發送/ })).toBeTruthy()
   })
 
+  it('returns to the sign-in form after leaving the verification prompt', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
+    await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '建立帳號' }))
+    await user.click(screen.getByRole('button', { name: '返回登入' }))
+
+    expect(screen.getByRole('heading', { name: '登入' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '需要帳號？註冊' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '建立帳號' })).toBeNull()
+  })
+
   it('disables resend button during cooldown', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })

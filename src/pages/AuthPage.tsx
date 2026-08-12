@@ -182,7 +182,7 @@ export function AuthPage() {
               ? t('auth.resendCooldown', { seconds: String(resendCooldown) })
               : t('auth.resendVerification')}
           </button>
-          <button type="button" onClick={() => { setShowVerificationPrompt(false); setMessage(''); navigate('/auth', { replace: true }) }}>
+          <button type="button" onClick={() => { setShowVerificationPrompt(false); setIsSignUp(false); setMessage(''); navigate('/auth', { replace: true }) }}>
             {t('auth.backToSignIn')}
           </button>
           {message ? <p className="message">{message}</p> : null}
