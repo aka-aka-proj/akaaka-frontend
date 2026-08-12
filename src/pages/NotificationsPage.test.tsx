@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NotificationsPage } from './NotificationsPage'
+import { NOTIFICATIONS_CHANGED_EVENT } from '../hooks/useUnreadNotificationCount'
 
 const mockUseAuth = vi.fn()
 const from = vi.fn()
@@ -110,6 +111,7 @@ describe('NotificationsPage', () => {
 
   it('marks all unread notifications as read', async () => {
     const user = userEvent.setup()
+    const dispatchEvent = vi.spyOn(window, 'dispatchEvent')
     render(<MemoryRouter><NotificationsPage /></MemoryRouter>)
 
     const button = await screen.findByRole('button', { name: '全部標為已讀' })
@@ -117,6 +119,8 @@ describe('NotificationsPage', () => {
 
     await waitFor(() => expect(update).toHaveBeenCalledWith({ read_at: expect.any(String) }))
     expect((button as HTMLButtonElement).disabled).toBe(true)
+    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: NOTIFICATIONS_CHANGED_EVENT }))
+    dispatchEvent.mockRestore()
   })
 
   it('lets the recipient follow back from a follow notification', async () => {

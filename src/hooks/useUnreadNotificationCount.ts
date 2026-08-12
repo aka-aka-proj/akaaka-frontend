@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
+export const NOTIFICATIONS_CHANGED_EVENT = 'akaaka:notifications-changed'
+
 export function useUnreadNotificationCount(userId: string | undefined) {
   const [count, setCount] = useState(0)
 
@@ -19,6 +21,11 @@ export function useUnreadNotificationCount(userId: string | undefined) {
 
       if (!cancelled) setCount(unreadCount ?? 0)
     }
+
+    const handleNotificationsChanged = () => {
+      void loadCount()
+    }
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handleNotificationsChanged)
 
     if (!supabase.realtime || typeof supabase.channel !== 'function') {
       void loadCount()
@@ -42,6 +49,7 @@ export function useUnreadNotificationCount(userId: string | undefined) {
 
     return () => {
       cancelled = true
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, handleNotificationsChanged)
       if (channel) void supabase.removeChannel(channel)
     }
   }, [userId])

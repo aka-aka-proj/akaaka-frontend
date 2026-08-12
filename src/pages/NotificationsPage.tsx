@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { NOTIFICATIONS_CHANGED_EVENT } from '../hooks/useUnreadNotificationCount'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface NotificationRow {
@@ -113,6 +114,7 @@ export function NotificationsPage() {
       return
     }
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item))
+    window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT))
   }
 
   const followBack = async (notification: NotificationRow) => {
@@ -166,6 +168,7 @@ export function NotificationsPage() {
       return
     }
     setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })))
+    window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT))
   }
 
   const hasPendingVenueApplication = notifications.some((notification) => (
