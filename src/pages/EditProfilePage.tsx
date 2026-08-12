@@ -163,14 +163,9 @@ export function EditProfilePage() {
             </fieldset>
             <label>
               {t('profile.bioLabel')}
-              <textarea
-                aria-label={t('profile.bioLabel')}
-                value={bio}
-                onChange={(event) => setBio(event.target.value)}
-              />
-            </label>
-            <label>
-              {t('profile.bioVisibilityLabel')}
+              <label>
+                {t('profile.bioVisibilityLabel')}
+              </label>
               <select
                 aria-label={t('profile.bioVisibilityLabel')}
                 value={visibility}
@@ -181,6 +176,11 @@ export function EditProfilePage() {
                 <option value="private">{t('profile.private')}</option>
               </select>
               <VisibilityTooltip fieldName="bio" />
+              <textarea
+                aria-label={t('profile.bioLabel')}
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+              />
             </label>
             <label>
               {t('profile.genderIdentityLabel')}
