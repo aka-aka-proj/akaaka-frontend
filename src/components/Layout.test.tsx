@@ -79,4 +79,15 @@ describe('Layout desktop More menu accessibility', () => {
     await waitFor(() => expect(moreButton.getAttribute('aria-expanded')).toBe('false'))
     expect(document.activeElement).toBe(moreButton)
   })
+
+  it('shows the notification icon entry with a visible label', () => {
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Layout><p>Content</p></Layout>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: 'Notifications' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Notifications' }).textContent).toContain('Notifications')
+  })
 })

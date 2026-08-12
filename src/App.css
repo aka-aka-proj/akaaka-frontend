@@ -798,8 +798,10 @@ dd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   min-width: 44px;
   min-height: 44px;
+  padding: 0.25rem 0.5rem;
   color: #1f2937;
   text-decoration: none;
   border-radius: 0.5rem;

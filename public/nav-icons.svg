@@ -52,6 +52,10 @@
   <symbol id="nav-heart" viewBox="0 0 20 20">
     <path d="M10 17.5l-1.083-.975C4.417 12.583 2 10.417 2 7.75 2 5.583 3.75 3.833 5.917 3.833c1.333 0 2.616.667 3.416 1.667l.667.833.667-.833c.8-1 2.083-1.667 3.416-1.667C16.25 3.833 18 5.583 18 7.75c0 2.667-2.417 4.833-6.917 8.792z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
+  <symbol id="nav-bell" viewBox="0 0 20 20">
+    <path d="M4.167 14.167h11.666l-1.25-1.667V8.333a4.583 4.583 0 0 0-9.166 0V12.5z" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8.333 16.667a1.833 1.833 0 0 0 3.334 0" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
   <symbol id="nav-language" viewBox="0 0 20 20">
     <circle cx="10" cy="10" r="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <ellipse cx="10" cy="10" rx="3.333" ry="7.5" fill="none" stroke="#aa3bff" stroke-width="1.35"/>

@@ -106,6 +106,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="topbar-actions">
           <Link to="/notifications" className="topbar-notification" aria-label={t('nav.notifications')}>
             <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
+            <span>{t('nav.notifications')}</span>
             {user && unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
           </Link>
           {user ? (
