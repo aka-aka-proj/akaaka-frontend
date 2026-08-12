@@ -59,13 +59,29 @@ export function DirectChatPage() {
         setError(messageError?.message ?? '')
         setLoading(false)
       }
+      const unreadIds = ((rows ?? []) as DirectMessage[])
+        .filter((message) => message.sender_id !== user.id && !message.read_at)
+        .map((message) => message.id)
+      if (unreadIds.length > 0) {
+        await supabase.from('direct_messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+      }
     }
     void load()
     const channel = supabase.channel(`direct-conversation:${conversationId}`, { config: { private: true } })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, async (payload) => {
         const incoming = payload.new as DirectMessage
         const { data } = await supabase.from('direct_messages').select('*').eq('id', incoming.id).maybeSingle()
-        if (data && !cancelled) setMessages((current) => current.some((item) => item.id === data.id) ? current : [...current, data as DirectMessage])
+        if (data && !cancelled) {
+          const message = data as DirectMessage
+          setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message])
+          if (message.sender_id !== user.id && !message.read_at) {
+            void supabase.from('direct_messages').update({ read_at: new Date().toISOString() }).eq('id', message.id)
+          }
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
+        const updated = payload.new as DirectMessage
+        if (!cancelled) setMessages((current) => current.map((message) => message.id === updated.id ? updated : message))
       })
       .subscribe((status) => { if (status === 'CHANNEL_ERROR' && !cancelled) setError(t('messages.realtimeError')) })
     return () => { cancelled = true; void supabase.removeChannel(channel) }
@@ -121,7 +137,7 @@ export function DirectChatPage() {
             return <div key={message.id} className={`chat-message ${isMine ? 'mine' : ''}`}>
               {!isMine ? <small className="chat-message-sender">{otherProfile?.display_name || t('messages.title')}</small> : null}
               <span>{message.content}</span>
-              <small className="chat-message-meta"><time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>{isMine ? <span aria-label={t('messages.sentStatus')}> ✓</span> : null}</small>
+              <small className="chat-message-meta"><time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>{isMine ? <span aria-label={message.read_at ? t('messages.readStatus') : t('messages.sentStatus')}> {message.read_at ? '✓✓' : '✓'}</span> : null}</small>
             </div>
           })}
           <div ref={endRef} />

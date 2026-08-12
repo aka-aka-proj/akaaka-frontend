@@ -230,6 +230,8 @@ const zhTW = {
     sending: '傳送中…',
     send: '傳送',
     sentStatus: '已送出',
+    readStatus: '已讀',
+    readStatusLabel: '已讀 ✓✓',
     enterToSend: '按 Enter 送出',
     enterToSendHint: 'Shift + Enter 換行',
     enterToLineBreakHint: 'Enter 換行，請點擊傳送',

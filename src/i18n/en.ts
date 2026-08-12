@@ -231,6 +231,8 @@ const en = {
     sending: 'Sending…',
     send: 'Send',
     sentStatus: 'Sent',
+    readStatus: 'Read',
+    readStatusLabel: 'Read ✓✓',
     enterToSend: 'Press Enter to send',
     enterToSendHint: 'Shift + Enter for a new line',
     enterToLineBreakHint: 'Enter adds a new line; click Send',

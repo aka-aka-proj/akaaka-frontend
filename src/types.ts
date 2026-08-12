@@ -81,6 +81,7 @@ export interface DirectMessage {
   sender_id: string
   content: string
   created_at: string
+  read_at: string | null
 }
 
 export interface EventItem {
