@@ -4,8 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminModerationPanel } from './AdminModerationPanel'
 
-const mockUseAuth = vi.fn()
-const rpc = vi.fn()
+const { mockUseAuth, rpc } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+  rpc: vi.fn(),
+}))
 
 vi.mock('../components/Layout', () => ({
   Layout: ({ children }: { children: ReactNode }) => <div>{children}</div>,

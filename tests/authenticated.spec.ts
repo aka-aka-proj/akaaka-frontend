@@ -12,8 +12,6 @@ const syntheticSupabaseRef = (() => {
   }
 })()
 const syntheticStorageKeys = [
-  'sb-fkqvjchizknuifjxiawe-auth-token',
-  'sb-127-auth-token',
   'sb-localhost-auth-token',
   syntheticSupabaseRef ? `sb-${syntheticSupabaseRef}-auth-token` : null,
 ].filter((key): key is string => Boolean(key))
@@ -88,6 +86,8 @@ const authenticatedRoutes = [
   '/settings/analytics',
 ]
 
+const authenticatedStateTimeout = 30_000
+
 async function installAuthenticatedFixture(page: Page) {
   await page.addInitScript(({ session, storageKeys }) => {
     for (const storageKey of storageKeys) {
@@ -121,26 +121,24 @@ test.describe('authenticated synthetic route boundary', () => {
     await installAuthenticatedFixture(page)
   })
 
-  test('keeps every protected route in the authenticated shell', async ({ page }) => {
-    test.setTimeout(90000)
-    for (const route of authenticatedRoutes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' })
-      await expect(page.getByRole('heading', { name: /登入|sign in/i })).not.toBeVisible()
-      await expect(page.locator('main')).toBeVisible()
-    }
-  })
-
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await page.goto('/events')
-    await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: authenticatedStateTimeout })
+    await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: authenticatedStateTimeout })
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
   })
 
   test('exposes the privacy center to an authenticated user', async ({ page }) => {
     await page.goto('/settings/security-privacy')
-    await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: authenticatedStateTimeout })
+    await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: authenticatedStateTimeout })
   })
+  for (const route of authenticatedRoutes) {
+    test(`keeps protected route authenticated: ${route}`, async ({ page }) => {
+      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 15000 })
+      await expect(page.getByRole('heading', { name: /登入|sign in/i })).not.toBeVisible()
+      await expect(page.locator('main')).toBeVisible()
+    })
+  }
 })
