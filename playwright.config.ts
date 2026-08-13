@@ -8,6 +8,9 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173',
+    // Service-worker behavior has a separate web-push verification scope; blocking it here
+    // keeps synthetic Supabase route interception deterministic across browser projects.
+    serviceWorkers: 'block',
     trace: 'on-first-retry',
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
