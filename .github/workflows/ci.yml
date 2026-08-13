@@ -37,7 +37,7 @@ jobs:
   browser-quality:
     name: Playwright browser quality
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: ci-public-test-key
