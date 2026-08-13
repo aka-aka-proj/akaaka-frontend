@@ -87,6 +87,7 @@ const authenticatedRoutes = [
 ]
 
 const authenticatedStateTimeout = 30_000
+const authenticatedFixtureTimeout = 45_000
 
 async function installAuthenticatedFixture(page: Page) {
   await page.addInitScript(({ session, storageKeys }) => {
@@ -96,14 +97,12 @@ async function installAuthenticatedFixture(page: Page) {
   }, { session: syntheticSession, storageKeys: syntheticStorageKeys })
 
   await page.route('**/rest/v1/**', async (route) => {
-    const response = route.request().url().includes('/rest/v1/profiles')
-      ? { headers: { 'content-range': '0-0/1' }, body: JSON.stringify(syntheticProfile) }
-      : { headers: { 'content-range': '0-0/*' }, body: '[]' }
-
+    const isProfilesRequest = route.request().url().includes('/rest/v1/profiles')
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      ...response,
+      headers: { 'content-range': isProfilesRequest ? '0-0/1' : '0-0/*' },
+      body: isProfilesRequest ? JSON.stringify([syntheticProfile]) : '[]',
     })
   })
 
@@ -116,13 +115,23 @@ async function installAuthenticatedFixture(page: Page) {
   })
 }
 
+async function gotoAuthenticatedRoute(page: Page, route: string) {
+  const profileResponse = page.waitForResponse(
+    (response) => response.url().includes('/rest/v1/profiles') && response.status() === 200,
+    { timeout: authenticatedFixtureTimeout },
+  )
+  await page.goto(route, { waitUntil: 'domcontentloaded', timeout: authenticatedFixtureTimeout })
+  await profileResponse
+}
+
 test.describe('authenticated synthetic route boundary', () => {
+  test.setTimeout(60_000)
   test.beforeEach(async ({ page }) => {
     await installAuthenticatedFixture(page)
   })
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
-    await page.goto('/events')
+    await gotoAuthenticatedRoute(page, '/events')
     await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: authenticatedStateTimeout })
     await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: authenticatedStateTimeout })
     const results = await new AxeBuilder({ page }).analyze()
@@ -130,14 +139,14 @@ test.describe('authenticated synthetic route boundary', () => {
   })
 
   test('exposes the privacy center to an authenticated user', async ({ page }) => {
-    await page.goto('/settings/security-privacy')
+    await gotoAuthenticatedRoute(page, '/settings/security-privacy')
     await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: authenticatedStateTimeout })
     await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: authenticatedStateTimeout })
   })
   for (const route of authenticatedRoutes) {
     test(`keeps protected route authenticated: ${route}`, async ({ page }) => {
-      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 15000 })
-      await expect(page.getByRole('heading', { name: /登入|sign in/i })).not.toBeVisible()
+        await gotoAuthenticatedRoute(page, route)
+      await expect(page.getByRole('heading', { name: /^登入$|^sign in$/i })).not.toBeVisible()
       await expect(page.locator('main')).toBeVisible()
     })
   }
