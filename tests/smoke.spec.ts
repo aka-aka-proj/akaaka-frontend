@@ -103,7 +103,11 @@ test.describe('public event discovery', () => {
       fullPage: true,
       animations: 'disabled',
       // Native language controls are rendered by the host browser/OS; functional coverage remains above.
-      mask: [page.locator('[data-screenshot-mask="native-language-control"]')],
+      // The notification control is also rendered with runner-dependent font/icon antialiasing.
+      mask: [
+        page.locator('[data-screenshot-mask="native-language-control"]'),
+        page.locator('.topbar-notification'),
+      ],
     })
   })
 })
