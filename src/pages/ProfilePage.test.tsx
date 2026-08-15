@@ -7,6 +7,7 @@ import { ProfilePage } from './ProfilePage'
 const mockUseAuth = vi.fn()
 const from = vi.fn()
 const functionsInvoke = vi.fn()
+const linkIdentity = vi.fn()
 const unlinkIdentity = vi.fn()
 const getUserIdentities = vi.fn()
 
@@ -23,6 +24,7 @@ vi.mock('../supabaseClient', () => ({
     from: (...args: unknown[]) => from(...args),
     auth: {
       unlinkIdentity: (...args: unknown[]) => unlinkIdentity(...args),
+      linkIdentity: (...args: unknown[]) => linkIdentity(...args),
       getUserIdentities: (...args: unknown[]) => getUserIdentities(...args),
     },
     functions: {
@@ -52,6 +54,7 @@ function queryBuilder(response: QueryResponse) {
 describe('ProfilePage', () => {
   beforeEach(() => {
     unlinkIdentity.mockReset()
+    linkIdentity.mockReset()
     getUserIdentities.mockReset()
     functionsInvoke.mockReset()
     mockUseAuth.mockReturnValue({
@@ -88,6 +91,7 @@ describe('ProfilePage', () => {
     })
     unlinkIdentity.mockResolvedValue({ error: null })
     getUserIdentities.mockResolvedValue({ data: { identities: [primary, secondary] }, error: null })
+    functionsInvoke.mockResolvedValue({ data: { verified: false }, error: null })
     HTMLDialogElement.prototype.showModal = function showModal() {
       this.setAttribute('open', '')
     }
@@ -110,6 +114,34 @@ describe('ProfilePage', () => {
 
     await waitFor(() => expect(unlinkIdentity).toHaveBeenCalledWith(secondary))
     expect(screen.queryByRole('button', { name: 'Unlink x account' })).toBeNull()
+  })
+
+  it('starts X identity linking from the owner profile', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'viewer-user', role_status: 'general', display_name: 'Self User', bio: 'Own bio',
+        external_social_links: [], metadata: { visibility: { bio: 'public' } }, reputation_score: 1,
+      },
+      error: null,
+    })
+    from.mockImplementation((table: string) => table === 'profiles' ? profilesQuery : queryBuilder({ data: null, error: null }))
+    linkIdentity.mockResolvedValue({ data: { provider: 'x' }, error: null })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/me']}>
+        <Routes>
+          <Route path="/profile/me" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByText('Self User')).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: 'Verify X account' }))
+
+    expect(linkIdentity).toHaveBeenCalledWith({
+      provider: 'x',
+      options: { redirectTo: 'http://localhost:3000/profile/me?social_verification=x' },
+    })
   })
 
   it('blocks self recommendation actions on own profile', async () => {
