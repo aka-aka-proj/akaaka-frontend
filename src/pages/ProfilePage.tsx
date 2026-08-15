@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { canViewBio, getAvatarPath, getBioVisibility, mapProfileRow } from '../lib/profile'
 import { supabase } from '../supabaseClient'
+import { getSocialIdentityRedirect, getSocialVerificationPlatform, type VerifiableSocialPlatform } from '../lib/social-identity'
 import type { Profile } from '../types'
 import type { UserIdentity } from '@supabase/supabase-js'
 
@@ -22,6 +23,7 @@ function maskEmail(email: string | undefined) {
 export function ProfilePage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, identities, refreshProfile } = useAuth()
   const { t } = useT()
   const targetProfileId = id === undefined || id === 'me' ? user?.id ?? '' : id
@@ -45,12 +47,37 @@ export function ProfilePage() {
   const [connectedIdentities, setConnectedIdentities] = useState<UserIdentity[]>(identities ?? [])
   const [identityToUnlink, setIdentityToUnlink] = useState<UserIdentity | null>(null)
   const [isUnlinkingIdentity, setIsUnlinkingIdentity] = useState(false)
+  const [isLinkingIdentity, setIsLinkingIdentity] = useState(false)
+  const socialVerificationInFlight = useRef(false)
   const [isSubmittingVenueApplication, setIsSubmittingVenueApplication] = useState(false)
   const profileUrl = `${window.location.origin}/profile/${targetProfileId}`
 
   useEffect(() => {
     setConnectedIdentities(identities ?? [])
   }, [identities])
+
+  useEffect(() => {
+    const platform = getSocialVerificationPlatform(location.search)
+    if (!isOwner || !user?.id || !platform || socialVerificationInFlight.current) return
+
+    socialVerificationInFlight.current = true
+    setIsLinkingIdentity(true)
+    void (async () => {
+      const { error } = await supabase.functions.invoke('verify-social-identity', {
+        body: { platform, action: 'sync' },
+      })
+      if (error) {
+        setMessage(t('profile.socialIdentityLinkError'))
+      } else {
+        const { data } = await supabase.auth.getUserIdentities()
+        setConnectedIdentities(data?.identities ?? [])
+        setMessage(t('profile.socialIdentityLinked', { provider: platform === 'x' ? 'X' : 'Facebook' }))
+      }
+      setIsLinkingIdentity(false)
+      socialVerificationInFlight.current = false
+      navigate('/profile/me', { replace: true })
+    })()
+  }, [isOwner, user?.id, location.search, navigate, t])
 
   const primaryIdentity = useMemo(() => {
     if (connectedIdentities.length === 0) return null
@@ -71,6 +98,20 @@ export function ProfilePage() {
     const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
     return externalLink?.url ?? null
   }, [isOwner, connectedIdentities, profile])
+
+  const linkSocialIdentity = async (platform: VerifiableSocialPlatform) => {
+    if (isLinkingIdentity) return
+    setIsLinkingIdentity(true)
+    setMessage('')
+    const { error } = await supabase.auth.linkIdentity({
+      provider: platform,
+      options: { redirectTo: getSocialIdentityRedirect(window.location.origin, platform) },
+    })
+    if (error) {
+      setIsLinkingIdentity(false)
+      setMessage(t('profile.socialIdentityLinkError'))
+    }
+  }
 
   const bioVisibility = getBioVisibility(profile)
   const showBio = profile
@@ -372,6 +413,14 @@ export function ProfilePage() {
         return
       }
 
+      const { error: revokeError } = await supabase.functions.invoke('verify-social-identity', {
+        body: { platform: latestTargetIdentity.provider, action: 'revoke' },
+      })
+      if (revokeError) {
+        setMessage(t('profile.unlinkAccountError'))
+        return
+      }
+
       setConnectedIdentities((current) => current.filter(identity => identity.identity_id !== targetIdentityId))
       setMessage(t('profile.unlinkAccountSuccess', { provider: latestTargetIdentity.provider }))
       setIdentityToUnlink(null)
@@ -632,6 +681,11 @@ export function ProfilePage() {
               ) : t('profile.noConnectedAccounts')}
             </dd>
           </dl>
+          {!connectedIdentities.some((identity) => identity.provider === 'x' || identity.provider === 'twitter') ? (
+            <button type="button" onClick={() => void linkSocialIdentity('x')} disabled={isLinkingIdentity}>
+              {t('profile.linkXAccount')}
+            </button>
+          ) : null}
           <button type="button" onClick={() => void handleSignOut()}>
             {t('nav.signOut')}
           </button>

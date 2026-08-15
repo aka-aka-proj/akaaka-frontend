@@ -94,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // 只有在 session 載入後才執行 Profile 同步
     if (isAuthLoading) return
 
     if (!session?.user.id) {
@@ -103,29 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // 自動同步 OAuth 資訊至 external_social_links (若適用)
-    const syncSocialConnections = async () => {
-      const identities = session.user.identities
-      if (!identities) return
-      
-      const twitter = identities.find(i => i.provider === 'x')
-      if (twitter && twitter.identity_data?.user_name) {
-        const twitterUrl = `https://x.com/${twitter.identity_data.user_name}`
-        const currentLinks = profile?.external_social_links ?? []
-        
-        if (!currentLinks.find(l => l.platform === 'x')) {
-          const newLinks = [...currentLinks, { platform: 'x' as const, url: twitterUrl, is_connected: true }]
-          await supabase
-            .from('profiles')
-            .update({ external_social_links: newLinks })
-            .eq('id', session.user.id)
-          await refreshProfile()
-        }
-      }
-    }
-
     void refreshProfile()
-    void syncSocialConnections()
   }, [session?.user.id, isAuthLoading])
 
   const hasOnboarded = profile !== null
