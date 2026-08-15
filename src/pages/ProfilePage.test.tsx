@@ -56,6 +56,7 @@ describe('ProfilePage', () => {
     unlinkIdentity.mockReset()
     linkIdentity.mockReset()
     getUserIdentities.mockReset()
+    getUserIdentities.mockResolvedValue({ data: { identities: [] }, error: null })
     functionsInvoke.mockReset()
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
@@ -70,7 +71,7 @@ describe('ProfilePage', () => {
         role_status: 'general',
         display_name: 'Self User',
         bio: 'Own bio',
-        external_social_links: [],
+        external_social_links: [{ platform: 'x', url: 'https://x.com/legacy-link' }],
         metadata: { visibility: { bio: 'public' } },
         reputation_score: 1,
       },
@@ -90,7 +91,10 @@ describe('ProfilePage', () => {
       return queryBuilder({ data: null, error: null })
     })
     unlinkIdentity.mockResolvedValue({ error: null })
-    getUserIdentities.mockResolvedValue({ data: { identities: [primary, secondary] }, error: null })
+    getUserIdentities
+      .mockResolvedValueOnce({ data: { identities: [primary, secondary] }, error: null })
+      .mockResolvedValueOnce({ data: { identities: [primary, secondary] }, error: null })
+      .mockResolvedValueOnce({ data: { identities: [primary] }, error: null })
     functionsInvoke.mockResolvedValue({ data: { verified: false }, error: null })
     HTMLDialogElement.prototype.showModal = function showModal() {
       this.setAttribute('open', '')
@@ -114,6 +118,8 @@ describe('ProfilePage', () => {
 
     await waitFor(() => expect(unlinkIdentity).toHaveBeenCalledWith(secondary))
     expect(screen.queryByRole('button', { name: 'Unlink x account' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'X' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Verify X account' })).toBeTruthy()
   })
 
   it('starts X identity linking from the owner profile', async () => {
