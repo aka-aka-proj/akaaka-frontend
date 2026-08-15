@@ -3,6 +3,13 @@ export const VIRTUAL_LOVER_PROVIDER_POLICY = {
   data_collection: 'deny',
 } as const
 
+export const VIRTUAL_LOVER_MODELS = [
+  'aion-labs/aion-3.0-mini',
+  'minimax/minimax-m2-her',
+  'cognitivecomputations/dolphin-mistral-24b-venice-edition',
+  'deepseek/deepseek-v4-flash',
+] as const
+
 interface ProviderKeyResponse {
   provider_key?: string
   error?: string
