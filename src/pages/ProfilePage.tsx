@@ -57,6 +57,21 @@ export function ProfilePage() {
   }, [identities])
 
   useEffect(() => {
+    if (!isOwner || !user?.id) return
+
+    let cancelled = false
+    void supabase.auth.getUserIdentities().then(({ data, error }) => {
+      if (!cancelled && !error) {
+        setConnectedIdentities(data?.identities ?? [])
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOwner, user?.id])
+
+  useEffect(() => {
     const platform = getSocialVerificationPlatform(location.search)
     if (!isOwner || !user?.id || !platform || socialVerificationInFlight.current) return
 
@@ -88,7 +103,7 @@ export function ProfilePage() {
   }, [connectedIdentities])
 
   const xProfileUrl = useMemo(() => {
-    if (isOwner && connectedIdentities) {
+    if (isOwner) {
       const twitterIdentity = connectedIdentities.find(i => i.provider === 'twitter' || i.provider === 'x')
       return twitterIdentity?.identity_data?.user_name 
         ? `https://x.com/${twitterIdentity.identity_data.user_name}` 
@@ -416,12 +431,15 @@ export function ProfilePage() {
       const { error: revokeError } = await supabase.functions.invoke('verify-social-identity', {
         body: { platform: latestTargetIdentity.provider, action: 'revoke' },
       })
+      const { data: reconciledData } = await supabase.auth.getUserIdentities()
+      const reconciledIdentities = reconciledData?.identities ?? []
       if (revokeError) {
+        setConnectedIdentities(reconciledIdentities)
         setMessage(t('profile.unlinkAccountError'))
         return
       }
 
-      setConnectedIdentities((current) => current.filter(identity => identity.identity_id !== targetIdentityId))
+      setConnectedIdentities(reconciledIdentities)
       setMessage(t('profile.unlinkAccountSuccess', { provider: latestTargetIdentity.provider }))
       setIdentityToUnlink(null)
     } finally {
@@ -599,7 +617,7 @@ export function ProfilePage() {
               </p>
               <ul className="social-links-list">
                 {profile.external_social_links
-                  .filter((link) => link.platform !== 'x' || !xProfileUrl)
+                  .filter((link) => link.platform !== 'x' || (!isOwner && !xProfileUrl))
                   .map((link) => (
                   <li key={`${link.platform}-${link.url}`} className="social-link-item">
                     <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.platform}>
