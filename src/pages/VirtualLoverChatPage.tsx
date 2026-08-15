@@ -5,12 +5,16 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
+import {
+  provisionBrowserProviderKey,
+  requestProviderChat,
+  VIRTUAL_LOVER_MODELS,
+} from '../lib/virtual-lover-provider'
 
 interface AiCharacter {
   id: string
   name: string
   persona: string
-  memory: string | null
 }
 
 interface ChatMessage {
@@ -42,7 +46,7 @@ export function VirtualLoverChatPage() {
   const [usedModel, setUsedModel] = useState('')
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [providerKey, setProviderKey] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -58,7 +62,7 @@ export function VirtualLoverChatPage() {
       if (!id) return
       const { data, error } = await supabase
         .from('ai_characters')
-        .select('*')
+        .select('id, name, persona')
         .eq('id', id)
         .maybeSingle()
 
@@ -82,39 +86,6 @@ export function VirtualLoverChatPage() {
         }
       }
 
-      // Load the latest conversation and its messages
-      const { data: latestConv } = await supabase
-        .from('ai_conversations')
-        .select('id')
-        .eq('character_id', data.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (latestConv) {
-        setConversationId(latestConv.id)
-        const { data: msgs } = await supabase
-          .from('ai_messages')
-          .select('role, content')
-          .eq('conversation_id', latestConv.id)
-          .order('created_at', { ascending: true })
-
-        if (msgs && msgs.length > 0) {
-          setMessages(msgs as ChatMessage[])
-        }
-      } else {
-        // Auto-create first conversation if none exists
-        const { data: newConv } = await supabase
-          .from('ai_conversations')
-          .insert({ character_id: data.id })
-          .select('id')
-          .single()
-
-        if (newConv) {
-          setConversationId(newConv.id)
-        }
-      }
-
       setLoading(false)
     }
 
@@ -134,35 +105,23 @@ export function VirtualLoverChatPage() {
       }
     }
 
-    const pickRandomModel = async () => {
-      if (!id) return
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) return
-        const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-        const data = await res.json()
-        if (data.model) setUsedModel(data.model)
-      } catch {
-        // silently fail, model will be set from SSE later
-      }
-    }
-
     const provisionLlmKey = async () => {
       if (!user?.id) return
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) return
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/llm-key`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      try {
+        const key = await provisionBrowserProviderKey(
+          import.meta.env.VITE_SUPABASE_URL as string,
+          session.access_token,
+        )
+        setProviderKey(key)
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'Unable to unlock AI provider')
+      }
     }
 
     void loadCharacter()
     void loadFeedback()
-    void pickRandomModel()
     void provisionLlmKey()
   }, [id, user?.id])
 
@@ -175,41 +134,24 @@ export function VirtualLoverChatPage() {
     setInput('')
     setStreaming(true)
 
-    // Save user message to DB immediately
-    if (conversationId) {
-      await supabase.from('ai_messages').insert({
-        conversation_id: conversationId,
-        role: 'user',
-        content: userMessage.content,
-      }).select().maybeSingle()
-    }
-
     let assistantContent = ''
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('Authentication required')
-      const functionUrl = `${supabaseUrl}/functions/v1/chat`
-
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          characterPersona: {
-            id: character.id,
-            name: character.name,
-            bio: character.persona,
-          },
-          userProfile,
-          sessionMessageCount: messages.length + 1,
-          preferredModel: usedModel || undefined,
-        }),
-      })
+      if (!providerKey) throw new Error('llm_key_unavailable')
+      const userContext = userProfile
+        ? [
+          userProfile.display_name ? `Name: ${userProfile.display_name}` : '',
+          userProfile.bio ? `Self introduction: ${userProfile.bio}` : '',
+          userProfile.metadata?.gender_identity ? `Gender identity: ${userProfile.metadata.gender_identity}` : '',
+          userProfile.metadata?.bdsm_roles?.length ? `BDSM roles: ${userProfile.metadata.bdsm_roles.join(', ')}` : '',
+        ].filter(Boolean).join('\n')
+        : ''
+      const systemPrompt = `You are ${character.name}, a fictional adult romantic roleplay character speaking natural Traditional Chinese.\n\nPersonality: ${character.persona}\n\nThis is a private, consenting-adults-only roleplay. Never involve minors, coercion, real-world harm, or non-consensual sexual activity. If the user says stop, uses a safeword, or sounds uncomfortable, stop sexual escalation immediately and respond with brief reassurance and aftercare.${userContext ? `\n\nAbout the user you are talking to:\n${userContext}` : ''}`
+      const response = await requestProviderChat(
+        providerKey,
+        usedModel || VIRTUAL_LOVER_MODELS[0],
+        [{ role: 'system', content: systemPrompt }, ...updatedMessages],
+      )
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
@@ -272,28 +214,13 @@ export function VirtualLoverChatPage() {
       setMessage(err instanceof Error ? err.message : 'Error during chat')
     } finally {
       setStreaming(false)
-      // Save assistant message to DB after streaming completes
-      if (conversationId && assistantContent) {
-        await supabase.from('ai_messages').insert({
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: assistantContent,
-        }).select().maybeSingle()
-      }
-    }
+  }
   }
 
   const startNewConversation = async () => {
     if (!character) return
-    const { data } = await supabase.from('ai_conversations').insert({
-      character_id: character.id,
-    }).select('id').single()
-
-    if (data) {
-      setConversationId(data.id)
-      setMessages([])
-      setMessage('')
-    }
+    setMessages([])
+    setMessage('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -304,21 +231,10 @@ export function VirtualLoverChatPage() {
   }
 
   const handleShuffle = async () => {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) return
-      const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-      const data = await res.json()
-      if (data.model) {
-        setUsedModel(data.model)
-        setFeedback(null)
-      }
-    } catch {
-      // silently fail
-    }
+    const currentIndex = VIRTUAL_LOVER_MODELS.indexOf(usedModel as typeof VIRTUAL_LOVER_MODELS[number])
+    const nextIndex = (currentIndex + 1) % VIRTUAL_LOVER_MODELS.length
+    setUsedModel(VIRTUAL_LOVER_MODELS[nextIndex])
+    setFeedback(null)
   }
 
   const handleFeedback = async (type: 'like' | 'dislike') => {
