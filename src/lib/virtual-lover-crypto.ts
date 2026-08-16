@@ -31,8 +31,10 @@ function base64UrlToBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0))
 }
 
-function asArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return Uint8Array.from(bytes).buffer
+function asBuffer(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return copy
 }
 
 function addressBytes(address: RecordAddress): Uint8Array {
@@ -82,7 +84,7 @@ export async function unwrapVaultKey(
 ): Promise<CryptoKey> {
   return crypto.subtle.unwrapKey(
     'raw',
-    asArrayBuffer(base64UrlToBytes(wrappedVaultKey)),
+    asBuffer(base64UrlToBytes(wrappedVaultKey)),
     devicePrivateKey,
     { name: 'RSA-OAEP' },
     { name: 'AES-GCM', length: 256 },
@@ -98,7 +100,7 @@ export async function encryptRecord(
 ): Promise<EncryptedRecord> {
   const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES))
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: asArrayBuffer(nonce), additionalData: asArrayBuffer(addressBytes(address)) },
+    { name: 'AES-GCM', iv: asBuffer(nonce), additionalData: asBuffer(addressBytes(address)) },
     vaultKey,
     encoder.encode(plaintext),
   )
@@ -121,11 +123,11 @@ export async function decryptRecord(
   const plaintext = await crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
-      iv: asArrayBuffer(base64UrlToBytes(record.nonce)),
-      additionalData: asArrayBuffer(addressBytes(address)),
+      iv: asBuffer(base64UrlToBytes(record.nonce)),
+      additionalData: asBuffer(addressBytes(address)),
     },
     vaultKey,
-    asArrayBuffer(base64UrlToBytes(record.ciphertext)),
+    asBuffer(base64UrlToBytes(record.ciphertext)),
   )
   return decoder.decode(plaintext)
 }
