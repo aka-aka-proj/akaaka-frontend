@@ -10,6 +10,13 @@ import {
   requestProviderChat,
   VIRTUAL_LOVER_MODELS,
 } from '../lib/virtual-lover-provider'
+import {
+  runVirtualLoverMigrationBatch,
+  type MigrationState,
+  VIRTUAL_LOVER_MIGRATION_VERSION,
+} from '../lib/virtual-lover-migration'
+import { createSupabaseVirtualLoverMigrationAdapter } from '../lib/virtual-lover-migration-supabase'
+import { unlockOrEnrollVirtualLoverVault } from '../lib/virtual-lover-vault'
 
 interface AiCharacter {
   id: string
@@ -47,6 +54,9 @@ export function VirtualLoverChatPage() {
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
   const [providerKey, setProviderKey] = useState<string | null>(null)
+  const [migrationState, setMigrationState] = useState<MigrationState | null>(null)
+  const [migrationBusy, setMigrationBusy] = useState(false)
+  const [migrationError, setMigrationError] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -56,6 +66,20 @@ export function VirtualLoverChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages, streaming, scrollToBottom])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!user?.id) return () => { cancelled = true }
+    const adapter = createSupabaseVirtualLoverMigrationAdapter()
+    void adapter.loadOrCreateMigration(user.id, VIRTUAL_LOVER_MIGRATION_VERSION)
+      .then((state) => {
+        if (!cancelled) setMigrationState(state)
+      })
+      .catch(() => {
+        if (!cancelled) setMigrationError(t('virtualLover.migrationBlocked'))
+      })
+    return () => { cancelled = true }
+  }, [t, user?.id])
 
   useEffect(() => {
     const loadCharacter = async () => {
@@ -258,6 +282,39 @@ export function VirtualLoverChatPage() {
     }
   }
 
+  const startEncryptionMigration = async () => {
+    if (!user?.id || migrationBusy || migrationState?.status === 'complete') return
+    if (!window.confirm(t('virtualLover.migrationNotice'))) return
+
+    setMigrationBusy(true)
+    setMigrationError('')
+    try {
+      const unlock = await unlockOrEnrollVirtualLoverVault(user.id)
+      if (unlock.status === 'recovery_required') {
+        setMigrationError(t('virtualLover.migrationRecoveryRequired'))
+        return
+      }
+
+      const adapter = createSupabaseVirtualLoverMigrationAdapter()
+      let latest = migrationState
+      for (let batch = 0; batch < 1000; batch += 1) {
+        const result = await runVirtualLoverMigrationBatch(adapter, user.id, unlock.vaultKey)
+        latest = result.state
+        setMigrationState(result.state)
+        if (result.blocked) {
+          setMigrationError(t('virtualLover.migrationBlocked'))
+          return
+        }
+        if (result.state.status === 'complete') return
+      }
+      if (latest?.status !== 'complete') setMigrationError(t('virtualLover.migrationBlocked'))
+    } catch (error) {
+      setMigrationError(error instanceof Error ? error.message : t('virtualLover.migrationBlocked'))
+    } finally {
+      setMigrationBusy(false)
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -295,6 +352,19 @@ export function VirtualLoverChatPage() {
           </button>
         </div>
       </div>
+      {migrationState && migrationState.status !== 'complete' ? (
+        <section className="card" aria-labelledby="virtual-lover-migration-title" style={{ margin: '1rem 0' }}>
+          <h2 id="virtual-lover-migration-title" style={{ marginTop: 0 }}>{t('virtualLover.migrationTitle')}</h2>
+          <p>{t('virtualLover.migrationNotice')}</p>
+          {migrationState.legacyRowsCleared > 0 ? (
+            <p role="status">{t('virtualLover.migrationProgress').replace('{count}', String(migrationState.legacyRowsCleared))}</p>
+          ) : null}
+          {migrationError ? <p className="message" role="alert">{migrationError}</p> : null}
+          <button type="button" onClick={() => void startEncryptionMigration()} disabled={migrationBusy}>
+            {migrationBusy ? t('virtualLover.migrationStarting') : t('virtualLover.migrationStart')}
+          </button>
+        </section>
+      ) : null}
       <div>
         {t('virtualLover.nameLabel')}: <span style={{ fontStyle: 'italic', color: '#6b7280' }}>{character.name}</span>
         <br />

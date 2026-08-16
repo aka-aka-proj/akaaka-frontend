@@ -194,6 +194,15 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
             <span>{t('nav.myReports')}</span>
           </Link>
 
+          <a href="mailto:akaaka.events@gmail.com" className="more-drawer-item">
+            <span aria-hidden="true">✉</span>
+            <span>{t('nav.techSupportEmail')}</span>
+          </a>
+          <a href="https://x.com/AkaAkaEvents" target="_blank" rel="noopener noreferrer" className="more-drawer-item">
+            <span aria-hidden="true">𝕏</span>
+            <span>{t('nav.techSupportX')}</span>
+          </a>
+
           <div className="more-drawer-divider" />
 
           {user ? (

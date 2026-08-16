@@ -43,6 +43,8 @@ vi.mock('../hooks/useT', () => ({
       'nav.securityPrivacy': 'Security & Privacy',
       'nav.myIssues': 'My issues',
       'nav.myReports': 'My reports',
+      'nav.techSupportEmail': 'Technical support: akaaka.events@gmail.com',
+      'nav.techSupportX': 'Follow @AkaAkaEvents on X',
       'nav.signOut': 'Sign out',
     }[key] ?? key),
   }),
@@ -104,5 +106,15 @@ describe('MoreMenuDrawer accessibility', () => {
 
     expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications')
     expect(screen.getByRole('link', { name: 'Notification settings' }).getAttribute('href')).toBe('/settings/notifications')
+  })
+
+  it('exposes technical support email and X links', () => {
+    render(<MoreMenuDrawer open onClose={vi.fn()} />)
+
+    expect(screen.getByRole('link', { name: 'Technical support: akaaka.events@gmail.com' }).getAttribute('href')).toBe('mailto:akaaka.events@gmail.com')
+    const xLink = screen.getByRole('link', { name: 'Follow @AkaAkaEvents on X' })
+    expect(xLink.getAttribute('href')).toBe('https://x.com/AkaAkaEvents')
+    expect(xLink.getAttribute('target')).toBe('_blank')
+    expect(xLink.getAttribute('rel')).toBe('noopener noreferrer')
   })
 })
