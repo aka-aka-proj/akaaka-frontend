@@ -83,6 +83,7 @@ const zhTW = {
     haveAccount: '已有帳號？登入',
     needAccount: '需要帳號？註冊',
     emailRequired: '請輸入電子郵件和密碼。',
+    passwordConfirmLabel: '確認密碼',
     signUpSuccess: '註冊成功。',
     verificationSent: '驗證信已發送至您的電子郵件，請點擊信中連結完成驗證。',
     resendVerification: '重新發送驗證信',
