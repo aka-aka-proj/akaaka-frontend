@@ -142,7 +142,7 @@ export function VirtualLoverChatPage() {
         setProviderKey(key)
         const models = await listZdrModels(key)
         setAvailableModels(models)
-        if (models.length === 0) setMessage('目前沒有符合 Zero Data Retention 的可用模型。')
+        setMessage(models.length === 0 ? '目前沒有符合 Zero Data Retention 的可用模型。' : '')
       } catch (error) {
         setMessage(error instanceof Error && error.message === 'provider_zdr_unavailable'
           ? '目前沒有符合 Zero Data Retention 的可用模型。'
@@ -170,11 +170,12 @@ export function VirtualLoverChatPage() {
     setInput('')
     setStreaming(true)
 
+    const requestedModel = usedModel
     let assistantContent = ''
 
     try {
       if (!providerKey) throw new Error('llm_key_unavailable')
-      if (!usedModel || !availableModels.includes(usedModel)) throw new Error('provider_zdr_unavailable')
+      if (!requestedModel || !availableModels.includes(requestedModel)) throw new Error('provider_zdr_unavailable')
       const userContext = userProfile
         ? [
           userProfile.display_name ? `Name: ${userProfile.display_name}` : '',
@@ -186,7 +187,7 @@ export function VirtualLoverChatPage() {
       const systemPrompt = `You are ${character.name}, a fictional adult romantic roleplay character speaking natural Traditional Chinese.\n\nPersonality: ${character.persona}\n\nThis is a private, consenting-adults-only roleplay. Never involve minors, coercion, real-world harm, or non-consensual sexual activity. If the user says stop, uses a safeword, or sounds uncomfortable, stop sexual escalation immediately and respond with brief reassurance and aftercare.${userContext ? `\n\nAbout the user you are talking to:\n${userContext}` : ''}`
       const response = await requestProviderChat(
         providerKey,
-        usedModel,
+        requestedModel,
         [{ role: 'system', content: systemPrompt }, ...updatedMessages],
       )
 
@@ -252,12 +253,12 @@ export function VirtualLoverChatPage() {
         }
       }
     } catch (err) {
-      setMessage(err instanceof Error && err.message === 'provider_zdr_unavailable'
-        ? '目前沒有符合 Zero Data Retention 的可用模型。'
-        : err instanceof Error ? err.message : 'Error during chat')
       if (err instanceof Error && err.message === 'provider_zdr_unavailable') {
-        setAvailableModels([])
+        setAvailableModels((models) => models.filter((model) => model !== requestedModel))
         setUsedModel('')
+        setMessage('目前選用的 ZDR model 暫時不可用，請改用其他可用模型或重新載入。')
+      } else {
+        setMessage(err instanceof Error ? err.message : 'Error during chat')
       }
     } finally {
       setStreaming(false)
