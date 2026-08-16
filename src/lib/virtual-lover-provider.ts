@@ -50,8 +50,10 @@ export async function listZdrModels(providerKey: string): Promise<string[]> {
 
   const zdrCatalog = readModelIds(await zdrResponse.json() as ProviderModelsResponse)
   const userCatalog = readModelIds(await userResponse.json() as ProviderModelsResponse)
-  return VIRTUAL_LOVER_MODELS.filter((model) => zdrCatalog.has(model) && userCatalog.has(model))
-    .concat([...userCatalog].filter((model) => zdrCatalog.has(model) && !VIRTUAL_LOVER_MODELS.includes(model as typeof VIRTUAL_LOVER_MODELS[number])))
+  return [
+    ...VIRTUAL_LOVER_MODELS.filter((model) => zdrCatalog.has(model) && userCatalog.has(model)),
+    ...[...userCatalog].filter((model) => zdrCatalog.has(model) && !VIRTUAL_LOVER_MODELS.includes(model as typeof VIRTUAL_LOVER_MODELS[number])),
+  ]
 }
 
 interface ProviderKeyResponse {
