@@ -49,7 +49,9 @@ describe('Virtual Lover browser provider boundary', () => {
   })
 
   it('fails closed when the provider has no usable ZDR catalog', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    ).mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
     )
     await expect(listZdrModels('secret-key')).resolves.toEqual([])
