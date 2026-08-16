@@ -227,7 +227,7 @@ export function AuthPage() {
             aria-label={t('common.password')}
             type="password"
             value={password}
-            autoComplete="current-password"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
