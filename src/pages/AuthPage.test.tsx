@@ -105,6 +105,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
 
     expect(screen.getByText('驗證信已發送至您的電子郵件，請點擊信中連結完成驗證。')).toBeTruthy()
@@ -124,6 +125,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
     await user.click(screen.getByRole('button', { name: '返回登入' }))
 
@@ -144,6 +146,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
 
     const resendButton = screen.getByRole('button', { name: /重新發送/ })
@@ -165,6 +168,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
 
     act(() => { vi.advanceTimersByTime(60000) })
@@ -206,6 +210,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'existing@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
 
     expect(screen.getByText('此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。')).toBeTruthy()
@@ -226,6 +231,7 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     await user.type(screen.getByLabelText('電子郵件'), 'existing@example.com')
     await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'password123')
     await user.click(screen.getByRole('button', { name: '建立帳號' }))
 
     expect(screen.getByText('此電子郵件已註冊，請使用原有的社交登入方式（Google、Facebook 或 Apple）登入。')).toBeTruthy()
@@ -275,5 +281,37 @@ describe('AuthPage', () => {
     expect(screen.getByRole('button', { name: '忘記密碼？' })).toBeTruthy()
     await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
     expect(screen.queryByRole('button', { name: '忘記密碼？' })).toBeNull()
+  })
+
+  it('shows password mismatch error on signup when passwords do not match', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '需要帳號？註冊' }))
+    await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.type(screen.getByLabelText('確認密碼'), 'differentPassword')
+    await user.click(screen.getByRole('button', { name: '建立帳號' }))
+
+    expect(screen.getByText('兩次輸入的密碼不一致。')).toBeTruthy()
+  })
+
+  it('does not show password mismatch error on sign-in when confirm password field differs', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AuthPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByLabelText('電子郵件'), 'test@example.com')
+    await user.type(screen.getByLabelText('密碼'), 'password123')
+    await user.click(screen.getByRole('button', { name: '登入' }))
+
+    expect(signInWithPassword).toHaveBeenCalled()
   })
 })

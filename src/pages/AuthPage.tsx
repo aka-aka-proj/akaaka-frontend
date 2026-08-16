@@ -31,6 +31,7 @@ export function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
@@ -122,6 +123,10 @@ export function AuthPage() {
     event.preventDefault()
     if (email.trim().length === 0 || password.trim().length === 0) {
       setMessage(t('auth.emailRequired'))
+      return
+    }
+    if (isSignUp && password !== passwordConfirm) {
+      setMessage(t('auth.passwordMismatch'))
       return
     }
     if (turnstileSiteKey && !captchaToken) {
@@ -222,10 +227,24 @@ export function AuthPage() {
             aria-label={t('common.password')}
             type="password"
             value={password}
-            autoComplete="current-password"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
+        {isSignUp ? (
+          <label className="form-field">
+            <span className="form-label-row">
+              <Icon href="/form-icons.svg" name="form-lock" size={16} /> {t('auth.passwordConfirmLabel')}
+            </span>
+            <input
+              aria-label={t('auth.passwordConfirmLabel')}
+              type="password"
+              value={passwordConfirm}
+              autoComplete="new-password"
+              onChange={(event) => setPasswordConfirm(event.target.value)}
+            />
+          </label>
+        ) : null}
         <button type="submit" disabled={loading}>
           {isSignUp ? t('auth.createAccount') : t('auth.signIn')}
         </button>

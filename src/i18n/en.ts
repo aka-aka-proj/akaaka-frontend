@@ -83,6 +83,7 @@ const en = {
     haveAccount: 'Have an account? Sign In',
     needAccount: 'Need an account? Sign Up',
     emailRequired: 'Email and password are required.',
+    passwordConfirmLabel: 'Confirm password',
     signUpSuccess: 'Sign up successful.',
     verificationSent: 'A verification email has been sent. Please click the link in the email to verify your account.',
     resendVerification: 'Resend verification email',
