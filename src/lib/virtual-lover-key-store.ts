@@ -6,11 +6,13 @@ export interface DevicePrivateKeyRecord {
   userId: string
   deviceId: string
   privateKey: CryptoKey
+  publicKeyJwk?: JsonWebKey
 }
 
 export interface DeviceKeyStore {
   save(record: DevicePrivateKeyRecord): Promise<void>
   load(userId: string, deviceId: string): Promise<DevicePrivateKeyRecord | undefined>
+  loadAny(userId: string): Promise<DevicePrivateKeyRecord | undefined>
   remove(userId: string, deviceId: string): Promise<void>
   clearUser(userId: string): Promise<void>
 }
@@ -73,7 +75,31 @@ export function createIndexedDbDeviceKeyStore(
       const result = await requestResult<DevicePrivateKeyRecord & { key: string }>(
         transaction.objectStore(STORE_NAME).get(recordKey(userId, deviceId)),
       )
-      return result ? { userId: result.userId, deviceId: result.deviceId, privateKey: result.privateKey } : undefined
+      return result
+        ? { userId: result.userId, deviceId: result.deviceId, privateKey: result.privateKey, publicKeyJwk: result.publicKeyJwk }
+        : undefined
+    },
+    async loadAny(userId) {
+      assertIdentifier(userId, 'user_id')
+      const database = await openDatabase()
+      const transaction = database.transaction(STORE_NAME, 'readonly')
+      const request = transaction.objectStore(STORE_NAME).openCursor()
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => {
+          const cursor = request.result
+          if (!cursor) {
+            resolve(undefined)
+            return
+          }
+          const value = cursor.value as DevicePrivateKeyRecord & { key: string }
+          if (value.userId === userId) {
+            resolve({ userId: value.userId, deviceId: value.deviceId, privateKey: value.privateKey, publicKeyJwk: value.publicKeyJwk })
+            return
+          }
+          cursor.continue()
+        }
+        request.onerror = () => reject(request.error ?? new Error('indexeddb_cursor_failed'))
+      })
     },
     async remove(userId, deviceId) {
       assertIdentifier(userId, 'user_id')
@@ -113,6 +139,11 @@ export function createMemoryDeviceKeyStore(): DeviceKeyStore {
       assertIdentifier(userId, 'user_id')
       assertIdentifier(deviceId, 'device_id')
       return records.get(recordKey(userId, deviceId))
+    },
+    async loadAny(userId) {
+      assertIdentifier(userId, 'user_id')
+      for (const record of records.values()) if (record.userId === userId) return record
+      return undefined
     },
     async remove(userId, deviceId) {
       assertIdentifier(userId, 'user_id')

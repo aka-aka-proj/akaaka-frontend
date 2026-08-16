@@ -13,6 +13,11 @@ describe('Virtual Lover device key storage contract', () => {
       deviceId: 'device-1',
       privateKey,
     })
+    await expect(store.loadAny('user-1')).resolves.toEqual({
+      userId: 'user-1',
+      deviceId: 'device-1',
+      privateKey,
+    })
     expect(localStorage.length).toBe(0)
     expect(sessionStorage.length).toBe(0)
   })
