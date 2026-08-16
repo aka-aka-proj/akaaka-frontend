@@ -40,6 +40,8 @@ const en = {
     notificationsGroup: 'Notifications',
     accountGroup: 'Account & security',
     supportGroup: 'Support & reports',
+    techSupportEmail: 'Technical support: akaaka.events@gmail.com',
+    techSupportX: 'Follow @AkaAkaEvents on X',
   },
   privacyNotice: {
     label: 'View privacy commitment',

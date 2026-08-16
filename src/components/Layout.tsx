@@ -139,6 +139,18 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
                           <span>{t(item.labelKey)}</span>
                         </Link>
                       ))}
+                      {index === 3 ? (
+                        <>
+                          <a className="desktop-more-dropdown-item" role="menuitem" href="mailto:akaaka.events@gmail.com">
+                            <span aria-hidden="true">✉</span>
+                            <span>{t('nav.techSupportEmail')}</span>
+                          </a>
+                          <a className="desktop-more-dropdown-item" role="menuitem" href="https://x.com/AkaAkaEvents" target="_blank" rel="noopener noreferrer">
+                            <span aria-hidden="true">𝕏</span>
+                            <span>{t('nav.techSupportX')}</span>
+                          </a>
+                        </>
+                      ) : null}
                     </div>
                   ))}
                   <div className="desktop-more-divider" />

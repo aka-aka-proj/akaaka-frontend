@@ -40,6 +40,8 @@ const zhTW = {
     notificationsGroup: '通知與提醒',
     accountGroup: '帳號與安全',
     supportGroup: '支援與回報',
+    techSupportEmail: '技術支援：akaaka.events@gmail.com',
+    techSupportX: '在 X 追蹤 @AkaAkaEvents',
   },
   privacyNotice: {
     label: '查看隱私承諾',
