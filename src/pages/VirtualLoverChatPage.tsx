@@ -7,8 +7,8 @@ import { supabase } from '../supabaseClient'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import {
   provisionBrowserProviderKey,
+  listZdrModels,
   requestProviderChat,
-  VIRTUAL_LOVER_MODELS,
 } from '../lib/virtual-lover-provider'
 import {
   runVirtualLoverMigrationBatch,
@@ -54,6 +54,7 @@ export function VirtualLoverChatPage() {
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
   const [feedbackSaving, setFeedbackSaving] = useState(false)
   const [providerKey, setProviderKey] = useState<string | null>(null)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
   const [migrationState, setMigrationState] = useState<MigrationState | null>(null)
   const [migrationBusy, setMigrationBusy] = useState(false)
   const [migrationError, setMigrationError] = useState('')
@@ -139,8 +140,13 @@ export function VirtualLoverChatPage() {
           session.access_token,
         )
         setProviderKey(key)
+        const models = await listZdrModels(key)
+        setAvailableModels(models)
+        if (models.length === 0) setMessage('目前沒有符合 Zero Data Retention 的可用模型。')
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Unable to unlock AI provider')
+        setMessage(error instanceof Error && error.message === 'provider_zdr_unavailable'
+          ? '目前沒有符合 Zero Data Retention 的可用模型。'
+          : error instanceof Error ? error.message : 'Unable to unlock AI provider')
       }
     }
 
@@ -148,6 +154,12 @@ export function VirtualLoverChatPage() {
     void loadFeedback()
     void provisionLlmKey()
   }, [id, user?.id])
+
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.includes(usedModel)) {
+      setUsedModel(availableModels[0])
+    }
+  }, [availableModels, usedModel])
 
   const sendMessage = async () => {
     if (!input.trim() || streaming || !character) return
@@ -162,6 +174,7 @@ export function VirtualLoverChatPage() {
 
     try {
       if (!providerKey) throw new Error('llm_key_unavailable')
+      if (!usedModel || !availableModels.includes(usedModel)) throw new Error('provider_zdr_unavailable')
       const userContext = userProfile
         ? [
           userProfile.display_name ? `Name: ${userProfile.display_name}` : '',
@@ -173,11 +186,15 @@ export function VirtualLoverChatPage() {
       const systemPrompt = `You are ${character.name}, a fictional adult romantic roleplay character speaking natural Traditional Chinese.\n\nPersonality: ${character.persona}\n\nThis is a private, consenting-adults-only roleplay. Never involve minors, coercion, real-world harm, or non-consensual sexual activity. If the user says stop, uses a safeword, or sounds uncomfortable, stop sexual escalation immediately and respond with brief reassurance and aftercare.${userContext ? `\n\nAbout the user you are talking to:\n${userContext}` : ''}`
       const response = await requestProviderChat(
         providerKey,
-        usedModel || VIRTUAL_LOVER_MODELS[0],
+        usedModel,
         [{ role: 'system', content: systemPrompt }, ...updatedMessages],
       )
 
       if (!response.ok) {
+        const body = await response.clone().json().catch(() => null) as { error?: { message?: string } } | null
+        if (body?.error?.message?.includes('Zero data retention')) {
+          throw new Error('provider_zdr_unavailable')
+        }
         throw new Error(`HTTP ${response.status}`)
       }
 
@@ -235,7 +252,13 @@ export function VirtualLoverChatPage() {
         }
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Error during chat')
+      setMessage(err instanceof Error && err.message === 'provider_zdr_unavailable'
+        ? '目前沒有符合 Zero Data Retention 的可用模型。'
+        : err instanceof Error ? err.message : 'Error during chat')
+      if (err instanceof Error && err.message === 'provider_zdr_unavailable') {
+        setAvailableModels([])
+        setUsedModel('')
+      }
     } finally {
       setStreaming(false)
   }
@@ -255,9 +278,10 @@ export function VirtualLoverChatPage() {
   }
 
   const handleShuffle = async () => {
-    const currentIndex = VIRTUAL_LOVER_MODELS.indexOf(usedModel as typeof VIRTUAL_LOVER_MODELS[number])
-    const nextIndex = (currentIndex + 1) % VIRTUAL_LOVER_MODELS.length
-    setUsedModel(VIRTUAL_LOVER_MODELS[nextIndex])
+    if (availableModels.length === 0) return
+    const currentIndex = availableModels.indexOf(usedModel)
+    const nextIndex = (currentIndex + 1) % availableModels.length
+    setUsedModel(availableModels[nextIndex])
     setFeedback(null)
   }
 

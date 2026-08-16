@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   provisionBrowserProviderKey,
+  listZdrModels,
   requestProviderChat,
   VIRTUAL_LOVER_PROVIDER_POLICY,
 } from './virtual-lover-provider'
@@ -28,6 +29,30 @@ describe('Virtual Lover browser provider boundary', () => {
     const body = JSON.parse(String(request?.body)) as { provider: typeof VIRTUAL_LOVER_PROVIDER_POLICY }
     expect(body.provider).toEqual(VIRTUAL_LOVER_PROVIDER_POLICY)
     expect(request?.headers).toMatchObject({ Authorization: 'Bearer secret-key' })
+    vi.restoreAllMocks()
+  })
+
+  it('only returns the intersection of ZDR and user-allowed text models', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
+        { id: 'aion-labs/aion-3.0-mini', architecture: { input_modalities: ['text'], output_modalities: ['text'] } },
+        { id: 'blocked/model', architecture: { input_modalities: ['text'], output_modalities: ['text'] } },
+      ] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
+        { id: 'aion-labs/aion-3.0-mini', architecture: { input_modalities: ['text'], output_modalities: ['text'] } },
+        { id: 'not-zdr/model', architecture: { input_modalities: ['text'], output_modalities: ['text'] } },
+      ] }), { status: 200 }))
+
+    await expect(listZdrModels('secret-key')).resolves.toEqual(['aion-labs/aion-3.0-mini'])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.restoreAllMocks()
+  })
+
+  it('fails closed when the provider has no usable ZDR catalog', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    )
+    await expect(listZdrModels('secret-key')).resolves.toEqual([])
     vi.restoreAllMocks()
   })
 })
