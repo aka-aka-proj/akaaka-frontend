@@ -37,6 +37,8 @@ vi.mock('../hooks/useT', () => ({
       'nav.securityPrivacy': 'Security & Privacy',
       'nav.myIssues': 'My issues',
       'nav.myReports': 'My reports',
+      'nav.techSupportEmail': 'Technical support: akaaka.events@gmail.com',
+      'nav.techSupportX': 'Follow @AkaAkaEvents on X',
       'nav.signOut': 'Sign out',
       'common.language': 'Language',
     }[key] ?? key),
@@ -89,6 +91,22 @@ describe('Layout desktop More menu accessibility', () => {
 
     expect(screen.getByRole('link', { name: 'Notifications' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Notifications' }).textContent).toContain('Notifications')
+  })
+
+  it('shows technical support contacts in the desktop support menu', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/events']}>
+        <Layout><p>Content</p></Layout>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getAllByRole('button', { name: 'More' })[0])
+    expect(screen.getByRole('menuitem', { name: 'Technical support: akaaka.events@gmail.com' }).getAttribute('href')).toBe('mailto:akaaka.events@gmail.com')
+    const xLink = screen.getByRole('menuitem', { name: 'Follow @AkaAkaEvents on X' })
+    expect(xLink.getAttribute('href')).toBe('https://x.com/AkaAkaEvents')
+    expect(xLink.getAttribute('target')).toBe('_blank')
+    expect(xLink.getAttribute('rel')).toBe('noopener noreferrer')
   })
 
   it('can hide the global back button when a page owns its own navigation', () => {
