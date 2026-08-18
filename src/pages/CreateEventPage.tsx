@@ -500,6 +500,14 @@ export function CreateEventPage() {
             />
           </label>
         )}
+        {locationDetail.trim() ? (
+          <p className="form-field-hint">
+            <Icon href="/form-icons.svg" name="form-location" size={14} /> {t('eventDetail.openInGoogleMaps')}:{' '}
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDetail.trim())}`} target="_blank" rel="noopener noreferrer">
+              {locationDetail.trim()}
+            </a>
+          </p>
+        ) : null}
         </section>
         <section className="form-section" aria-labelledby="registration-section-title">
           <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>

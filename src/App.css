@@ -1092,6 +1092,20 @@ dd {
   font-weight: 500;
 }
 
+.form-field-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.form-field-hint a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 .illustration {
   width: 100%;
   max-width: 480px;
