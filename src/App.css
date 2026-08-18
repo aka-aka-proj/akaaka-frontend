@@ -3766,12 +3766,50 @@ dd {
 }
 
 .markdown-editor-textarea {
-  border-radius: 0 0 8px 8px !important;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
   font-family: inherit;
+  font-size: 0.8125rem;
   line-height: 1.6;
+  resize: vertical;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
 }
 
-/* ── Markdown Renderer (markdown-body) ────────────────────── */
+.markdown-editor-textarea:focus {
+  color: var(--color-text);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.markdown-editor-live-preview {
+  min-height: 160px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--color-surface);
+}
+
+.markdown-editor-placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.markdown-editor-done {
+  margin-left: auto;
+  font-weight: 500;
+}
+
+.markdown-editor-done:hover {
+  background: var(--color-accent) !important;
+  color: #fff;
+  border-color: var(--color-accent) !important;
+}
+
+/* ── Markdown Editor - Preview Mode (non-editing) ──────────── */
 
 .markdown-body {
   line-height: 1.75;

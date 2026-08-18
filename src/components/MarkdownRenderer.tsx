@@ -1,10 +1,11 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
+import type { ReactNode } from 'react'
 
 interface MarkdownRendererProps {
   content: string | null
-  fallback?: string
+  fallback?: ReactNode
 }
 
 const components: Components = {
@@ -17,7 +18,7 @@ const components: Components = {
 
 export function MarkdownRenderer({ content, fallback }: MarkdownRendererProps) {
   if (!content) {
-    return <p className="markdown-body">{fallback}</p>
+    return <div className="markdown-body">{fallback}</div>
   }
 
   return (

@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext'
 import { useT } from './hooks/useT'
 import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
+import { AdminIssuesPanel } from './pages/AdminIssuesPanel'
 import { AuthPage } from './pages/AuthPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
@@ -243,6 +244,14 @@ function App() {
         element={
           <AdminRoute>
             <AdminRoleUpgrade />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/issues"
+        element={
+          <AdminRoute>
+            <AdminIssuesPanel />
           </AdminRoute>
         }
       />

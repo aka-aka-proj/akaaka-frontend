@@ -104,59 +104,57 @@ export function MarkdownEditor({
     })
   }
 
-  const startEditing = () => {
-    setEditing(true)
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus()
-    })
-  }
-
-  const doneEditing = () => {
-    setEditing(false)
-  }
-
-  return (
-    <div className={`markdown-editor ${className ?? ''}`}>
-      {editing ? (
-        <>
-          <div className="markdown-editor-toolbar" role="toolbar" aria-label="Markdown 編輯工具">
-            {TOOLS.map((tool) => (
-              <button
-                key={tool.label}
-                type="button"
-                className="markdown-editor-btn"
-                title={tool.title}
-                onClick={() => applyTool(tool)}
-                aria-label={tool.title}
-              >
-                {tool.label}
-              </button>
-            ))}
-            <span className="markdown-editor-hint">Markdown</span>
-          </div>
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="markdown-editor-textarea"
-            {...textareaProps}
-          />
-          <div className="markdown-editor-actions">
-            <button type="button" className="text-button" onClick={doneEditing}>
-              完成
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="markdown-editor-preview" onClick={startEditing} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditing() } }}>
+  if (!editing) {
+    return (
+      <div className={`markdown-editor ${className ?? ''}`}>
+        <div className="markdown-editor-preview" onClick={() => setEditing(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true) } }}>
           <MarkdownRenderer content={value} fallback="" />
           <div className="markdown-editor-edit-overlay">
-            <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); startEditing() }}>
+            <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); setEditing(true) }}>
               編輯
             </button>
           </div>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`markdown-editor ${className ?? ''}`}>
+      <div className="markdown-editor-toolbar" role="toolbar" aria-label="格式工具">
+        {TOOLS.map((tool) => (
+          <button
+            key={tool.label}
+            type="button"
+            className="markdown-editor-btn"
+            title={tool.title}
+            onClick={() => applyTool(tool)}
+            aria-label={tool.title}
+          >
+            {tool.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="markdown-editor-btn markdown-editor-done"
+          onClick={() => setEditing(false)}
+          aria-label="完成編輯"
+        >
+          完成
+        </button>
+      </div>
+      <div className="markdown-editor-live-preview">
+        <MarkdownRenderer content={value} fallback={<span className="markdown-editor-placeholder">輸入活動描述…</span>} />
+      </div>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="markdown-editor-textarea"
+        placeholder="輸入活動描述…"
+        rows={3}
+        {...textareaProps}
+      />
     </div>
   )
 }
