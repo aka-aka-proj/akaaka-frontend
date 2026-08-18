@@ -1,105 +1,102 @@
-import { useState, useRef, type TextareaHTMLAttributes } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { marked } from 'marked'
+import TurndownService from 'turndown'
 import { MarkdownRenderer } from './MarkdownRenderer'
 
-interface MarkdownEditorProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
-  value: string
-  onChange: (value: string) => void
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+  emDelimiter: '*',
+  strongDelimiter: '**',
+})
+
+function mdToHtml(md: string): string {
+  return marked.parse(md) as string
 }
 
-type Snippet = {
-  prefix: string
-  suffix: string
-  placeholder: string
+interface MarkdownEditorProps {
+  value: string
+  onChange: (value: string) => void
+  className?: string
+  'aria-label'?: string
 }
 
 type Tool = {
   label: string
   title: string
-  snippet: Snippet
+  command: string
+  value?: string
 }
 
 const TOOLS: Tool[] = [
-  {
-    label: 'B',
-    title: '粗體',
-    snippet: { prefix: '**', suffix: '**', placeholder: '粗體文字' },
-  },
-  {
-    label: 'I',
-    title: '斜體',
-    snippet: { prefix: '*', suffix: '*', placeholder: '斜體文字' },
-  },
-  {
-    label: 'H',
-    title: 'Heading',
-    snippet: { prefix: '## ', suffix: '', placeholder: '標題' },
-  },
-  {
-    label: '•',
-    title: '無序列表',
-    snippet: { prefix: '- ', suffix: '', placeholder: '列表項目' },
-  },
-  {
-    label: '1.',
-    title: '有序列表',
-    snippet: { prefix: '1. ', suffix: '', placeholder: '列表項目' },
-  },
-  {
-    label: '🔗',
-    title: '連結',
-    snippet: { prefix: '[', suffix: '](url)', placeholder: '連結文字' },
-  },
+  { label: 'B', title: '粗體', command: 'bold' },
+  { label: 'I', title: '斜體', command: 'italic' },
+  { label: 'H', title: '標題', command: 'formatBlock', value: 'h3' },
+  { label: '•', title: '無序列表', command: 'insertUnorderedList' },
+  { label: '1.', title: '有序列表', command: 'insertOrderedList' },
+  { label: '🔗', title: '連結', command: 'createLink' },
 ]
+
+function execFormat(command: string, value?: string) {
+  if (command === 'createLink') {
+    const url = window.prompt('輸入連結網址：')
+    if (url) document.execCommand(command, false, url)
+  } else {
+    document.execCommand(command, false, value)
+  }
+}
 
 export function MarkdownEditor({
   value,
   onChange,
   className,
-  ...textareaProps
 }: MarkdownEditorProps) {
   const [editing, setEditing] = useState(!value.trim())
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
+  const ignoreNextSync = useRef(false)
+
+  useEffect(() => {
+    if (!editing || !editorRef.current) return
+    if (ignoreNextSync.current) {
+      ignoreNextSync.current = false
+      return
+    }
+    const html = value ? mdToHtml(value) : ''
+    if (editorRef.current.innerHTML !== html) {
+      editorRef.current.innerHTML = html
+    }
+  }, [value, editing])
+
+  const handleInput = useCallback(() => {
+    if (!editorRef.current) return
+    const html = editorRef.current.innerHTML
+    const markdown = turndownService.turndown(html === '<br>' ? '' : html)
+    if (markdown !== value) {
+      ignoreNextSync.current = true
+      onChange(markdown)
+    }
+  }, [value, onChange])
 
   const applyTool = (tool: Tool) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
+    const editor = editorRef.current
+    if (!editor) return
+    editor.focus()
+    execFormat(tool.command, tool.value)
+    editor.dispatchEvent(new Event('input', { bubbles: true }))
+  }
 
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = value.slice(start, end)
-    const before = value.slice(0, start)
-    const after = value.slice(end)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text/plain')
+    document.execCommand('insertText', false, text)
+  }
 
-    const { prefix, suffix, placeholder } = tool.snippet
-
-    let newValue: string
-    let cursorPos: number
-
-    if (selectedText) {
-      newValue = `${before}${prefix}${selectedText}${suffix}${after}`
-      cursorPos = start + prefix.length + selectedText.length + suffix.length
-    } else {
-      if (tool.snippet.suffix) {
-        newValue = `${before}${prefix}${placeholder}${suffix}${after}`
-        cursorPos = start + prefix.length
-      } else {
-        newValue = `${before}${prefix}${placeholder}\n${after}`
-        cursorPos = start + prefix.length + placeholder.length + 1
-      }
-    }
-
-    onChange(newValue)
-
+  const startEditing = () => {
+    setEditing(true)
     requestAnimationFrame(() => {
-      textarea.focus()
-      if (tool.snippet.suffix && !selectedText) {
-        const prefixLen = prefix.length
-        textarea.setSelectionRange(start + prefixLen, start + prefixLen + placeholder.length)
-      } else if (selectedText) {
-        textarea.setSelectionRange(cursorPos, cursorPos)
-      } else {
-        textarea.setSelectionRange(cursorPos, cursorPos)
+      if (editorRef.current && value) {
+        editorRef.current.innerHTML = mdToHtml(value)
       }
     })
   }
@@ -107,10 +104,21 @@ export function MarkdownEditor({
   if (!editing) {
     return (
       <div className={`markdown-editor ${className ?? ''}`}>
-        <div className="markdown-editor-preview" onClick={() => setEditing(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true) } }}>
+        <div
+          className="markdown-editor-preview"
+          onClick={startEditing}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              startEditing()
+            }
+          }}
+        >
           <MarkdownRenderer content={value} fallback="" />
           <div className="markdown-editor-edit-overlay">
-            <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); setEditing(true) }}>
+            <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); startEditing() }}>
               編輯
             </button>
           </div>
@@ -143,17 +151,17 @@ export function MarkdownEditor({
           完成
         </button>
       </div>
-      <div className="markdown-editor-live-preview">
-        <MarkdownRenderer content={value} fallback={<span className="markdown-editor-placeholder">輸入活動描述…</span>} />
-      </div>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="markdown-editor-textarea"
-        placeholder="輸入活動描述…"
-        rows={3}
-        {...textareaProps}
+      <div
+        ref={editorRef}
+        className="markdown-editor-wysiwyg"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onPaste={handlePaste}
+        role="textbox"
+        aria-multiline="true"
+        aria-label="活動描述編輯器"
+        data-placeholder="輸入活動描述…"
       />
     </div>
   )
