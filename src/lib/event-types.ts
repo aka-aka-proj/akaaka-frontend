@@ -18,6 +18,7 @@ export const PRACTICE_TAGS = [
 ] as const;
 
 export const SOCIAL_TAGS = [
+  'Drinking',
   'Dining',
   'BBQ',
   'Karaoke',
@@ -28,9 +29,10 @@ export const SOCIAL_TAGS = [
   'Conversation',
   'SpeedDating',
   'HangOut',
+  'UrgentOne',
 ] as const;
 
-export const EVENT_TYPES = [...PRACTICE_TAGS, ...SOCIAL_TAGS] as const;
+export const EVENT_TYPES = [...SOCIAL_TAGS, ...PRACTICE_TAGS] as const;
 
 export type EventType = typeof EVENT_TYPES[number];
 
@@ -46,6 +48,7 @@ export const EVENT_TYPE_I18N_KEY_MAP: Record<string, string> = {
   'Conversation': 'conversation',
   'SpeedDating': 'speedDating',
   'HangOut': 'hangOut',
+  'UrgentOne': 'urgentOne',
   'Bondage': 'bondage',
   'Discipline': 'discipline',
   'Dominance / Submission': 'dominanceSubmission',

@@ -1060,6 +1060,7 @@ const zhTW = {
     speedDating: '速配',
     drinking: '喝酒',
     hangOut: '閒聚',
+    urgentOne: '急一個',
   },
 } as const
 

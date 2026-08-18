@@ -1060,6 +1060,7 @@ const en = {
     speedDating: 'Speed Dating',
     Drinking: 'Drinking',
     hangOut: 'Hang Out',
+    urgentOne: 'Urgent One',
   },
 } as const
 
