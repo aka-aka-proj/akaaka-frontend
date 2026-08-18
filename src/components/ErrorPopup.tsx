@@ -14,6 +14,7 @@ export function ErrorPopup() {
   const [submitting, setSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [userNote, setUserNote] = useState('')
 
   const open = error !== null
 
@@ -35,6 +36,7 @@ export function ErrorPopup() {
       setSubmitting(false)
       setSubmitSuccess(false)
       setSubmitError('')
+      setUserNote('')
     }
   }, [open])
 
@@ -45,7 +47,7 @@ export function ErrorPopup() {
     setSubmitError('')
 
     const titleStr = `[Auto Error Report] ${error.title || 'App Error'}`
-    const descriptionParts = [
+    const descriptionParts: string[] = [
       `Message: ${error.message}`,
       `Response: ${error.response ? JSON.stringify(error.response, null, 2) : 'None'}`,
       `Debug Info: ${error.debugInfo ? JSON.stringify(error.debugInfo, null, 2) : 'None'}`,
@@ -53,6 +55,28 @@ export function ErrorPopup() {
       `URL: ${window.location.href}`,
       `Timestamp: ${new Date().toISOString()}`,
     ]
+
+    // Browser / Device info
+    const nav = navigator
+    descriptionParts.push(
+      '',
+      `--- Browser / Device Info ---`,
+      `User Agent: ${nav.userAgent}`,
+      `Language: ${nav.language}`,
+      `Platform: ${(nav as any).platform || 'N/A'}`,
+      `Screen: ${screen.width}x${screen.height}`,
+      `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+    )
+
+    // User note
+    if (userNote.trim()) {
+      descriptionParts.push(
+        '',
+        `--- User Note ---`,
+        userNote.trim(),
+      )
+    }
+
     const descriptionStr = descriptionParts.join('\n\n')
 
     try {
@@ -60,6 +84,7 @@ export function ErrorPopup() {
         body: {
           title: titleStr,
           description: descriptionStr,
+          log_url: undefined,
         },
       })
 
@@ -125,6 +150,31 @@ export function ErrorPopup() {
                   ? JSON.stringify(error.debugInfo, null, 2)
                   : String(error.debugInfo)}
               </pre>
+            </div>
+          )}
+
+          {/* User note — shown before submitting */}
+          {!submitSuccess && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.25rem' }}>{t('errorPopup.userNote')}</h3>
+              <textarea
+                aria-label={t('errorPopup.userNote')}
+                placeholder={t('errorPopup.userNotePlaceholder')}
+                value={userNote}
+                onChange={(e) => setUserNote(e.target.value)}
+                rows={3}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  resize: 'vertical',
+                  padding: '0.5rem',
+                  fontSize: '0.85rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-surface)',
+                  color: 'var(--color-text)',
+                }}
+              />
             </div>
           )}
 

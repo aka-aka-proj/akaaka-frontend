@@ -18,6 +18,9 @@ const zhTW = {
     close: '關閉',
     submitting: '正在回報...',
     reportIssue: '一鍵回報此問題',
+    userNote: '當時你在做什麼？（選填）',
+    userNotePlaceholder: '請簡述發生錯誤時你正在進行的操作…',
+    browserInfo: '瀏覽器 / 裝置資訊',
   },
   nav: {
     events: '活動',
@@ -1057,6 +1060,7 @@ const zhTW = {
     speedDating: '速配',
     drinking: '喝酒',
     hangOut: '閒聚',
+    urgentOne: '急一個',
   },
 } as const
 
