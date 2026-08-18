@@ -13,6 +13,7 @@ import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 
@@ -405,10 +406,10 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
           </span>
-          <textarea
+          <MarkdownEditor
             aria-label={t('createEvent.descriptionLabel')}
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
           />
         </label>
         <label className="form-field">

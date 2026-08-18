@@ -554,6 +554,8 @@ const zhTW = {
     formValidationError: '請檢查表單欄位後再試一次。',
     summaryLabel: '活動摘要',
     locationLabel: '地點',
+    mapLabel: '地圖',
+    openInGoogleMaps: '在 Google Maps 中開啟',
     capacityLabel: '名額',
     full: '已額滿',
     registrationClosed: '報名已截止',
@@ -1039,6 +1041,7 @@ const zhTW = {
     bookClub: '書圈',
     conversation: '對話',
     speedDating: '速配',
+    drinking: '喝酒',
     hangOut: '閒聚',
   },
 } as const

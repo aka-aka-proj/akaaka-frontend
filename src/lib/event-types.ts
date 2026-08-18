@@ -35,6 +35,17 @@ export const EVENT_TYPES = [...PRACTICE_TAGS, ...SOCIAL_TAGS] as const;
 export type EventType = typeof EVENT_TYPES[number];
 
 export const EVENT_TYPE_I18N_KEY_MAP: Record<string, string> = {
+  'Drinking': 'drinking',
+  'Dining': 'dining',
+  'BBQ': 'bbq',
+  'Karaoke': 'karaoke',
+  'Movie': 'movie',
+  'BoardGame': 'boardGame',
+  'Travel': 'travel',
+  'BookClub': 'bookClub',
+  'Conversation': 'conversation',
+  'SpeedDating': 'speedDating',
+  'HangOut': 'hangOut',
   'Bondage': 'bondage',
   'Discipline': 'discipline',
   'Dominance / Submission': 'dominanceSubmission',
@@ -51,16 +62,6 @@ export const EVENT_TYPE_I18N_KEY_MAP: Record<string, string> = {
   'DDLG': 'ddlg',
   '4 love': 'fourLove',
   'ABDL': 'abdl',
-  'Dining': 'dining',
-  'BBQ': 'bbq',
-  'Karaoke': 'karaoke',
-  'Movie': 'movie',
-  'BoardGame': 'boardGame',
-  'Travel': 'travel',
-  'BookClub': 'bookClub',
-  'Conversation': 'conversation',
-  'SpeedDating': 'speedDating',
-  'HangOut': 'hangOut',
 }
 
 export function getEventTypeI18nKey(type: string): string {

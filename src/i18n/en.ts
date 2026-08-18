@@ -553,6 +553,8 @@ const en = {
     formValidationError: 'Please check the form fields and try again.',
     summaryLabel: 'Event summary',
     locationLabel: 'Location',
+    mapLabel: 'Map',
+    openInGoogleMaps: 'Open in Google Maps',
     capacityLabel: 'Capacity',
     full: 'Full',
     registrationClosed: 'Registration is closed',
@@ -1039,6 +1041,7 @@ const en = {
     bookClub: 'Book Club',
     conversation: 'Conversation',
     speedDating: 'Speed Dating',
+    Drinking: 'Drinking',
     hangOut: 'Hang Out',
   },
 } as const
