@@ -40,7 +40,7 @@ export function AdminIssuesPanel() {
     setSubmitting((prev) => ({ ...prev, [issueId]: true }))
     setActionMessages((prev) => ({ ...prev, [issueId]: '' }))
 
-    const { data, error } = await supabase.functions.invoke('update-issue-status', {
+    const { error } = await supabase.functions.invoke('update-issue-status', {
       body: { issue_id: issueId, status: newStatus },
     })
 
