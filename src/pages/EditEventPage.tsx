@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RegistrationFormBuilder } from '../components/RegistrationFormBuilder'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { Icon } from '../components/Icon'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
@@ -280,10 +281,10 @@ export function EditEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.descriptionLabel')}
           </span>
-          <textarea
+          <MarkdownEditor
             aria-label={t('editEvent.descriptionLabel')}
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
           />
         </label>
         <label className="form-field">

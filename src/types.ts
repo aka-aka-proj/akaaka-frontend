@@ -217,3 +217,12 @@ export interface RegistrationResponse {
   responses: Record<string, unknown>
   created_at: string
 }
+
+export interface AdminIssueItem {
+  id: string
+  title: string
+  status: string
+  created_at: string
+  updated_at: string
+  reporter_id: string
+}

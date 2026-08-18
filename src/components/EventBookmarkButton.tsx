@@ -24,9 +24,12 @@ export function EventBookmarkButton({ eventId, isBookmarked, onChange }: EventBo
 
     const result = nextValue
       ? user
-        ? await supabase.from('event_bookmarks').upsert({ profile_id: user.id, event_id: eventId }, { onConflict: 'profile_id,event_id' })
+        ? await supabase.from('event_bookmarks').upsert(
+            { profile_id: user.id, event_id: eventId },
+            { ignoreDuplicates: true }
+          )
         : { error: new Error('Authentication required') }
-      : await supabase.from('event_bookmarks').delete().eq('event_id', eventId)
+      : await supabase.from('event_bookmarks').delete().eq('profile_id', user?.id ?? '').eq('event_id', eventId)
 
     if (result.error) {
       onChange(isBookmarked)

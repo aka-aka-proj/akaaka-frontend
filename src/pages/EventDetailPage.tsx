@@ -8,6 +8,7 @@ import { ShareButton } from '../components/ShareButton'
 import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
+import { MarkdownRenderer } from '../components/MarkdownRenderer'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -513,7 +514,7 @@ export function EventDetailPage() {
                 ))}
               </div>
             )}
-            <p>{eventItem.description ?? t('eventDetail.noDescription')}</p>
+            <MarkdownRenderer content={eventItem.description} fallback={t('eventDetail.noDescription')} />
             {eventItem && hasPracticeTag(parseEventTypes(eventItem.event_type)) && (
               <div className="safety-banner">
                 <div className="safety-banner-title">
@@ -556,6 +557,12 @@ export function EventDetailPage() {
                 <div className="event-summary-item">
                   <Icon href="/form-icons.svg" name="form-location" size={18} />
                   <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
+                </div>
+              ) : null}
+              {eventItem.location_detail ? (
+                <div className="event-summary-item">
+                  <Icon href="/form-icons.svg" name="form-location" size={18} />
+                  <span><strong>{t('eventDetail.mapLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{t('eventDetail.openInGoogleMaps')}</a></span>
                 </div>
               ) : null}
               <div className="event-summary-item">

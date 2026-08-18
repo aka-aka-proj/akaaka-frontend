@@ -1092,6 +1092,20 @@ dd {
   font-weight: 500;
 }
 
+.form-field-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.form-field-hint a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 .illustration {
   width: 100%;
   max-width: 480px;
@@ -3697,4 +3711,292 @@ dd {
   .chat-msg {
     max-width: 90%;
   }
+}
+
+/* ── Markdown Editor ──────────────────────────────────────── */
+
+.markdown-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.markdown-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.markdown-editor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.markdown-editor-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.markdown-editor-btn:active {
+  background: var(--color-surface-active);
+}
+
+.markdown-editor-hint {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.markdown-editor-wysiwyg {
+  min-height: 180px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0 0 8px 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  outline: none;
+  cursor: text;
+  overflow-wrap: break-word;
+}
+
+.markdown-editor-wysiwyg:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.markdown-editor-wysiwyg:empty:before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.markdown-editor-wysiwyg h1,
+.markdown-editor-wysiwyg h2,
+.markdown-editor-wysiwyg h3,
+.markdown-editor-wysiwyg h4 {
+  margin: 1em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.markdown-editor-wysiwyg h1 { font-size: 1.5rem; }
+.markdown-editor-wysiwyg h2 { font-size: 1.25rem; }
+.markdown-editor-wysiwyg h3 { font-size: 1.125rem; }
+
+.markdown-editor-wysiwyg p {
+  margin: 0 0 0.5em;
+}
+
+.markdown-editor-wysiwyg ul,
+.markdown-editor-wysiwyg ol {
+  margin: 0 0 0.5em;
+  padding-left: 1.5em;
+}
+
+.markdown-editor-wysiwyg li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-editor-wysiwyg a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.markdown-editor-wysiwyg strong {
+  font-weight: 600;
+}
+
+.markdown-editor-done {
+  margin-left: auto;
+  font-weight: 500;
+}
+
+.markdown-editor-done:hover {
+  background: var(--color-accent) !important;
+  color: #fff;
+  border-color: var(--color-accent) !important;
+}
+
+/* ── Markdown Editor - Preview Mode (non-editing) ──────────── */
+
+.markdown-body {
+  line-height: 1.75;
+  overflow-wrap: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 1.25em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.markdown-body h1 { font-size: 1.5rem; }
+.markdown-body h2 { font-size: 1.25rem; }
+.markdown-body h3 { font-size: 1.125rem; }
+
+.markdown-body p {
+  margin: 0 0 0.75em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-bottom: 0;
+}
+
+.markdown-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-body a:hover {
+  opacity: 0.8;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
+
+.markdown-body blockquote {
+  margin: 0 0 0.75em;
+  padding: 0.25em 1em;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.markdown-body code {
+  padding: 0.15em 0.35em;
+  background: var(--color-surface-muted);
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: ui-monospace, monospace;
+}
+
+.markdown-body pre {
+  margin: 0 0 0.75em;
+  padding: 1em;
+  background: var(--color-surface-muted);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: 0.8125rem;
+}
+
+.markdown-body hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown-body table {
+  width: 100%;
+  margin: 0 0 0.75em;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--color-surface-muted);
+  font-weight: 600;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* ── Markdown Editor - Preview Mode ─────────────────────────── */
+
+.markdown-editor-preview {
+  position: relative;
+  min-height: 120px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: text;
+  transition: border-color 0.15s ease;
+}
+
+.markdown-editor-preview:hover {
+  border-color: var(--color-accent);
+}
+
+.markdown-editor-preview:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.markdown-editor-edit-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.markdown-editor-preview:hover .markdown-editor-edit-overlay {
+  opacity: 1;
+}
+
+.markdown-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 0 0;
 }

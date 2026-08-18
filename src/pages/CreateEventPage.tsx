@@ -13,6 +13,7 @@ import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 
@@ -405,10 +406,10 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
           </span>
-          <textarea
+          <MarkdownEditor
             aria-label={t('createEvent.descriptionLabel')}
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
           />
         </label>
         <label className="form-field">
@@ -499,6 +500,14 @@ export function CreateEventPage() {
             />
           </label>
         )}
+        {locationDetail.trim() ? (
+          <p className="form-field-hint">
+            <Icon href="/form-icons.svg" name="form-location" size={14} /> {t('eventDetail.openInGoogleMaps')}:{' '}
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDetail.trim())}`} target="_blank" rel="noopener noreferrer">
+              {locationDetail.trim()}
+            </a>
+          </p>
+        ) : null}
         </section>
         <section className="form-section" aria-labelledby="registration-section-title">
           <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>

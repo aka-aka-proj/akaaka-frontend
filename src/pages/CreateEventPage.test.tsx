@@ -56,7 +56,7 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('標題'), 'My Event')
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'My Event')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
@@ -84,7 +84,7 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('標題'), 'Approved Event')
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Approved Event')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByLabelText('場地主辦'))
@@ -117,7 +117,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('活動發想'), '週末桌遊聚會\n台北北部一起認識新朋友')
     await user.click(screen.getByRole('button', { name: 'AI 整理' }))
 
-    expect((screen.getByLabelText('標題') as HTMLInputElement).value).toBe('週末桌遊聚會')
+    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('週末桌遊聚會')
     expect((screen.getByLabelText('活動地區') as HTMLSelectElement).value).toBe('North')
     expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
   })
@@ -142,7 +142,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('選項 2'), '素食')
     await user.click(screen.getByLabelText('必填'))
 
-    await user.type(screen.getByLabelText('標題'), '問卷活動')
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], '問卷活動')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
@@ -174,7 +174,7 @@ describe('CreateEventPage', () => {
 
     await user.click(screen.getByRole('radio', { name: /外部報名/ }))
     fireEvent.change(screen.getByLabelText('外部報名網址（選填）'), { target: { value: 'https://docs.google.com/forms/d/e/1FAIpQLSdSNh1EbK-smx53wUFvxCgX7odDvoJXw4Q87Iiu7PueQwofVg/viewform' } })
-    await user.type(screen.getByLabelText('標題'), 'Google Form 活動')
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Google Form 活動')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
@@ -214,8 +214,8 @@ describe('CreateEventPage', () => {
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
     expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
-    expect((screen.getByLabelText('標題') as HTMLInputElement).value).toBe('來源活動')
-    expect((screen.getByLabelText('描述') as HTMLTextAreaElement).value).toBe('來源描述')
+    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動')
+    expect(screen.getByRole('textbox', { name: '活動描述編輯器' }).textContent?.trim()).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
 
