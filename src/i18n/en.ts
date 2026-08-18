@@ -18,6 +18,9 @@ const en = {
     close: 'Close',
     submitting: 'Reporting...',
     reportIssue: 'Report Issue',
+    userNote: 'What were you doing? (optional)',
+    userNotePlaceholder: 'Describe what you were doing when this error occurred...',
+    browserInfo: 'Browser / Device Info',
   },
   nav: {
     events: 'Events',
