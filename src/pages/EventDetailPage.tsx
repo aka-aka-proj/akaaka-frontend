@@ -214,14 +214,16 @@ export function EventDetailPage() {
     }
 
     // External events never expose native registration state or registrant profiles.
-    const allRegs = user && eventData && (eventData as EventItem).external_registration_url
-      ? []
-      : (await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', id)
-        .neq('status', 'cancelled')
-        .order('created_at', { ascending: true })).data
+    const allRegs = user
+      ? (eventData && (eventData as EventItem).external_registration_url
+          ? []
+          : (await supabase
+            .from('event_registrations')
+            .select('*')
+            .eq('event_id', id)
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: true })).data ?? [])
+      : []
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
