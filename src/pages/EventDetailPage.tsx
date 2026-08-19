@@ -130,9 +130,13 @@ export function EventDetailPage() {
         .order('created_at', { ascending: true })
       : Promise.resolve({ data: null, error: null })
 
+    const eventsQuery = user
+      ? supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle()
+      : supabase.from('events').select('*').eq('id', id).maybeSingle()
+
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
       await Promise.all([
-        supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
+        eventsQuery,
         threadQuery,
         bookmarkQuery,
       ])
