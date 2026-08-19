@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: npm run build
 
-browser-quality:
+  browser-quality:
     name: Playwright browser quality
     runs-on: ubuntu-latest
     timeout-minutes: 25
