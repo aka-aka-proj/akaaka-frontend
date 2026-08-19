@@ -122,14 +122,22 @@ export function EventDetailPage() {
         .maybeSingle()
       : Promise.resolve({ data: null, error: null })
 
+    const threadQuery = user
+      ? supabase
+        .from('event_threads')
+        .select('*, profile:profiles(display_name)')
+        .eq('event_id', id)
+        .order('created_at', { ascending: true })
+      : Promise.resolve({ data: null, error: null })
+
+    const eventsQuery = user
+      ? supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle()
+      : supabase.from('events').select('*').eq('id', id).maybeSingle()
+
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
       await Promise.all([
-        supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle(),
-        supabase
-          .from('event_threads')
-          .select('*, profile:profiles(display_name)')
-          .eq('event_id', id)
-          .order('created_at', { ascending: true }),
+        eventsQuery,
+        threadQuery,
         bookmarkQuery,
       ])
 
@@ -143,7 +151,7 @@ export function EventDetailPage() {
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
-    if (eventData) {
+    if (user && eventData) {
       const { data: reportStats } = await supabase
         .from('profile_report_stats')
         .select('report_count')
@@ -206,14 +214,16 @@ export function EventDetailPage() {
     }
 
     // External events never expose native registration state or registrant profiles.
-    const allRegs = eventData && (eventData as EventItem).external_registration_url
-      ? []
-      : (await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', id)
-        .neq('status', 'cancelled')
-        .order('created_at', { ascending: true })).data
+    const allRegs = user
+      ? (eventData && (eventData as EventItem).external_registration_url
+          ? []
+          : (await supabase
+            .from('event_registrations')
+            .select('*')
+            .eq('event_id', id)
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: true })).data ?? [])
+      : []
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
@@ -539,9 +549,15 @@ export function EventDetailPage() {
               </div>
             )}
             <p className="event-meta">
-              <img src={getAvatarPath(eventItem.creator)} alt="" width={24} height={24} className="avatar avatar-sm" />
-              {t('eventDetail.createdBy')} <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator?.display_name || eventItem.creator_id}</Link>
+              <img src={user && eventItem.creator ? getAvatarPath(eventItem.creator) : eventItem.creator_avatar_path || '/default-avatar.svg'} alt="" width={24} height={24} className="avatar avatar-sm" />
+              {t('eventDetail.createdBy')}{' '}
+              {user && eventItem.creator ? (
+                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator.display_name || eventItem.creator_id}</Link>
+              ) : (
+                <span>{eventItem.creator_display_name || eventItem.creator_id}</span>
+              )}
             </p>
+            {user && eventItem.creator ? (
             <div className="event-creator-stats">
               <span className="creator-stat">
                 <Icon href="/badge-icons.svg" name="reputation-star" size={14} />
@@ -552,6 +568,7 @@ export function EventDetailPage() {
                 {creatorReportCount} {t('eventDetail.reports')}
               </span>
             </div>
+            ) : null}
             <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
               {eventItem.location_region ? (
                 <div className="event-summary-item">
@@ -570,9 +587,11 @@ export function EventDetailPage() {
                 <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
               </div>
               {eventItem.max_capacity ? (
-                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                <div className={`event-summary-item${user && isAtCapacity ? ' event-summary-item-warning' : ''}`}>
                   <Icon href="/form-icons.svg" name="form-user" size={18} />
-                  <span><strong>{t('eventDetail.capacityLabel')}</strong>{isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length })}</span>
+                  <span><strong>{t('eventDetail.capacityLabel')}</strong>
+                    {user ? (isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length }))
+                     : t('eventDetail.capacity', {max: eventItem.max_capacity, current: '?' })}</span>
                 </div>
               ) : null}
               {eventItem.registration_deadline ? (
@@ -587,7 +606,7 @@ export function EventDetailPage() {
               </div>
             </div>
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
-              <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} />
+              {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
               <details className="calendar-menu">
                 <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
                 <div className="calendar-menu-items">
@@ -609,7 +628,7 @@ export function EventDetailPage() {
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}
-            </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}><EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /></div> : null}
+            </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>{user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}</div> : null}
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>
@@ -630,6 +649,15 @@ export function EventDetailPage() {
         <section className="card event-registration-section" role="status">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationUnavailable')}</p>
+        </section>
+      ) : null}
+      {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !user && !isHost && !eventItem.external_registration_url ? (
+        <section className="card event-registration-section">
+          <h3>{t('eventDetail.registration')}</h3>
+          <p className="registration-hint">{t('eventDetail.loginToRegister')}</p>
+          <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className="primary-cta">
+            {t('eventDetail.loginToRegisterCta')}
+          </Link>
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
@@ -917,6 +945,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
+      {user ? (
       <section className="card event-discussion-section">
         <div className="discussion-heading">
           <div>
@@ -949,9 +978,10 @@ export function EventDetailPage() {
           </ul>
         )}
       </section>
+      ) : null}
       </div>
 
-      {id ? (
+      {id && user ? (
         <section className="event-report-section" aria-label={t('report.title')}>
           <button type="button" className="report-trigger" onClick={() => setReportOpen(true)}>
             <Icon href="/report-icons.svg" name="report-safety-risk" size={16} />
@@ -960,7 +990,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {id && reportOpen ? (
+      {id && user && reportOpen ? (
         <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setReportOpen(false)
         }}>

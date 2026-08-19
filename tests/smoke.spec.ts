@@ -15,7 +15,6 @@ test.describe('public event discovery', () => {
       '/events/new',
       '/events/bookmarks',
       '/events/synthetic-event/edit',
-      '/events/synthetic-event',
       '/profile/me',
       '/profile/me/edit',
       '/profile/me/feedback',

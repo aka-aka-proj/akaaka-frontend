@@ -109,7 +109,6 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
             <span>{t('nav.notifications')}</span>
             {user && unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
           </Link>
-          {user ? (
             <nav className="nav desktop-nav">
               <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
               <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
@@ -182,60 +181,39 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
               )}
             </div>
             </nav>
-          ) : null}
         </div>
-        {!user ? (
-          <label className="lang-switch desktop-only">
-            <Icon href="/nav-icons.svg" name="nav-language" size={16} />
-            <select
-              id="language-select-mobile"
-              name="language"
-              aria-label={t('common.language')}
-              value={locale}
-              onChange={(e) => setLocale(e.target.value as Locale)}
-            >
-              {locales.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
       </header>
       {showPageBack ? <PageBackButton /> : null}
       {user ? <PrivacyNotice /> : null}
       {children}
-      {user ? (
-        <nav className="bottom-nav" aria-label="Mobile navigation">
-          {BOTTOM_NAV_ITEMS.map((item) => {
-            if (item.isMore) {
-              return (
-                <button
-                  key="more"
-                  type="button"
-                  className={`bottom-nav-item${moreOpen ? ' active' : ''}`}
-                  onClick={() => setMoreOpen(true)}
-                  aria-label={t('nav.more')}
-                >
-                  <Icon href="/nav-icons.svg" name={item.icon} size={20} />
-                  <span>{t(item.labelKey)}</span>
-                </button>
-              )
-            }
+      <nav className="bottom-nav" aria-label="Mobile navigation">
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          if (item.isMore) {
             return (
-              <Link
-                key={item.to}
-                to={item.to!}
-                className={`bottom-nav-item${isActive(item.to) ? ' active' : ''}`}
+              <button
+                key="more"
+                type="button"
+                className={`bottom-nav-item${moreOpen ? ' active' : ''}`}
+                onClick={() => setMoreOpen(true)}
+                aria-label={t('nav.more')}
               >
                 <Icon href="/nav-icons.svg" name={item.icon} size={20} />
                 <span>{t(item.labelKey)}</span>
-              </Link>
+              </button>
             )
-          })}
-        </nav>
-      ) : null}
+          }
+          return (
+            <Link
+              key={item.to}
+              to={item.to!}
+              className={`bottom-nav-item${isActive(item.to) ? ' active' : ''}`}
+            >
+              <Icon href="/nav-icons.svg" name={item.icon} size={20} />
+              <span>{t(item.labelKey)}</span>
+            </Link>
+          )
+        })}
+      </nav>
       <MoreMenuDrawer
         open={moreOpen}
         onClose={() => setMoreOpen(false)}

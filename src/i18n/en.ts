@@ -565,6 +565,8 @@ const en = {
     waitlistHint: 'This event is full. Submitting will add you to the waitlist, promoted in order when a spot opens.',
     reportEvent: 'Report event',
     copyPreviousAnswers: 'Use previous answers',
+    loginToRegister: 'Please log in to register for this event.',
+    loginToRegisterCta: 'Log in / Sign up',
   },
   profile: {
     title: 'Profile',

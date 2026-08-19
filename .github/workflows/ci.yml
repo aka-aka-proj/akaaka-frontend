@@ -38,9 +38,15 @@ jobs:
     name: Playwright browser quality
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: ci-public-test-key
+      # Preview pushes only run chromium for speed; main/PR runs full matrix
+      BROWSER_FILTER: ${{ (github.ref_name == 'main' || github.event_name == 'pull_request') && '' || 'chromium' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,14 +63,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run browser smoke matrix
-        run: npm run test:e2e -- --reporter=line
+      - name: Run browser smoke matrix (shard ${{ matrix.shard }}/3)
+        run: npx playwright test --reporter=line --shard=${{ matrix.shard }}/3
 
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-browser-quality-report
+          name: playwright-browser-quality-report-shard-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/

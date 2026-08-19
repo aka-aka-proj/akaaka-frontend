@@ -101,11 +101,7 @@ function App() {
       />
       <Route
         path="/events/:id"
-        element={
-          <ProtectedRoute>
-            <EventDetailPage />
-          </ProtectedRoute>
-        }
+        element={<EventDetailPage />}
       />
       <Route
         path="/profile/me"

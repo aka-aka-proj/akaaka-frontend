@@ -109,6 +109,8 @@ export interface EventItem {
   registration_deadline: string | null
   external_registration_url: string | null
   source_url: string | null
+  creator_display_name: string | null
+  creator_avatar_path: string | null
   created_at: string
   creator?: Profile | null
 }
