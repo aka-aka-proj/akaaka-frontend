@@ -565,6 +565,8 @@ const zhTW = {
     waitlistRegister: '候補報名',
     waitlistHint: '目前名額已滿，送出報名後會進入候補名單；有人取消時將依序遞補。',
     reportEvent: '檢舉活動',
+    loginToRegister: '請登入後再報名此活動。',
+    loginToRegisterCta: '登入 / 註冊',
   },
   profile: {
     title: '個人資料',
