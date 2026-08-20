@@ -26,6 +26,11 @@ interface Attendee {
   joined_at: string
 }
 
+interface PublicCapacitySummary {
+  approved_registration_count: number
+  capacity_external_guest_count: number
+}
+
 function getCompatibleFormData(
   fields: RegistrationFormField[],
   responses: Record<string, unknown>,
@@ -61,6 +66,7 @@ export function EventDetailPage() {
   const [myRegistration, setMyRegistration] = useState<Registration | null>(null)
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [publicCapacityOccupied, setPublicCapacityOccupied] = useState<number | null>(null)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
   const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
@@ -92,7 +98,6 @@ export function EventDetailPage() {
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
-  const isAtCapacity = Boolean(eventItem?.max_capacity && attendees.length >= eventItem.max_capacity)
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -105,6 +110,8 @@ export function EventDetailPage() {
     if (!eventItem?.max_capacity) return 0
     return attendees.length + capacityExternalGuests.length
   }, [attendees.length, capacityExternalGuests.length, eventItem?.max_capacity])
+  const capacityOccupied = isHost ? totalCapacityOccupied : publicCapacityOccupied
+  const isAtCapacity = Boolean(eventItem?.max_capacity && capacityOccupied !== null && capacityOccupied >= eventItem.max_capacity)
   const pendingInvitations = useMemo(
     () => invitations.filter((inv) => inv.status === 'pending'),
     [invitations],
@@ -181,6 +188,25 @@ export function EventDetailPage() {
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
+    const currentEvent = eventData as EventItem | null
+    if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
+      const { data: capacityData, error: capacityError } = await supabase
+        .rpc('get_event_capacity', { p_event_id: id })
+        .maybeSingle()
+
+      if (capacityError || !capacityData) {
+        setPublicCapacityOccupied(null)
+      } else {
+        const capacitySummary = capacityData as PublicCapacitySummary
+        setPublicCapacityOccupied(
+          Number(capacitySummary.approved_registration_count ?? 0)
+          + Number(capacitySummary.capacity_external_guest_count ?? 0),
+        )
+      }
+    } else {
+      setPublicCapacityOccupied(null)
+    }
+
     if (user && eventData) {
       const { data: reportStats } = await supabase
         .from('profile_report_stats')
@@ -202,7 +228,6 @@ export function EventDetailPage() {
         setBlockedUserIds(((blocksData as { blocked_id: string }[] | null) ?? []).map((item) => item.blocked_id))
       }
 
-      const currentEvent = eventData as EventItem | null
       if (!currentEvent?.external_registration_url) {
         const { data: myReg } = await supabase
           .from('event_registrations')
@@ -734,15 +759,16 @@ export function EventDetailPage() {
                 <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
               </div>
               {eventItem.max_capacity ? (
-                <div className={`event-summary-item${user && isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
                   <Icon href="/form-icons.svg" name="form-user" size={18} />
                   <span><strong>{t('eventDetail.capacityLabel')}</strong>
                     {isHost
-                      ? (totalCapacityOccupied >= eventItem.max_capacity
-                        ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
-                        : t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : ''))
-                      : (user ? (isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length }))
-                       : t('eventDetail.capacity', {max: eventItem.max_capacity, current: '?' }))}</span>
+                      ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
+                      : (publicCapacityOccupied === null
+                        ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: '?' })
+                        : (isAtCapacity
+                          ? t('eventDetail.full')
+                          : t('eventDetail.capacity', { max: eventItem.max_capacity, current: publicCapacityOccupied })))}</span>
                 </div>
               ) : null}
               {eventItem.registration_deadline ? (
