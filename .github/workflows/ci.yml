@@ -64,7 +64,7 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run browser smoke matrix (shard ${{ matrix.shard }}/3)
-        run: npx playwright test --reporter=line --shard=${{ matrix.shard }}/3
+        run: npx playwright test --shard=${{ matrix.shard }}/3
 
       - name: Upload Playwright artifacts
         if: always()
@@ -73,7 +73,7 @@ jobs:
           name: playwright-browser-quality-report-shard-${{ matrix.shard }}
           path: |
             playwright-report/
-            test-results/
+            test-results/**/*.zip
           if-no-files-found: ignore
 
   lighthouse-quality:
