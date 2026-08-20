@@ -18,7 +18,7 @@ import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
-import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest } from '../types'
+import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
 
 interface Attendee {
   profile_id: string
@@ -80,6 +80,13 @@ export function EventDetailPage() {
   const [newGuestCountsToCapacity, setNewGuestCountsToCapacity] = useState(true)
   const [guestToRemove, setGuestToRemove] = useState<ExternalGuest | null>(null)
   const [submittingGuest, setSubmittingGuest] = useState(false)
+  const [invitations, setInvitations] = useState<EventInvitation[]>([])
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('')
+  const [inviteSearchResults, setInviteSearchResults] = useState<PublicProfilePreview[]>([])
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isRegistrationClosed = eventItem?.registration_deadline
@@ -98,6 +105,10 @@ export function EventDetailPage() {
     if (!eventItem?.max_capacity) return 0
     return attendees.length + capacityExternalGuests.length
   }, [attendees.length, capacityExternalGuests.length, eventItem?.max_capacity])
+  const pendingInvitations = useMemo(
+    () => invitations.filter((inv) => inv.status === 'pending'),
+    [invitations],
+  )
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !blockedUserIds.includes(thread.profile_id)),
@@ -283,6 +294,15 @@ export function EventDetailPage() {
       .order('created_at', { ascending: true })
 
     setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
+
+    // Load invitations (host sees all, target sees own)
+    const { data: inviteData } = await supabase
+      .from('event_invitations')
+      .select('*')
+      .eq('event_id', id)
+      .order('created_at', { ascending: true })
+
+    setInvitations((inviteData as EventInvitation[] | null) ?? [])
   }
 
   useEffect(() => {
@@ -430,6 +450,54 @@ export function EventDetailPage() {
     }
 
     setGuestToRemove(null)
+    await load()
+  }
+
+  const handleSearchMembers = async (query: string) => {
+    setInviteSearchQuery(query)
+    if (query.trim().length < 2) {
+      setInviteSearchResults([])
+      return
+    }
+    const { data } = await supabase
+      .from('public_profiles')
+      .select('id, display_name, avatar_path')
+      .ilike('display_name', `%${query.trim()}%`)
+      .limit(20)
+    setInviteSearchResults((data as PublicProfilePreview[] | null) ?? [])
+  }
+
+  const handleSendInvitation = async (targetProfileId: string) => {
+    if (!id || !user) return
+    setInviting(true)
+    setInviteError('')
+    const { error } = await supabase.from('event_invitations').insert([{
+      event_id: id,
+      host_id: user.id,
+      target_profile_id: targetProfileId,
+    }])
+    setInviting(false)
+    if (error) {
+      setInviteError(error.message)
+      return
+    }
+    setShowInviteModal(false)
+    setInviteSearchQuery('')
+    setInviteSearchResults([])
+    await load()
+  }
+
+  const handleRetractInvitation = async () => {
+    if (!user || !invitationToRetract) return
+    const { error } = await supabase
+      .from('event_invitations')
+      .update({ status: 'retracted' })
+      .eq('id', invitationToRetract.id)
+    setInvitationToRetract(null)
+    if (error) {
+      showError(error.message, error)
+      return
+    }
     await load()
   }
 
@@ -908,6 +976,9 @@ export function EventDetailPage() {
             <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
               <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
             </button>
+            <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
+            </button>
           </div>
         </section>
       ) : null}
@@ -1059,6 +1130,34 @@ export function EventDetailPage() {
                 <div>
                   <button type="button" className="danger-action" onClick={() => setGuestToRemove(g)}>
                     {t('eventDetail.removeExternalGuest')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Pending Invitations Section (host only) */}
+      {isHost && pendingInvitations.length > 0 ? (
+        <section className="card event-admin-section event-admin-section--wide">
+          <h3>{t('eventDetail.invitations')} ({pendingInvitations.length})</h3>
+          <ul>
+            {pendingInvitations.map((inv) => (
+              <li key={inv.id} className="thread-item">
+                <div className="thread-header">
+                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
+                  <div>
+                    <p>
+                      {inv.target_profile_id}{' '}
+                      <span className="chip chip-neutral">{t('eventDetail.pendingInvite')}</span>
+                    </p>
+                    <small>{new Date(inv.created_at).toLocaleString()}</small>
+                  </div>
+                </div>
+                <div>
+                  <button type="button" className="danger-action" onClick={() => setInvitationToRetract(inv)}>
+                    {t('eventDetail.retractInvitation')}
                   </button>
                 </div>
               </li>
@@ -1221,6 +1320,69 @@ export function EventDetailPage() {
               <button type="button" className="danger-action" disabled={submittingGuest} onClick={() => void handleRemoveExternalGuest()}>
                 {submittingGuest ? t('common.loading') : t('eventDetail.removeExternalGuest')}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && invitationToRetract ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setInvitationToRetract(null)
+        }}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="retract-invitation-dialog-title">
+            <h3 id="retract-invitation-dialog-title">{t('eventDetail.retractInvitation')}</h3>
+            <p>{t('eventDetail.retractInvitationConfirm')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="secondary-action" onClick={() => setInvitationToRetract(null)}>
+                {t('common.cancelReply')}
+              </button>
+              <button type="button" className="danger-action" onClick={() => void handleRetractInvitation()}>
+                {t('eventDetail.retractInvitation')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && showInviteModal ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) { setShowInviteModal(false); setInviteSearchResults([]); setInviteError('') }
+        }}>
+          <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="invite-member-title">
+            <div className="report-modal-header">
+              <h3 id="invite-member-title">{t('eventDetail.inviteMemberTitle')}</h3>
+              <button type="button" className="modal-close" onClick={() => { setShowInviteModal(false); setInviteSearchResults([]); setInviteError('') }} aria-label={t('common.close')}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '1rem' }}>
+              <label className="form-field" style={{ marginBottom: '0.75rem' }}>
+                <span>{t('eventDetail.searchMember')}</span>
+                <input
+                  autoFocus
+                  value={inviteSearchQuery}
+                  onChange={(e) => void handleSearchMembers(e.target.value)}
+                  placeholder={t('eventDetail.searchMember')}
+                />
+              </label>
+              {inviteError ? <p className="error-message" role="alert">{inviteError}</p> : null}
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {inviteSearchResults.map((profile) => (
+                  <li key={profile.id} className="thread-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+                    <span>{profile.display_name || profile.id}</span>
+                    <button
+                      type="button"
+                      className="primary-cta"
+                      disabled={inviting}
+                      onClick={() => void handleSendInvitation(profile.id)}
+                      style={{ fontSize: '0.8125rem', padding: '0.375rem 0.75rem' }}
+                    >
+                      {inviting ? t('common.loading') : t('eventDetail.sendInvitation')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {inviteSearchQuery.trim().length >= 2 && inviteSearchResults.length === 0 ? (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{t('common.noResults')}</p>
+              ) : null}
             </div>
           </div>
         </div>
