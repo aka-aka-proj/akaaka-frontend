@@ -1,5 +1,11 @@
 # React + TypeScript + Vite
 
+## PWA notifications
+
+通知設定頁的「啟用瀏覽器通知」會在使用者明確操作後建立目前瀏覽器／PWA 的 Web Push subscription。前端只需要公開的 `VITE_VAPID_PUBLIC_KEY`；VAPID private key 不得放入前端環境變數或 bundle。
+
+目前 Service Worker 已處理通知顯示與安全的通知點擊導向，但 provider fan-out 尚未部署；`push_subscriptions` 本身不代表通知已送達。provider、retry 與失效 endpoint 清理須依 docs ADR-017／ADR-014 另行完成。
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

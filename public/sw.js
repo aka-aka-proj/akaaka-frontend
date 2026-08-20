@@ -70,12 +70,30 @@ self.addEventListener('push', (event) => {
     payload = {}
   }
 
-  const title = typeof payload.title === 'string' ? payload.title : 'AkaAka'
+  const notificationType = typeof payload.notificationType === 'string' ? payload.notificationType : 'general'
+  const titles = {
+    new_event: 'AkaAka 新活動通知',
+    new_follow: 'AkaAka 新追蹤通知',
+    event_invitation: 'AkaAka 活動邀請',
+    new_issue: 'AkaAka 系統通知',
+    venue_application: 'AkaAka 系統通知',
+  }
+  const title = titles[notificationType] || 'AkaAka 通知'
+  const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
+  const safeEventPath = /^\/events\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const requestedUrl = typeof payload.url === 'string' ? payload.url : ''
+  const url = requestedUrl === '/notifications'
+    ? requestedUrl
+    : safeEventPath.test(requestedUrl)
+      ? requestedUrl
+      : safeEventPath.test(`/events/${eventId}`)
+        ? `/events/${eventId}`
+        : '/notifications'
   const options = {
-    body: typeof payload.body === 'string' ? payload.body : '你有一則新的通知。',
+    body: '你有一則新的通知，開啟 AkaAka 查看詳細內容。',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: { url: typeof payload.url === 'string' ? payload.url : '/notifications' },
+    data: { url, notificationId: typeof payload.notificationId === 'string' ? payload.notificationId : undefined },
   }
   event.waitUntil(self.registration.showNotification(title, options))
 })
