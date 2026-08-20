@@ -11,6 +11,14 @@ import { initClientErrorLogger } from './lib/client-error-logger'
 
 initClientErrorLogger()
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {
+      // PWA support is additive; a registration failure must not block the app.
+    })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
