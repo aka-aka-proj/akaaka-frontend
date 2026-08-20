@@ -7,6 +7,9 @@ import { AuthProvider } from './context/AuthContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ErrorProvider } from './context/ErrorContext'
 import { ErrorPopup } from './components/ErrorPopup'
+import { initClientErrorLogger } from './lib/client-error-logger'
+
+initClientErrorLogger()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
