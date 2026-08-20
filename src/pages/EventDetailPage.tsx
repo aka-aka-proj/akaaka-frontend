@@ -26,6 +26,11 @@ interface Attendee {
   joined_at: string
 }
 
+interface PublicCapacitySummary {
+  approved_registration_count: number
+  capacity_external_guest_count: number
+}
+
 function getCompatibleFormData(
   fields: RegistrationFormField[],
   responses: Record<string, unknown>,
@@ -192,9 +197,10 @@ export function EventDetailPage() {
       if (capacityError || !capacityData) {
         setPublicCapacityOccupied(null)
       } else {
+        const capacitySummary = capacityData as PublicCapacitySummary
         setPublicCapacityOccupied(
-          Number(capacityData.approved_registration_count ?? 0)
-          + Number(capacityData.capacity_external_guest_count ?? 0),
+          Number(capacitySummary.approved_registration_count ?? 0)
+          + Number(capacitySummary.capacity_external_guest_count ?? 0),
         )
       }
     } else {
