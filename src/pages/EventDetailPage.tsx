@@ -19,7 +19,6 @@ import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
-import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest } from '../types'
 
 interface Attendee {
   profile_id: string
@@ -300,7 +299,8 @@ export function EventDetailPage() {
       )
     } else {
       setAttendees([])
-    }
+}
+  }
 
   useEffect(() => {
     void load()
