@@ -125,6 +125,24 @@ export interface EventBookmark {
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlisted' | 'cancellation_pending' | 'cancellation_rejected'
 
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'retracted'
+
+export interface EventInvitation {
+  id: string
+  event_id: string
+  host_id: string
+  target_profile_id: string
+  status: InvitationStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface PublicProfilePreview {
+  id: string
+  display_name: string | null
+  avatar_path: string | null
+}
+
 export interface Registration {
   id: string
   event_id: string

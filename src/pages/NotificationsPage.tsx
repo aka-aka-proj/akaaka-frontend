@@ -9,7 +9,7 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface NotificationRow {
   id: string
-  notification_type: 'new_event' | 'new_issue' | 'new_follow' | 'venue_application'
+  notification_type: 'new_event' | 'new_issue' | 'new_follow' | 'venue_application' | 'event_invitation'
   event_id: string | null
   issue_id: string | null
   venue_application_profile_id: string | null
@@ -34,6 +34,9 @@ export function NotificationsPage() {
   const [followedBackIds, setFollowedBackIds] = useState<Set<string>>(new Set())
   const [applicationProfiles, setApplicationProfiles] = useState<Record<string, PublicProfileSummary>>({})
   const [processingApplicationId, setProcessingApplicationId] = useState<string | null>(null)
+  const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(null)
+  const [declineConfirmId, setDeclineConfirmId] = useState<string | null>(null)
+  const [acceptedInviteIds, setAcceptedInviteIds] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   const [mfaAssuranceLevel, setMfaAssuranceLevel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -156,6 +159,51 @@ export function NotificationsPage() {
     setProcessingApplicationId(null)
   }
 
+  const handleInvitationAccept = async (notification: NotificationRow) => {
+    if (!user || !notification.event_id || processingInvitationId) return
+    setProcessingInvitationId(notification.id)
+    setMessage('')
+    const { error } = await supabase.functions.invoke('create-registration', {
+      body: { event_id: notification.event_id },
+    })
+    if (error) {
+      setMessage((error as any).context?.message || error.message)
+      setProcessingInvitationId(null)
+      return
+    }
+    setAcceptedInviteIds((current) => new Set(current).add(notification.id))
+    setProcessingInvitationId(null)
+    if (!notification.read_at) await markRead(notification.id)
+    setMessage(t('eventDetail.invitationAccepted'))
+  }
+
+  const handleConfirmDecline = async () => {
+    if (!user || !declineConfirmId) return
+    setProcessingInvitationId(declineConfirmId)
+    setMessage('')
+    const notification = notifications.find((n) => n.id === declineConfirmId)
+    if (notification && notification.event_id) {
+      const { data: invites } = await supabase
+        .from('event_invitations')
+        .select('id')
+        .eq('event_id', notification.event_id)
+        .eq('host_id', notification.actor_profile_id ?? '')
+        .eq('target_profile_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle()
+      if (invites) {
+        await supabase
+          .from('event_invitations')
+          .update({ status: 'declined' })
+          .eq('id', invites.id)
+      }
+      if (!notification.read_at) await markRead(notification.id)
+    }
+    setProcessingInvitationId(null)
+    setDeclineConfirmId(null)
+    setMessage(t('eventDetail.invitationDeclined'))
+  }
+
   const markAllRead = async () => {
     if (!user) return
     const { error } = await supabase
@@ -222,7 +270,36 @@ export function NotificationsPage() {
                 </span>
               </>
             )
-            return notification.event_id ? (
+            return notification.notification_type === 'event_invitation' && acceptedInviteIds.has(notification.id) ? (
+              <Link
+                key={notification.id}
+                to={`/events/${notification.event_id}`}
+                className={`notification-item${notification.read_at ? '' : ' unread'}`}
+                onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
+              >
+                <span className="notification-dot" aria-hidden="true" />
+                <span>
+                  <strong>{t('notifications.invitation')}: {actorName} → {eventTitles[notification.event_id ?? ''] ?? notification.title} ({t('eventDetail.invitationAccepted')})</strong>
+                  <span className="notification-meta">{t('notifications.invitation')} · {new Date(notification.created_at).toLocaleString()}</span>
+                </span>
+              </Link>
+            ) : notification.notification_type === 'event_invitation' ? (
+              <div key={notification.id} className={`notification-item notification-follow-item${notification.read_at ? '' : ' unread'}`}>
+                <span className="notification-dot" aria-hidden="true" />
+                <span>
+                  <strong>{t('notifications.invitation')}: {actorId ? <Link to={`/profile/${actorId}`} onClick={(event) => event.stopPropagation()}>{actorName}</Link> : actorName} → {eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
+                  <span className="notification-meta">{t('notifications.invitation')} · {new Date(notification.created_at).toLocaleString()}</span>
+                </span>
+                <span className="notification-actions">
+                  <button type="button" onClick={() => void handleInvitationAccept(notification)} disabled={processingInvitationId === notification.id}>
+                    {processingInvitationId === notification.id ? t('common.loading') : t('eventDetail.acceptInvite')}
+                  </button>
+                  <button type="button" className="secondary-button" onClick={() => setDeclineConfirmId(notification.id)} disabled={processingInvitationId === notification.id}>
+                    {t('eventDetail.declineInvite')}
+                  </button>
+                </span>
+              </div>
+            ) : notification.event_id ? (
               <Link
                 key={notification.id}
                 to={`/events/${notification.event_id}`}
@@ -295,6 +372,25 @@ export function NotificationsPage() {
             )
           })}
         </div>
+
+        {declineConfirmId ? (
+          <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDeclineConfirmId(null)
+          }}>
+            <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="decline-invitation-dialog-title">
+              <h3 id="decline-invitation-dialog-title">{t('eventDetail.declineInvite')}</h3>
+              <p>{t('eventDetail.declineInviteConfirm')}</p>
+              <div className="confirm-dialog-actions">
+                <button type="button" className="secondary-action" onClick={() => setDeclineConfirmId(null)}>
+                  {t('common.cancelReply')}
+                </button>
+                <button type="button" className="danger-action" disabled={processingInvitationId === declineConfirmId} onClick={() => void handleConfirmDecline()}>
+                  {processingInvitationId === declineConfirmId ? t('common.loading') : t('eventDetail.declineInvite')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </Layout>
   )
