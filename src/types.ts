@@ -220,6 +220,16 @@ export interface RegistrationResponse {
   created_at: string
 }
 
+export interface ExternalGuest {
+  id: string
+  event_id: string
+  guest_name: string
+  contact_info: string | null
+  count_towards_capacity: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface AdminIssueItem {
   id: string
   title: string
