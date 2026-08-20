@@ -31,3 +31,4 @@ lighthouse-report
 # Next.js
 .next/
 next-env.d.ts
+.envrc

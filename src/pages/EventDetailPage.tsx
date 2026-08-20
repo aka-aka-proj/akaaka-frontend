@@ -19,6 +19,7 @@ import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
+import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest } from '../types'
 
 interface Attendee {
   profile_id: string
@@ -257,16 +258,31 @@ export function EventDetailPage() {
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
-    // Load profile names for all registrants
+    // Load profile names for registrants + invited users
     let tempMap = new Map<string, string | null>()
-    if (allRegs && allRegs.length > 0) {
-      const profileIds = [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))]
-      const { data: profiles } = await supabase
+    const registrantIds = allRegs ? [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))] : []
+
+    setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
+
+    // Load invitations (host sees all, target sees own)
+    const { data: inviteData } = await supabase
+      .from('event_invitations')
+      .select('*')
+      .eq('event_id', id)
+      .order('created_at', { ascending: true })
+
+    setInvitations((inviteData as EventInvitation[] | null) ?? [])
+
+    const inviteTargetIds = inviteData
+      ? [...new Set((inviteData as EventInvitation[]).map((inv) => inv.target_profile_id))]
+      : []
+    const allProfileIds = [...new Set([...registrantIds, ...inviteTargetIds])]
+    if (allProfileIds.length > 0) {
+      const { data: allProfiles } = await supabase
         .from('profiles')
         .select('id, display_name')
-        .in('id', profileIds)
-
-      tempMap = new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
+        .in('id', allProfileIds)
+      tempMap = new Map(((allProfiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
       setProfileNameMap(tempMap)
     } else {
       setProfileNameMap(new Map())
@@ -285,25 +301,6 @@ export function EventDetailPage() {
     } else {
       setAttendees([])
     }
-
-    // Load external guests (host only — RLS will return empty for non-host)
-    const { data: guestData } = await supabase
-      .from('event_external_guests')
-      .select('*')
-      .eq('event_id', id)
-      .order('created_at', { ascending: true })
-
-    setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
-
-    // Load invitations (host sees all, target sees own)
-    const { data: inviteData } = await supabase
-      .from('event_invitations')
-      .select('*')
-      .eq('event_id', id)
-      .order('created_at', { ascending: true })
-
-    setInvitations((inviteData as EventInvitation[] | null) ?? [])
-  }
 
   useEffect(() => {
     void load()
@@ -1149,7 +1146,7 @@ export function EventDetailPage() {
                   <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                   <div>
                     <p>
-                      {inv.target_profile_id}{' '}
+                      <Link to={`/profile/${inv.target_profile_id}`}>{profileNameMap.get(inv.target_profile_id) || inv.target_profile_id}</Link>{' '}
                       <span className="chip chip-neutral">{t('eventDetail.pendingInvite')}</span>
                     </p>
                     <small>{new Date(inv.created_at).toLocaleString()}</small>
