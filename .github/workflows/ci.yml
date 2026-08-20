@@ -45,8 +45,8 @@ jobs:
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: ci-public-test-key
-      # Preview pushes only run chromium for speed; main/PR runs full matrix
-      BROWSER_FILTER: ${{ (github.ref_name == 'main' || github.event_name == 'pull_request') && '' || 'chromium' }}
+      # Preview pushes run Chromium plus iPhone Safari/WebKit; main/PR runs full matrix.
+      BROWSER_FILTER: ${{ (github.ref_name == 'main' || github.event_name == 'pull_request') && '' || 'chromium,webkit-mobile' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
