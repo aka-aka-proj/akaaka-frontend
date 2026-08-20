@@ -591,6 +591,7 @@ const zhTW = {
     invitationRetracted: '已撤回邀請',
     retractInvitationConfirm: '確定要撤回此邀請嗎？對方將無法再接受此邀請。',
     invitations: '待回覆邀請',
+    unnamedMember: '未命名會員',
     noInvitations: '尚無待回覆的邀請。',
     invitedBy: '{name} 邀請了你',
     invitationAccepted: '你已加入此活動。',

@@ -591,6 +591,7 @@ const en = {
     invitationRetracted: 'Invitation retracted',
     retractInvitationConfirm: 'Are you sure you want to retract this invitation? The invited person will no longer be able to accept.',
     invitations: 'Pending invitations',
+    unnamedMember: 'Unnamed member',
     noInvitations: 'No pending invitations.',
     invitedBy: 'Invited by {name}',
     invitationAccepted: 'You have joined the event.',
