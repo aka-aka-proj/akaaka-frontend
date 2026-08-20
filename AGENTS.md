@@ -15,6 +15,15 @@
 | **Production** | `https://fkqvjchizknuifjxiawe.supabase.co` | `/home/zacko/Projects/AkaAka/supabase.prod.anon` |
 | **Staging** | `https://xdknuxdhyvjgwlcliyqx.supabase.co` | `/home/zacko/Projects/AkaAka/supabase.stage.anon` |
 
+## Supabase DB Password
+
+執行 `supabase db push` 部署 migration 到遠端資料庫時需要 DB password（僅供 IaC 操作參考）：
+
+| 環境 | DB Password 檔案 |
+|---|---|
+| **Production** | `/home/zacko/Projects/AkaAka/supabase.db.pwd.prod` |
+| **Staging** | `/home/zacko/Projects/AkaAka/supabase.db.pwd.stage` |
+
 - 開發時使用 staging anon key 連線 Supabase，production 用於正式環境。
 - 修改前端程式後，依影響範圍執行 `rtk npm run lint`、`rtk npm test` 或 `rtk npm run build`。
 - 不得儲存原始照片；多媒體僅能使用 FB、IG、X.com 的外部社群連結。

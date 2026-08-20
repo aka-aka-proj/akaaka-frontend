@@ -257,34 +257,9 @@ export function EventDetailPage() {
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
-    // Load profile names for all registrants
+    // Load public profile names for registrants + invited users
     let tempMap = new Map<string, string | null>()
-    if (allRegs && allRegs.length > 0) {
-      const profileIds = [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))]
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .in('id', profileIds)
-
-      tempMap = new Map(((profiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
-      setProfileNameMap(tempMap)
-    } else {
-      setProfileNameMap(new Map())
-    }
-
-    // Load attendees (approved or cancellation_rejected)
-    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved' || r.status === 'cancellation_rejected')
-    if (approvedRegs.length > 0) {
-      setAttendees(
-        approvedRegs.map((r) => ({
-          profile_id: r.profile_id,
-          display_name: tempMap.get(r.profile_id) ?? null,
-          joined_at: r.created_at,
-        })),
-      )
-    } else {
-      setAttendees([])
-    }
+    const registrantIds = allRegs ? [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))] : []
 
     // Load external guests (host only — RLS will return empty for non-host)
     const { data: guestData } = await supabase
@@ -303,6 +278,35 @@ export function EventDetailPage() {
       .order('created_at', { ascending: true })
 
     setInvitations((inviteData as EventInvitation[] | null) ?? [])
+
+    const inviteTargetIds = inviteData
+      ? [...new Set((inviteData as EventInvitation[]).map((inv) => inv.target_profile_id))]
+      : []
+    const allProfileIds = [...new Set([...registrantIds, ...inviteTargetIds])]
+    if (allProfileIds.length > 0) {
+      const { data: allProfiles } = await supabase
+        .from('public_profiles')
+        .select('id, display_name')
+        .in('id', allProfileIds)
+      tempMap = new Map(((allProfiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
+      setProfileNameMap(tempMap)
+    } else {
+      setProfileNameMap(new Map())
+    }
+
+    // Load attendees (approved or cancellation_rejected)
+    const approvedRegs = ((allRegs as Registration[]) ?? []).filter((r) => r.status === 'approved' || r.status === 'cancellation_rejected')
+    if (approvedRegs.length > 0) {
+      setAttendees(
+        approvedRegs.map((r) => ({
+          profile_id: r.profile_id,
+          display_name: tempMap.get(r.profile_id) ?? null,
+          joined_at: r.created_at,
+        })),
+      )
+    } else {
+      setAttendees([])
+}
   }
 
   useEffect(() => {
@@ -1149,7 +1153,9 @@ export function EventDetailPage() {
                   <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                   <div>
                     <p>
-                      {inv.target_profile_id}{' '}
+                      <Link to={`/profile/${inv.target_profile_id}`}>
+                        {profileNameMap.get(inv.target_profile_id) || t('eventDetail.unnamedMember')}
+                      </Link>{' '}
                       <span className="chip chip-neutral">{t('eventDetail.pendingInvite')}</span>
                     </p>
                     <small>{new Date(inv.created_at).toLocaleString()}</small>
