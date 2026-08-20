@@ -257,7 +257,7 @@ export function EventDetailPage() {
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
-    // Load profile names for registrants + invited users
+    // Load public profile names for registrants + invited users
     let tempMap = new Map<string, string | null>()
     const registrantIds = allRegs ? [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))] : []
 
@@ -285,7 +285,7 @@ export function EventDetailPage() {
     const allProfileIds = [...new Set([...registrantIds, ...inviteTargetIds])]
     if (allProfileIds.length > 0) {
       const { data: allProfiles } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id, display_name')
         .in('id', allProfileIds)
       tempMap = new Map(((allProfiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
@@ -1153,7 +1153,9 @@ export function EventDetailPage() {
                   <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                   <div>
                     <p>
-                      <Link to={`/profile/${inv.target_profile_id}`}>{profileNameMap.get(inv.target_profile_id) || inv.target_profile_id}</Link>{' '}
+                      <Link to={`/profile/${inv.target_profile_id}`}>
+                        {profileNameMap.get(inv.target_profile_id) || t('eventDetail.unnamedMember')}
+                      </Link>{' '}
                       <span className="chip chip-neutral">{t('eventDetail.pendingInvite')}</span>
                     </p>
                     <small>{new Date(inv.created_at).toLocaleString()}</small>
