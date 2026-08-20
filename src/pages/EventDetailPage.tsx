@@ -261,6 +261,13 @@ export function EventDetailPage() {
     let tempMap = new Map<string, string | null>()
     const registrantIds = allRegs ? [...new Set(((allRegs as Registration[]) ?? []).map((r) => r.profile_id))] : []
 
+    // Load external guests (host only — RLS will return empty for non-host)
+    const { data: guestData } = await supabase
+      .from('event_external_guests')
+      .select('*')
+      .eq('event_id', id)
+      .order('created_at', { ascending: true })
+
     setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
 
     // Load invitations (host sees all, target sees own)
