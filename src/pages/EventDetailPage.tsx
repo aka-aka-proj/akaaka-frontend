@@ -18,7 +18,7 @@ import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
-import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse } from '../types'
+import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest } from '../types'
 
 interface Attendee {
   profile_id: string
@@ -73,12 +73,31 @@ export function EventDetailPage() {
   const [reportOpen, setReportOpen] = useState(false)
   const [publicationConfirmOpen, setPublicationConfirmOpen] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [externalGuests, setExternalGuests] = useState<ExternalGuest[]>([])
+  const [showAddGuest, setShowAddGuest] = useState(false)
+  const [newGuestName, setNewGuestName] = useState('')
+  const [newGuestContact, setNewGuestContact] = useState('')
+  const [newGuestCountsToCapacity, setNewGuestCountsToCapacity] = useState(true)
+  const [guestToRemove, setGuestToRemove] = useState<ExternalGuest | null>(null)
+  const [submittingGuest, setSubmittingGuest] = useState(false)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
   const isAtCapacity = Boolean(eventItem?.max_capacity && attendees.length >= eventItem.max_capacity)
+  const capacityExternalGuests = useMemo(
+    () => externalGuests.filter((g) => g.count_towards_capacity),
+    [externalGuests],
+  )
+  const extraExternalGuests = useMemo(
+    () => externalGuests.filter((g) => !g.count_towards_capacity),
+    [externalGuests],
+  )
+  const totalCapacityOccupied = useMemo(() => {
+    if (!eventItem?.max_capacity) return 0
+    return attendees.length + capacityExternalGuests.length
+  }, [attendees.length, capacityExternalGuests.length, eventItem?.max_capacity])
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => !blockedUserIds.includes(thread.profile_id)),
@@ -255,6 +274,15 @@ export function EventDetailPage() {
     } else {
       setAttendees([])
     }
+
+    // Load external guests (host only — RLS will return empty for non-host)
+    const { data: guestData } = await supabase
+      .from('event_external_guests')
+      .select('*')
+      .eq('event_id', id)
+      .order('created_at', { ascending: true })
+
+    setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
   }
 
   useEffect(() => {
@@ -355,6 +383,53 @@ export function EventDetailPage() {
       return
     }
 
+    await load()
+  }
+
+  const handleAddExternalGuest = async () => {
+    if (!id || !newGuestName.trim()) return
+    setSubmittingGuest(true)
+
+    const { error } = await supabase.from('event_external_guests').insert([
+      {
+        event_id: id,
+        guest_name: newGuestName.trim(),
+        contact_info: newGuestContact.trim() || null,
+        count_towards_capacity: newGuestCountsToCapacity,
+      },
+    ])
+
+    setSubmittingGuest(false)
+
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+
+    setNewGuestName('')
+    setNewGuestContact('')
+    setNewGuestCountsToCapacity(true)
+    setShowAddGuest(false)
+    await load()
+  }
+
+  const handleRemoveExternalGuest = async () => {
+    if (!guestToRemove) return
+    setSubmittingGuest(true)
+
+    const { error } = await supabase
+      .from('event_external_guests')
+      .delete()
+      .eq('id', guestToRemove.id)
+
+    setSubmittingGuest(false)
+
+    if (error) {
+      showError(error.message, error)
+      return
+    }
+
+    setGuestToRemove(null)
     await load()
   }
 
@@ -590,8 +665,12 @@ export function EventDetailPage() {
                 <div className={`event-summary-item${user && isAtCapacity ? ' event-summary-item-warning' : ''}`}>
                   <Icon href="/form-icons.svg" name="form-user" size={18} />
                   <span><strong>{t('eventDetail.capacityLabel')}</strong>
-                    {user ? (isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length }))
-                     : t('eventDetail.capacity', {max: eventItem.max_capacity, current: '?' })}</span>
+                    {isHost
+                      ? (totalCapacityOccupied >= eventItem.max_capacity
+                        ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
+                        : t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : ''))
+                      : (user ? (isAtCapacity ? t('eventDetail.full') : t('eventDetail.capacity', {max: eventItem.max_capacity, current: attendees.length }))
+                       : t('eventDetail.capacity', {max: eventItem.max_capacity, current: '?' }))}</span>
                 </div>
               ) : null}
               {eventItem.registration_deadline ? (
@@ -826,6 +905,9 @@ export function EventDetailPage() {
                 <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
               </button>
             ) : null}
+            <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
+            </button>
           </div>
         </section>
       ) : null}
@@ -933,6 +1015,57 @@ export function EventDetailPage() {
           </ul>
         </section>
       ) : null}
+      
+      {/* External Guests Section (host only) */}
+      {isHost && externalGuests.length > 0 ? (
+        <section className="card event-admin-section event-admin-section--wide">
+          <h3>{t('eventDetail.externalGuests')} ({externalGuests.length})</h3>
+          <ul>
+            {capacityExternalGuests.map((g) => (
+              <li key={g.id} className="thread-item">
+                <div className="thread-header">
+                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
+                  <div>
+                    <p>
+                      {g.guest_name}{' '}
+                      <span className="chip chip-neutral">{t('eventDetail.externalGuestBadge')}</span>{' '}
+                      <span className="chip">{t('eventDetail.externalGuestCapacity')}</span>
+                    </p>
+                    {g.contact_info ? <small>{g.contact_info}</small> : null}
+                    <small>{new Date(g.created_at).toLocaleString()}</small>
+                  </div>
+                </div>
+                <div>
+                  <button type="button" className="danger-action" onClick={() => setGuestToRemove(g)}>
+                    {t('eventDetail.removeExternalGuest')}
+                  </button>
+                </div>
+              </li>
+            ))}
+            {extraExternalGuests.map((g) => (
+              <li key={g.id} className="thread-item">
+                <div className="thread-header">
+                  <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
+                  <div>
+                    <p>
+                      {g.guest_name}{' '}
+                      <span className="chip chip-neutral">{t('eventDetail.externalGuestBadge')}</span>{' '}
+                      <span className="chip">{t('eventDetail.externalGuestNoCapacity')}</span>
+                    </p>
+                    {g.contact_info ? <small>{g.contact_info}</small> : null}
+                    <small>{new Date(g.created_at).toLocaleString()}</small>
+                  </div>
+                </div>
+                <div>
+                  <button type="button" className="danger-action" onClick={() => setGuestToRemove(g)}>
+                    {t('eventDetail.removeExternalGuest')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {isHost && formResponses.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
@@ -1017,6 +1150,76 @@ export function EventDetailPage() {
               </button>
               <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
                 {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && showAddGuest ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setShowAddGuest(false)
+        }}>
+          <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="add-guest-title">
+            <div className="report-modal-header">
+              <h3 id="add-guest-title">{t('eventDetail.addExternalGuestTitle')}</h3>
+              <button type="button" className="modal-close" onClick={() => setShowAddGuest(false)} aria-label={t('common.close')}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '1rem' }}>
+              <label className="form-field" style={{ marginBottom: '0.75rem' }}>
+                <span>{t('eventDetail.addGuestName')} *</span>
+                <input
+                  autoFocus
+                  value={newGuestName}
+                  onChange={(e) => setNewGuestName(e.target.value)}
+                  placeholder={t('eventDetail.addGuestName')}
+                />
+              </label>
+              <label className="form-field" style={{ marginBottom: '0.75rem' }}>
+                <span>{t('eventDetail.addContactInfo')}</span>
+                <input
+                  value={newGuestContact}
+                  onChange={(e) => setNewGuestContact(e.target.value)}
+                  placeholder={t('eventDetail.addContactInfo')}
+                />
+              </label>
+              <label className="form-field checkbox" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={newGuestCountsToCapacity}
+                  onChange={(e) => setNewGuestCountsToCapacity(e.target.checked)}
+                />
+                <div>
+                  <span>{t('eventDetail.countTowardsCapacity')}</span>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{t('eventDetail.countTowardsCapacityHint')}</p>
+                </div>
+              </label>
+              <div className="confirm-dialog-actions">
+                <button type="button" className="secondary-action" onClick={() => setShowAddGuest(false)}>
+                  {t('common.cancelReply')}
+                </button>
+                <button type="button" className="primary-cta" disabled={submittingGuest || !newGuestName.trim()} onClick={() => void handleAddExternalGuest()}>
+                  {submittingGuest ? t('common.loading') : t('eventDetail.addExternalGuest')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && guestToRemove ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setGuestToRemove(null)
+        }}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-guest-dialog-title">
+            <h3 id="remove-guest-dialog-title">{t('eventDetail.removeExternalGuest')}</h3>
+            <p>{t('eventDetail.removeExternalGuestConfirm')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="secondary-action" onClick={() => setGuestToRemove(null)}>
+                {t('common.cancelReply')}
+              </button>
+              <button type="button" className="danger-action" disabled={submittingGuest} onClick={() => void handleRemoveExternalGuest()}>
+                {submittingGuest ? t('common.loading') : t('eventDetail.removeExternalGuest')}
               </button>
             </div>
           </div>
