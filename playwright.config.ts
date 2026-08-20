@@ -13,6 +13,7 @@ const allProjects = [
 ]
 
 const browserFilter = process.env.BROWSER_FILTER
+const browserFilters = browserFilter?.split(',').map((filter) => filter.trim()).filter(Boolean)
 
 export default defineConfig({
   testDir: './tests',
@@ -40,6 +41,6 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
       },
   projects: browserFilter
-    ? allProjects.filter((p) => p.name.startsWith(browserFilter))
+    ? allProjects.filter((p) => browserFilters?.some((filter) => p.name.startsWith(filter)))
     : allProjects,
 })
