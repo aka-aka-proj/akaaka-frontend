@@ -15,6 +15,7 @@ storybook-static
 coverage
 test-results
 playwright-report
+.playwright-runtime-manifest.json
 lighthouse-report
 *.local
 

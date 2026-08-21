@@ -5,8 +5,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, firefox, webkit } from 'playwright'
 
-const reportDirectory = process.env.PLAYWRIGHT_REPORT_DIR || 'playwright-report'
-const manifestPath = path.resolve(reportDirectory, 'runtime-manifest.json')
+// Playwright's HTML reporter may clear its output directory after globalSetup.
+// Keep the source manifest outside that directory, then materialize the
+// artifact copy after the test command has finished.
+const manifestPath = path.resolve('.playwright-runtime-manifest.json')
 const playwrightPackagePath = fileURLToPath(new URL('../node_modules/playwright/package.json', import.meta.url))
 
 const browserTypes = { chromium, firefox, webkit }
