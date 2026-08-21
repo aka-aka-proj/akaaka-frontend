@@ -70,7 +70,11 @@ self.addEventListener('push', (event) => {
     payload = {}
   }
 
-  const notificationType = typeof payload.notificationType === 'string' ? payload.notificationType : 'general'
+  const notificationType = typeof payload.notification_type === 'string'
+    ? payload.notification_type
+    : typeof payload.notificationType === 'string'
+      ? payload.notificationType
+      : 'general'
   const titles = {
     new_event: 'AkaAka 新活動通知',
     new_follow: 'AkaAka 新追蹤通知',
@@ -79,21 +83,34 @@ self.addEventListener('push', (event) => {
     venue_application: 'AkaAka 系統通知',
   }
   const title = titles[notificationType] || 'AkaAka 通知'
+  const targetId = typeof payload.target?.id === 'string' ? payload.target.id : ''
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
   const safeEventPath = /^\/events\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const requestedUrl = typeof payload.url === 'string' ? payload.url : ''
-  const url = requestedUrl === '/notifications'
-    ? requestedUrl
-    : safeEventPath.test(requestedUrl)
-      ? requestedUrl
-      : safeEventPath.test(`/events/${eventId}`)
-        ? `/events/${eventId}`
-        : '/notifications'
+  const url = isUuid && payload.target?.kind === 'event'
+    ? `/events/${targetId}`
+    : isUuid && payload.target?.kind === 'profile'
+      ? `/profile/${targetId}`
+      : requestedUrl === '/notifications'
+        ? requestedUrl
+        : safeEventPath.test(requestedUrl)
+          ? requestedUrl
+          : safeEventPath.test(`/events/${eventId}`)
+            ? `/events/${eventId}`
+            : '/notifications'
   const options = {
     body: '你有一則新的通知，開啟 AkaAka 查看詳細內容。',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: { url, notificationId: typeof payload.notificationId === 'string' ? payload.notificationId : undefined },
+    data: {
+      url,
+      notificationId: typeof payload.notification_id === 'string'
+        ? payload.notification_id
+        : typeof payload.notificationId === 'string'
+          ? payload.notificationId
+          : undefined,
+    },
   }
   event.waitUntil(self.registration.showNotification(title, options))
 })
