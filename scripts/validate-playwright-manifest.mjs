@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-const manifestPath = process.argv[2] || 'playwright-report/runtime-manifest.json'
+const manifestPath = process.argv[2] || '.playwright-runtime-manifest.json'
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
 const requiredProjectFields = [
   'browser',
