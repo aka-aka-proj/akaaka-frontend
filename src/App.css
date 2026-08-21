@@ -324,6 +324,35 @@ button {
   font-weight: 700;
 }
 
+.onboarding-push-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.5rem;
+}
+
+.onboarding-push-prompt h1 {
+  margin: 0;
+  color: var(--color-text-strong);
+  letter-spacing: -0.02em;
+}
+
+.onboarding-push-prompt > p:not(.eyebrow):not(.message) {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.onboarding-push-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.onboarding-push-later {
+  min-height: 2.75rem;
+}
+
 .onboarding-submit:hover,
 .onboarding-submit:focus-visible {
   background: var(--color-primary-hover);
