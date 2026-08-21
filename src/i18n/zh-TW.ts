@@ -768,6 +768,13 @@ const zhTW = {
     identityTitle: '身分認同',
     identityDescription: '這些欄位都是選填的，你可以為每個屬性設定可見範圍。',
     socialLinksLater: '外部社群連結可稍後在個人資料設定中管理；手動網址不會被視為已驗證身份。',
+    pushEyebrow: '通知偏好',
+    pushTitle: '要接收 AkaAka 通知嗎？',
+    pushDescription: '開啟後，你可以在瀏覽器或 PWA 關閉時收到新活動、追蹤與邀請提醒。你也可以稍後到通知設定開啟。',
+    pushAccept: '開啟通知',
+    pushLater: '稍後到通知設定',
+    pushWorking: '正在設定…',
+    pushEnableFailed: '通知設定失敗，你可以稍後到通知設定再試。',
 
     displayNameLabel: '顯示名稱',
     bioLabel: '簡介',

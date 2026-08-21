@@ -768,6 +768,13 @@ const en = {
     identityTitle: 'Identity',
     identityDescription: 'These fields are optional. Choose who can see each attribute.',
     socialLinksLater: 'You can manage external social links later in profile settings. A manual URL is never identity-verified.',
+    pushEyebrow: 'Notification preference',
+    pushTitle: 'Would you like AkaAka notifications?',
+    pushDescription: 'Enable notifications to receive new event, follow, and invitation reminders while your browser or PWA is closed. You can also turn this on later in Notification Settings.',
+    pushAccept: 'Enable notifications',
+    pushLater: 'Later in Notification Settings',
+    pushWorking: 'Setting up…',
+    pushEnableFailed: 'Notification setup failed. You can try again later in Notification Settings.',
 
     displayNameLabel: 'Display name',
     bioLabel: 'Bio',

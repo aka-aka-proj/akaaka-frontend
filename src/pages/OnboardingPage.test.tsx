@@ -7,6 +7,9 @@ import { OnboardingPage } from './OnboardingPage'
 const mockUseAuth = vi.fn()
 const upsert = vi.fn()
 const from = vi.fn()
+const refreshProfile = vi.fn()
+const enableWebPush = vi.fn()
+const getWebPushState = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -17,6 +20,11 @@ vi.mock('../supabaseClient', () => ({
     from: (...args: unknown[]) => from(...args),
     auth: { signOut: vi.fn().mockResolvedValue({ error: null }) },
   },
+}))
+
+vi.mock('../lib/web-push', () => ({
+  enableWebPush: (...args: unknown[]) => enableWebPush(...args),
+  getWebPushState: (...args: unknown[]) => getWebPushState(...args),
 }))
 
 describe('OnboardingPage', () => {
@@ -33,6 +41,12 @@ describe('OnboardingPage', () => {
 
     upsert.mockReset()
     upsert.mockResolvedValue({ error: null })
+    refreshProfile.mockReset()
+    refreshProfile.mockResolvedValue(undefined)
+    enableWebPush.mockReset()
+    enableWebPush.mockResolvedValue(undefined)
+    getWebPushState.mockReset()
+    getWebPushState.mockResolvedValue('unsubscribed')
     from.mockReset()
     from.mockImplementation((table: string) => {
       if (table === 'profiles') {
@@ -49,7 +63,7 @@ describe('OnboardingPage', () => {
     })
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1' },
-      refreshProfile: vi.fn().mockResolvedValue(undefined),
+      refreshProfile,
     })
   })
 
@@ -82,6 +96,42 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
     expect(upsert).toHaveBeenCalled()
+  })
+
+  it('offers Web Push after profile creation and enables it only after acceptance', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OnboardingPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+
+    expect(screen.getByRole('heading', { name: '要接收 AkaAka 通知嗎？' })).toBeTruthy()
+    expect(enableWebPush).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '開啟通知' }))
+
+    expect(enableWebPush).toHaveBeenCalledWith('user-1')
+    expect(refreshProfile).toHaveBeenCalled()
+  })
+
+  it('allows postponing Web Push until Notification Settings', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OnboardingPage />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    await user.click(screen.getByRole('button', { name: '稍後到通知設定' }))
+
+    expect(enableWebPush).not.toHaveBeenCalled()
+    expect(refreshProfile).toHaveBeenCalled()
   })
 
   it('allows selecting a preset avatar and persists it in metadata', async () => {

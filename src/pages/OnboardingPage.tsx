@@ -7,6 +7,7 @@ import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { PRESET_AVATAR_PATHS } from '../lib/profile'
+import { enableWebPush, getWebPushState } from '../lib/web-push'
 import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Visibility } from '../types'
 
@@ -28,6 +29,10 @@ export function OnboardingPage() {
   const [bdsmRolesVisibility, setBdsmRolesVisibility] = useState<Visibility>('public')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [pushPromptVisible, setPushPromptVisible] = useState(false)
+  const [pushPromptBusy, setPushPromptBusy] = useState(false)
+  const [pushPromptMessage, setPushPromptMessage] = useState('')
 
   useEffect(() => {
     if (profile) {
@@ -82,9 +87,38 @@ export function OnboardingPage() {
       return
     }
 
+    setProfileSaved(true)
+    const webPushState = await getWebPushState().catch(() => 'unsupported' as const)
+    if (webPushState === 'unsubscribed' || webPushState === 'default') {
+      setPushPromptVisible(true)
+      return
+    }
+
+    await finishOnboarding()
+  }
+
+  const finishOnboarding = async () => {
     await refreshProfile()
     const from = (location.state as { from?: string } | null)?.from
     navigate(from ?? '/events', { replace: true })
+  }
+
+  const acceptPush = async () => {
+    if (!user) return
+    setPushPromptBusy(true)
+    setPushPromptMessage('')
+    try {
+      await enableWebPush(user.id)
+      await finishOnboarding()
+    } catch (error) {
+      setPushPromptMessage(error instanceof Error ? error.message : t('onboarding.pushEnableFailed'))
+      setPushPromptBusy(false)
+    }
+  }
+
+  const skipPush = async () => {
+    setPushPromptBusy(true)
+    await finishOnboarding()
   }
 
   return (
@@ -103,6 +137,24 @@ export function OnboardingPage() {
       {agreed && (
         <>
           <div className="onboarding-shell">
+            {profileSaved && pushPromptVisible ? (
+              <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
+                <p className="eyebrow">{t('onboarding.pushEyebrow')}</p>
+                <h1 id="onboarding-push-title">{t('onboarding.pushTitle')}</h1>
+                <p>{t('onboarding.pushDescription')}</p>
+                <div className="onboarding-push-actions">
+                  <button type="button" className="primary onboarding-submit" disabled={pushPromptBusy} onClick={() => void acceptPush()}>
+                    {pushPromptBusy ? t('onboarding.pushWorking') : t('onboarding.pushAccept')}
+                  </button>
+                  <button type="button" className="secondary onboarding-push-later" disabled={pushPromptBusy} onClick={() => void skipPush()}>
+                    {t('onboarding.pushLater')}
+                  </button>
+                </div>
+                {pushPromptMessage ? <p className="message" role="alert">{pushPromptMessage}</p> : null}
+              </section>
+            ) : null}
+            {!profileSaved ? (
+            <>
             <header className="onboarding-header">
               <p className="eyebrow">{t('onboarding.step')}</p>
               <h1>{t('onboarding.title')}</h1>
@@ -265,6 +317,8 @@ export function OnboardingPage() {
                 {message ? <p className="message" role="alert">{message}</p> : null}
               </div>
             </form>
+            </>
+            ) : null}
           </div>
         </>
       )}
