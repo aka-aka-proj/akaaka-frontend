@@ -66,6 +66,16 @@ jobs:
       - name: Run browser smoke matrix (shard ${{ matrix.shard }}/3)
         run: npx playwright test --shard=${{ matrix.shard }}/3
 
+      - name: Materialize runtime manifest artifact
+        if: always()
+        run: |
+          mkdir -p playwright-report
+          cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
+
+      - name: Validate runtime manifest
+        if: always()
+        run: npm run test:manifest
+
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4

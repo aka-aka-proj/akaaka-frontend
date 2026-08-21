@@ -17,6 +17,7 @@ const browserFilters = browserFilter?.split(',').map((filter) => filter.trim()).
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './scripts/playwright-global-setup.mjs',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -31,6 +32,9 @@ export default defineConfig({
     // Service-worker behavior has a separate web-push verification scope; blocking it here
     // keeps synthetic Supabase route interception deterministic across browser projects.
     serviceWorkers: 'block',
+    locale: 'en-US',
+    timezoneId: 'UTC',
+    reducedMotion: 'reduce',
     trace: 'retain-on-failure',
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
