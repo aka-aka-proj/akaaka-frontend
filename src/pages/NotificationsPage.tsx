@@ -9,8 +9,9 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 
 interface NotificationRow {
   id: string
-  notification_type: 'new_event' | 'new_issue' | 'new_follow' | 'venue_application' | 'event_invitation'
+  notification_type: 'new_event' | 'new_issue' | 'new_follow' | 'venue_application' | 'event_invitation' | 'event_announcement'
   event_id: string | null
+  event_announcement_id: string | null
   issue_id: string | null
   venue_application_profile_id: string | null
   actor_profile_id: string | null
@@ -30,6 +31,7 @@ export function NotificationsPage() {
   const { t } = useT()
   const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [eventTitles, setEventTitles] = useState<Record<string, string>>({})
+  const [announcementEventIds, setAnnouncementEventIds] = useState<Record<string, string>>({})
   const [actorNames, setActorNames] = useState<Record<string, string>>({})
   const [followedBackIds, setFollowedBackIds] = useState<Set<string>>(new Set())
   const [applicationProfiles, setApplicationProfiles] = useState<Record<string, PublicProfileSummary>>({})
@@ -46,7 +48,7 @@ export function NotificationsPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('notifications')
-      .select('id, notification_type, event_id, issue_id, actor_profile_id, venue_application_profile_id, title, read_at, created_at')
+      .select('id, notification_type, event_id, event_announcement_id, issue_id, actor_profile_id, venue_application_profile_id, title, read_at, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -58,6 +60,7 @@ export function NotificationsPage() {
     const rows = (data ?? []) as NotificationRow[]
     setNotifications(rows)
     const eventIds = [...new Set(rows.flatMap((row) => row.event_id ? [row.event_id] : []))]
+    const announcementIds = [...new Set(rows.flatMap((row) => row.event_announcement_id ? [row.event_announcement_id] : []))]
     const actorIds = [...new Set(rows.flatMap((row) => row.actor_profile_id ? [row.actor_profile_id] : []))]
     const applicationIds = [...new Set(rows.flatMap((row) => row.venue_application_profile_id ? [row.venue_application_profile_id] : []))]
     if (eventIds.length > 0) {
@@ -65,6 +68,15 @@ export function NotificationsPage() {
       setEventTitles(Object.fromEntries((events ?? []).map((event) => [event.id, event.title])))
     } else {
       setEventTitles({})
+    }
+    if (announcementIds.length > 0) {
+      const { data: announcementRows } = await supabase
+        .from('event_announcements')
+        .select('id, event_id')
+        .in('id', announcementIds)
+      setAnnouncementEventIds(Object.fromEntries((announcementRows ?? []).map((row) => [row.id, row.event_id])))
+    } else {
+      setAnnouncementEventIds({})
     }
     if (actorIds.length > 0) {
       const actorProfileRequest = user.app_metadata?.role === 'admin'
@@ -256,17 +268,19 @@ export function NotificationsPage() {
           {notifications.map((notification) => {
             const isFollowNotification = notification.notification_type === 'new_follow'
             const isVenueApplicationNotification = notification.notification_type === 'venue_application'
+            const isAnnouncementNotification = notification.notification_type === 'event_announcement'
             const applicationProfile = notification.venue_application_profile_id ? applicationProfiles[notification.venue_application_profile_id] : undefined
             const actorId = notification.actor_profile_id
             const actorName = actorNames[actorId ?? ''] ?? actorId ?? notification.title
+            const targetEventId = notification.event_id ?? announcementEventIds[notification.event_announcement_id ?? ''] ?? null
             const content = (
               <>
                 <span className="notification-dot" aria-hidden="true" />
                 <span>
-                <strong>{isFollowNotification ? <>{t('notifications.newFollow')}: {actorId ? <Link to={`/profile/${actorId}`}>{actorName}</Link> : actorName}</> : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
+                <strong>{isFollowNotification ? <>{t('notifications.newFollow')}: {actorId ? <Link to={`/profile/${actorId}`}>{actorName}</Link> : actorName}</> : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : isAnnouncementNotification ? notification.title : eventTitles[notification.event_id ?? ''] ?? notification.title}</strong>
                 <span className="notification-meta">
-                    {isFollowNotification ? t('notifications.newFollow') : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
-                  </span>
+                    {isFollowNotification ? t('notifications.newFollow') : notification.notification_type === 'new_issue' ? t('notifications.newIssue') : isVenueApplicationNotification ? t('notifications.venueApplication') : isAnnouncementNotification ? t('notifications.eventAnnouncement') : t('notifications.newEvent')} · {new Date(notification.created_at).toLocaleString()}
+                </span>
                 </span>
               </>
             )
@@ -299,10 +313,10 @@ export function NotificationsPage() {
                   </button>
                 </span>
               </div>
-            ) : notification.event_id ? (
+            ) : targetEventId ? (
               <Link
                 key={notification.id}
-                to={`/events/${notification.event_id}`}
+                to={`/events/${targetEventId}`}
                 className={`notification-item${notification.read_at ? '' : ' unread'}`}
                 onClick={() => { if (!notification.read_at) void markRead(notification.id) }}
               >

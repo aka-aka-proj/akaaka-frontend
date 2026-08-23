@@ -20,6 +20,7 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   className?: string
   'aria-label'?: string
+  allowLinks?: boolean
 }
 
 type Tool = {
@@ -51,6 +52,7 @@ export function MarkdownEditor({
   value,
   onChange,
   className,
+  allowLinks = true,
 }: MarkdownEditorProps) {
   const [editing, setEditing] = useState(!value.trim())
   const editorRef = useRef<HTMLDivElement>(null)
@@ -116,7 +118,7 @@ export function MarkdownEditor({
             }
           }}
         >
-          <MarkdownRenderer content={value} fallback="" />
+          <MarkdownRenderer content={value} fallback="" allowLinks={allowLinks} />
           <div className="markdown-editor-edit-overlay">
             <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); startEditing() }}>
               編輯
@@ -130,7 +132,7 @@ export function MarkdownEditor({
   return (
     <div className={`markdown-editor ${className ?? ''}`}>
       <div className="markdown-editor-toolbar" role="toolbar" aria-label="格式工具">
-        {TOOLS.map((tool) => (
+        {TOOLS.filter((tool) => allowLinks || tool.command !== 'createLink').map((tool) => (
           <button
             key={tool.label}
             type="button"

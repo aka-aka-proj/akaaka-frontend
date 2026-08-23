@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 interface MarkdownRendererProps {
   content: string | null
   fallback?: ReactNode
+  allowLinks?: boolean
 }
 
 const components: Components = {
@@ -16,14 +17,23 @@ const components: Components = {
   ),
 }
 
-export function MarkdownRenderer({ content, fallback }: MarkdownRendererProps) {
+const announcementAllowedElements = [
+  'p', 'br', 'strong', 'em', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li', 'blockquote', 'code', 'pre',
+]
+
+export function MarkdownRenderer({ content, fallback, allowLinks = true }: MarkdownRendererProps) {
   if (!content) {
     return <div className="markdown-body">{fallback}</div>
   }
 
   return (
     <div className="markdown-body">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={allowLinks ? components : undefined}
+        allowedElements={allowLinks ? undefined : announcementAllowedElements}
+      >
         {content}
       </ReactMarkdown>
     </div>

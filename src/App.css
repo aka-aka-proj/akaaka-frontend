@@ -42,8 +42,36 @@
 }
 
 .event-registration-section,
-.event-admin-section {
+.event-admin-section,
+.event-announcements-section {
   grid-column: 2;
+}
+
+.event-announcements-section {
+  grid-column: 1 / -1;
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+.event-announcement-editor {
+  margin-top: 1rem;
+  background: var(--color-surface);
+}
+
+.event-announcement-card {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.event-announcement-card h4 {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-strong);
+}
+
+.event-announcement-card time {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
 }
 
 .event-admin-section {

@@ -1,0 +1,208 @@
+import { useCallback, useEffect, useState } from 'react'
+import { MarkdownEditor } from './MarkdownEditor'
+import { MarkdownRenderer } from './MarkdownRenderer'
+import { supabase } from '../supabaseClient'
+import { useT } from '../hooks/useT'
+import type { EventAnnouncement } from '../types'
+
+interface EventAnnouncementsProps {
+  eventId: string
+  isHost: boolean
+  nativeRegistration: boolean
+}
+
+type PublishMode = 'draft' | 'scheduled' | 'now'
+
+const invalidMarkdown = /<[^>]+>|!\[[^]]*\]\([^)]*\)|\[[^]]+\]\([^)]*\)|https?:\/\/|www\./i
+
+function localDateTimeToIso(value: string): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+function isoToLocalDateTime(value: string | null): string {
+  if (!value) return ''
+  const date = new Date(value)
+  const offset = date.getTimezoneOffset()
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
+}
+
+export function EventAnnouncements({ eventId, isHost, nativeRegistration }: EventAnnouncementsProps) {
+  const { t } = useT()
+  const [announcements, setAnnouncements] = useState<EventAnnouncement[]>([])
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [publishMode, setPublishMode] = useState<PublishMode>('draft')
+  const [publishAt, setPublishAt] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [openForm, setOpenForm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('event_announcements')
+      .select('id, event_id, title, body_markdown, status, publish_at, published_at, created_at, updated_at')
+      .eq('event_id', eventId)
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+    if (!error) setAnnouncements((data ?? []) as EventAnnouncement[])
+  }, [eventId])
+
+  useEffect(() => {
+    if (nativeRegistration) void load()
+  }, [load, nativeRegistration])
+
+  const resetForm = () => {
+    setTitle('')
+    setBody('')
+    setPublishMode('draft')
+    setPublishAt('')
+    setEditingId(null)
+    setOpenForm(false)
+  }
+
+  const edit = (announcement: EventAnnouncement) => {
+    setEditingId(announcement.id)
+    setTitle(announcement.title)
+    setBody(announcement.body_markdown)
+    setPublishMode(announcement.status === 'scheduled' ? 'scheduled' : 'draft')
+    setPublishAt(isoToLocalDateTime(announcement.publish_at))
+    setMessage('')
+    setOpenForm(true)
+  }
+
+  const validate = (): string | null => {
+    const titleLength = Array.from(title.trim()).length
+    const bodyLength = Array.from(body).length
+    if (titleLength < 1 || titleLength > 50) return t('eventAnnouncements.titleLengthError')
+    if (bodyLength < 1 || bodyLength > 1000 || !body.trim()) return t('eventAnnouncements.bodyLengthError')
+    if (invalidMarkdown.test(body)) return t('eventAnnouncements.markdownError')
+    if (publishMode === 'scheduled' && !localDateTimeToIso(publishAt)) return t('eventAnnouncements.scheduleRequired')
+    return null
+  }
+
+  const save = async () => {
+    if (!isHost || !nativeRegistration || busy) return
+    const validationError = validate()
+    if (validationError) {
+      setMessage(validationError)
+      return
+    }
+    setBusy(true)
+    setMessage('')
+    const scheduledAt = publishMode === 'scheduled' ? localDateTimeToIso(publishAt) : null
+    const result = editingId
+      ? await supabase.rpc('update_event_announcement', {
+        p_announcement_id: editingId,
+        p_title: title.trim(),
+        p_body_markdown: body,
+        p_status: publishMode === 'scheduled' ? 'scheduled' : 'draft',
+        p_publish_at: scheduledAt,
+      })
+      : await supabase.rpc('create_event_announcement', {
+        p_event_id: eventId,
+        p_title: title.trim(),
+        p_body_markdown: body,
+        p_publish_at: scheduledAt,
+        p_publish_now: publishMode === 'now',
+      })
+    setBusy(false)
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+    resetForm()
+    await load()
+  }
+
+  const publish = async (announcement: EventAnnouncement) => {
+    if (!isHost || busy) return
+    setBusy(true)
+    setMessage('')
+    const { error } = await supabase.rpc('publish_event_announcement', { p_announcement_id: announcement.id })
+    setBusy(false)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    await load()
+  }
+
+  if (!nativeRegistration) return null
+
+  return (
+    <section className="card event-announcements-section" aria-labelledby="event-announcements-title">
+      <div className="section-heading-row">
+        <div>
+          <p className="eyebrow">{t('eventAnnouncements.eyebrow')}</p>
+          <h3 id="event-announcements-title">{t('eventAnnouncements.title')}</h3>
+        </div>
+        {isHost && announcements.length < 5 ? (
+          <button type="button" className="secondary-action" onClick={() => { setMessage(''); setOpenForm(true) }}>
+            {t('eventAnnouncements.newAnnouncement')}
+          </button>
+        ) : null}
+      </div>
+      {isHost ? <p className="form-hint">{t('eventAnnouncements.limits')}</p> : null}
+      {message ? <p className="error-message" role="alert">{message}</p> : null}
+      {isHost && openForm ? (
+        <div className="event-announcement-editor card">
+          <label className="form-field">
+            <span>{t('eventAnnouncements.headline')} ({Array.from(title).length}/50)</span>
+            <input value={title} maxLength={50} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <div className="form-field">
+            <span>{t('eventAnnouncements.body')} ({Array.from(body).length}/1000)</span>
+            <MarkdownEditor value={body} onChange={setBody} allowLinks={false} aria-label={t('eventAnnouncements.body')} />
+          </div>
+          <label className="form-field">
+            <span>{t('eventAnnouncements.publishMode')}</span>
+            <select value={publishMode} onChange={(event) => setPublishMode(event.target.value as PublishMode)}>
+              <option value="draft">{t('eventAnnouncements.saveDraft')}</option>
+              <option value="scheduled">{t('eventAnnouncements.schedule')}</option>
+              <option value="now">{t('eventAnnouncements.publishNow')}</option>
+            </select>
+          </label>
+          {publishMode === 'scheduled' ? (
+            <label className="form-field">
+              <span>{t('eventAnnouncements.publishAt')}</span>
+              <input type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
+            </label>
+          ) : null}
+          <div className="discussion-form-actions">
+            <button type="button" className="secondary-action" onClick={resetForm}>{t('common.cancelReply')}</button>
+            <button type="button" className="primary-cta" disabled={busy} onClick={() => void save()}>
+              {busy ? t('common.loading') : editingId ? t('eventAnnouncements.saveChanges') : t('eventAnnouncements.save')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {announcements.length === 0 ? <p className="empty-state">{t('eventAnnouncements.empty')}</p> : null}
+      <div className="event-announcement-list">
+        {announcements.map((announcement) => (
+          <article key={announcement.id} className="event-announcement-card">
+            <div className="section-heading-row">
+              <div>
+                <h4>{announcement.title}</h4>
+                <time dateTime={announcement.published_at ?? announcement.created_at}>
+                  {announcement.status === 'published'
+                    ? new Date(announcement.published_at ?? announcement.created_at).toLocaleString()
+                    : t(`eventAnnouncements.status.${announcement.status}` as 'eventAnnouncements.status.draft')}
+                </time>
+              </div>
+              {isHost && announcement.status !== 'published' ? (
+                <div className="event-admin-actions">
+                  <button type="button" className="secondary-action" onClick={() => edit(announcement)}>{t('eventAnnouncements.edit')}</button>
+                  <button type="button" className="primary-cta" disabled={busy} onClick={() => void publish(announcement)}>{t('eventAnnouncements.publishNow')}</button>
+                </div>
+              ) : null}
+            </div>
+            <MarkdownRenderer content={announcement.body_markdown} allowLinks={false} />
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
