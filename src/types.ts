@@ -184,6 +184,20 @@ export interface EventThread {
   profile?: Profile | null
 }
 
+export type EventAnnouncementStatus = 'draft' | 'scheduled' | 'published'
+
+export interface EventAnnouncement {
+  id: string
+  event_id: string
+  title: string
+  body_markdown: string
+  status: EventAnnouncementStatus
+  publish_at: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Recommendation {
   id: string
   from_profile_id: string

@@ -9,6 +9,7 @@ import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { MarkdownRenderer } from '../components/MarkdownRenderer'
+import { EventAnnouncements } from '../components/EventAnnouncements'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -811,6 +812,14 @@ export function EventDetailPage() {
           <p>{t('eventDetail.notFound')}</p>
         )}
       </section>
+
+      {eventItem ? (
+        <EventAnnouncements
+          eventId={eventItem.id}
+          isHost={Boolean(isHost)}
+          nativeRegistration={!eventItem.external_registration_url}
+        />
+      ) : null}
 
       {/* Registration Section */}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (

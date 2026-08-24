@@ -215,7 +215,7 @@ describe('CreateEventPage', () => {
 
     expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
     expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動')
-    expect(screen.getByRole('textbox', { name: '活動描述編輯器' }).textContent?.trim()).toBe('來源描述')
+    expect(screen.getByRole('textbox', { name: '描述' }).textContent?.trim()).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
 
