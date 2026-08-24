@@ -21,12 +21,57 @@ function canUseWebPush() {
   )
 }
 
-export async function getWebPushState(): Promise<WebPushState> {
+const SERVICE_WORKER_TIMEOUT_MS = 5000
+
+// navigator.serviceWorker.ready and Supabase queries can both pend forever
+// (stuck registration, captive portal); every await below races a timeout so
+// onboarding always settles instead of hanging on a blank screen.
+function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), SERVICE_WORKER_TIMEOUT_MS)
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      () => {
+        window.clearTimeout(timer)
+        resolve(fallback)
+      },
+    )
+  })
+}
+
+async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  return withTimeout(navigator.serviceWorker.ready, null)
+}
+
+// A browser-level subscription may belong to a previous account on shared
+// devices; only treat the endpoint as owned when this profile holds its row.
+async function isEndpointOwnedByProfile(profileId: string, endpoint: string): Promise<boolean> {
+  const ownershipQuery = supabase
+    .from('push_subscriptions')
+    .select('endpoint')
+    .eq('profile_id', profileId)
+    .eq('endpoint', endpoint)
+    .maybeSingle() as unknown as Promise<{ data: { endpoint: string } | null; error: { message: string } | null }>
+  const result = await withTimeout(ownershipQuery, null)
+  if (!result) throw new Error('web_push_state_timeout')
+  if (result.error) throw new Error(result.error.message)
+  return Boolean(result.data)
+}
+
+export async function getWebPushState(profileId?: string): Promise<WebPushState> {
   if (!canUseWebPush()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) return 'unsupported'
   const subscription = await registration.pushManager.getSubscription()
-  return subscription ? 'subscribed' : 'unsubscribed'
+  if (!subscription) return 'unsubscribed'
+  if (profileId && !(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) {
+    return 'unsubscribed'
+  }
+  return 'subscribed'
 }
 
 export async function enableWebPush(profileId: string) {
@@ -35,7 +80,17 @@ export async function enableWebPush(profileId: string) {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error(permission === 'denied' ? 'web_push_denied' : 'web_push_cancelled')
 
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) throw new Error('web_push_unsupported')
+
+  // pushManager.subscribe() reuses the existing endpoint, and the
+  // (profile_id, endpoint) upsert would then bind one endpoint to two
+  // profiles — revoke any subscription this profile does not own first.
+  const previous = await registration.pushManager.getSubscription()
+  if (previous && !(await isEndpointOwnedByProfile(profileId, previous.endpoint))) {
+    await previous.unsubscribe()
+  }
+
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: decodeBase64Url(vapidPublicKey),
@@ -58,7 +113,8 @@ export async function enableWebPush(profileId: string) {
 
 export async function disableWebPush(profileId: string) {
   if (!('serviceWorker' in navigator)) return
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) return
   const subscription = await registration.pushManager.getSubscription()
   if (!subscription) return
 
