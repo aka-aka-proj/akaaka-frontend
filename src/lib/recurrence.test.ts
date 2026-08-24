@@ -43,6 +43,17 @@ describe('generateRecurringDates', () => {
     ])
   })
 
+  it('V12 count of one means no copies in either frequency mode', () => {
+    expect(generateRecurringDates(v1BaseSunday, { frequency: 'weekly', interval: 1, days: ['Mon'], count: 1 })).toEqual([])
+    expect(generateRecurringDates(v1BaseSunday, { frequency: 'monthly', interval: 1, count: 1 })).toEqual([])
+  })
+
+  it('V13 until-only rules are bounded to a hard maximum instead of running unbounded', () => {
+    const dates = generateRecurringDates(v1BaseSunday, { frequency: 'weekly', interval: 1, until: '2200-01-01T00:00:00.000Z' })
+    expect(dates.length).toBe(1000)
+    expect(iso(dates)[0]).toBe('2026-03-22T14:00:00.000Z')
+  })
+
   it('V4 monthly weekday mode takes the Nth occurrence of the selected weekday', () => {
     const dates = generateRecurringDates(v1BaseSunday, {
       frequency: 'monthly',

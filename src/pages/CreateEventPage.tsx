@@ -37,6 +37,8 @@ function weekdayOf(timestamp: string): string {
   return dayNames[new Date(timestamp).getDay()] ?? 'Mon'
 }
 
+const PREVIEW_DATE_LIMIT = 12
+
 export function CreateEventPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
@@ -104,6 +106,8 @@ export function CreateEventPage() {
     return rule
   }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime])
 
+  const effectiveRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : startTime ? [weekdayOf(startTime)] : []
+
   const recurrencePreview = useMemo(() => {
     const base = startTime ? new Date(startTime) : null
     if (!recurrenceEnabled || !base || Number.isNaN(base.getTime()) || !recurrenceRule) return null
@@ -117,6 +121,7 @@ export function CreateEventPage() {
 
   const formatPreviewDate = (date: Date) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', {
+      year: 'numeric',
       month: 'short',
       day: 'numeric',
       weekday: 'short',
@@ -725,7 +730,7 @@ export function CreateEventPage() {
               <div className="chip-group">
                 {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
                   <button key={day} type="button"
-                    className={`chip${recurrenceDays.includes(day) ? ' chip-active' : ''}`}
+                    className={`chip${effectiveRecurrenceDays.includes(day) ? ' chip-active' : ''}`}
                     onClick={() => setRecurrenceDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])}>
                     {t(`createEvent.recurrence${day}`)}
                   </button>
@@ -742,10 +747,10 @@ export function CreateEventPage() {
               </label>
             )}
             <div className="chip-group" role="group" aria-label={t('createEvent.recurrenceLimitLabel')}>
-              <button type="button" className={`chip${recurrenceLimitMode === 'count' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('count')}>
+              <button type="button" aria-pressed={recurrenceLimitMode === 'count'} className={`chip${recurrenceLimitMode === 'count' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('count')}>
                 {t('createEvent.recurrenceLimitCount')}
               </button>
-              <button type="button" className={`chip${recurrenceLimitMode === 'until' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('until')}>
+              <button type="button" aria-pressed={recurrenceLimitMode === 'until'} className={`chip${recurrenceLimitMode === 'until' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('until')}>
                 {t('createEvent.recurrenceLimitUntil')}
               </button>
             </div>
@@ -758,23 +763,28 @@ export function CreateEventPage() {
                 {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
               </label>
             )}
-            {recurrencePreview && (
-              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
-                <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
-                {recurrencePreview.invalid ? (
-                  <p>{t('createEvent.recurrencePreviewLimitError')}</p>
-                ) : recurrencePreview.dates.length === 0 ? (
-                  <p>{t('createEvent.recurrencePreviewNone')}</p>
-                ) : (
-                  <>
-                    <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
-                      {recurrencePreview.dates.map((date) => <li key={date.toISOString()}>{formatPreviewDate(date)}</li>)}
-                    </ul>
-                    <p>{t('createEvent.recurrencePreviewTotal', { n: recurrencePreview.total })}</p>
-                  </>
-                )}
-              </div>
-            )}
+            <div aria-live="polite">
+              {recurrencePreview && (
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
+                  <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
+                  {recurrencePreview.invalid ? (
+                    <p>{t('createEvent.recurrencePreviewLimitError')}</p>
+                  ) : recurrencePreview.dates.length === 0 ? (
+                    <p>{t('createEvent.recurrencePreviewNone')}</p>
+                  ) : (
+                    <>
+                      <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
+                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date) => <li key={date.toISOString()}>{formatPreviewDate(date)}</li>)}
+                      </ul>
+                      <p>{t('createEvent.recurrencePreviewTotal', { n: recurrencePreview.total })}</p>
+                      {recurrencePreview.dates.length > PREVIEW_DATE_LIMIT ? (
+                        <p>{t('createEvent.recurrencePreviewTruncated', { shown: PREVIEW_DATE_LIMIT, total: recurrencePreview.total })}</p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

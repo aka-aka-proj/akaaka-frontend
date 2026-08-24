@@ -18,6 +18,7 @@ const DAY_NAMES = Object.keys(DAY_MAP)
 
 const MAX_WEEK_STEPS = 5200
 const MAX_MONTH_STEPS = 1200
+const MAX_GENERATED_DATES = 1000
 
 function copyTime(source: Date, target: Date): Date {
   target.setUTCHours(source.getUTCHours(), source.getUTCMinutes(), source.getUTCSeconds(), source.getUTCMilliseconds())
@@ -132,6 +133,7 @@ function* monthlyCandidates(base: Date, rule: RecurrenceRule): Generator<Date> {
 
 export function generateRecurringDates(base: Date, rule: RecurrenceRule): Date[] {
   const limit = rule.count !== undefined ? rule.count - 1 : Number.POSITIVE_INFINITY
+  if (limit <= 0) return []
   const until = rule.until ? new Date(rule.until) : null
   const seen = new Set<string>()
   const dates: Date[] = []
@@ -144,7 +146,7 @@ export function generateRecurringDates(base: Date, rule: RecurrenceRule): Date[]
     if (seen.has(key)) continue
     seen.add(key)
     dates.push(candidate)
-    if (dates.length >= limit) break
+    if (dates.length >= Math.min(limit, MAX_GENERATED_DATES)) break
   }
   return dates
 }

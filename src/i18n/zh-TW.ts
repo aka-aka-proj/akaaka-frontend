@@ -383,6 +383,7 @@ const zhTW = {
     recurrenceInvalid: '重複規則設定不完整：次數與結束日期請擇一，數字需介於 1 到 52。',
     recurrencePreviewTitle: '將建立的場次',
     recurrencePreviewTotal: '含原始活動共 {n} 場',
+    recurrencePreviewTruncated: '預覽僅顯示前 {shown} 場。',
     recurrencePreviewNone: '目前的設定不會產生任何場次，請調整條件。',
     recurrencePreviewLimitError: '請設定有效的次數或結束日期。',
     formBuilderLabel: '報名問卷設定',

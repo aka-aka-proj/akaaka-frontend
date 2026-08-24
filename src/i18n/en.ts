@@ -384,6 +384,7 @@ const en = {
     recurrenceInvalid: 'The recurrence rule is incomplete: choose either count or end date, and keep numbers between 1 and 52.',
     recurrencePreviewTitle: 'Scheduled instances',
     recurrencePreviewTotal: '{n} events in total including the original',
+    recurrencePreviewTruncated: 'Preview is limited to the first {shown} events.',
     recurrencePreviewNone: 'No instances would be created with the current settings.',
     recurrencePreviewLimitError: 'Set a valid count or end date.',
     formBuilderLabel: 'Registration Form',
