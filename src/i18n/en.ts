@@ -340,6 +340,7 @@ const en = {
     publishPartialFailed: 'Publishing failed for {count} event(s). Already-published events are unaffected; you can retry later from each event page.',
     saveAndPublishImportHint: 'Imported content must be saved as a draft and reviewed before it can be published.',
     recurrenceCreateRetry: 'The event was created, but recurring instances failed. Click "Save and publish" again to retry.',
+    retryScheduleLocked: 'Recurring instances already exist; the start time and recurrence rule cannot be changed on retry. Restore the original schedule before submitting.',
     locationDetailHint: 'Tip: enter the full address (city, street, and number) so we can generate a Google Maps link.',
     aiOrganizerTitle: 'Organize event idea with AI',
     aiOrganizerDescription: 'Enter rough ideas to prefill editable event fields. AI will not publish the event.',

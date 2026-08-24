@@ -87,7 +87,7 @@ export function CreateEventPage() {
   const [recurrenceLimitMode, setRecurrenceLimitMode] = useState<'count' | 'until'>('count')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean } | null>(null)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean; seriesStartIso?: string; seriesRuleJson?: string } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
@@ -326,29 +326,37 @@ export function CreateEventPage() {
 
     // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
     const existing = createdEventRef.current
+    // Fields every instance in the series must keep identical (spec 007) — the Edge Function copies
+    // these at creation time, except attendance fee which is pending iac#69; retried edits sync them all.
+    const sharedInstanceFields = () => ({
+      title: title.trim(),
+      description: description.trim() || null,
+      attendance_fee_type: attendanceFeeType,
+      attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
+      category,
+      event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
+      location_region: locationRegion,
+      location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
+      is_venue_hosted: isVenueHosted,
+      visibility_settings: { type: visibilityType },
+      max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+      registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+      registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+      external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
+      source_url: sourceUrl.trim() || null,
+    })
+    const draftPayload = () => ({
+      ...sharedInstanceFields(),
+      start_time: new Date(startTime).toISOString(),
+      recurrence_rule: recurrenceRule,
+    })
     const { data, error } = existing ? { data: null, error: null } : await supabase
       .from('events')
       .insert([
         {
           creator_id: user.id,
           lifecycle_status: 'draft',
-          title: title.trim(),
-          description: description.trim() || null,
-          attendance_fee_type: attendanceFeeType,
-          attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
-          category,
-          event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
-          start_time: new Date(startTime).toISOString(),
-          location_region: locationRegion,
-          location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
-          is_venue_hosted: isVenueHosted,
-          visibility_settings: { type: visibilityType },
-          max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
-          registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
-          registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
-          external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
-          source_url: sourceUrl.trim() || null,
-          recurrence_rule: recurrenceRule,
+          ...draftPayload(),
         },
       ])
       .select('id')
@@ -359,6 +367,40 @@ export function CreateEventPage() {
         return
       }
 
+      if (existing) {
+        const childInstanceIds = existing.instanceIds.filter((id) => id !== existing.eventId)
+        // Persisted instances are anchored to the schedule sent when they were created; changing it
+        // would need a non-idempotent delete-and-recreate (spec 007), so block instead of desyncing.
+        const scheduleChanged =
+          existing.seriesStartIso != null &&
+          (existing.seriesStartIso !== new Date(startTime).toISOString() ||
+            existing.seriesRuleJson !== JSON.stringify(recurrenceRule))
+        if (childInstanceIds.length > 0 && scheduleChanged) {
+          setMessage(t('createEvent.retryScheduleLocked'))
+          return
+        }
+        // The form stays editable between attempts; push any edits into the
+        // persisted draft so retried RPCs match what the user now sees.
+        const { error: syncError } = await supabase
+          .from('events')
+          .update(draftPayload())
+          .eq('id', existing.eventId)
+        if (syncError) {
+          setMessage(syncError.message)
+          return
+        }
+        if (childInstanceIds.length > 0) {
+          const { error: childSyncError } = await supabase
+            .from('events')
+            .update(sharedInstanceFields())
+            .in('id', childInstanceIds)
+          if (childSyncError) {
+            setMessage(childSyncError.message)
+            return
+          }
+        }
+      }
+
       let publishInstanceIds = existing?.instanceIds ?? []
 
       // Re-running create-recurring-events on an unknown/partial state would
@@ -366,6 +408,8 @@ export function CreateEventPage() {
       // confirmed zero-created failure may be retried on the next submit.
       const ensureRecurrenceInstances = async (parentEventId: string): Promise<boolean> => {
         if (!recurrenceEnabled || !recurrenceRule) return true
+        const attemptStartIso = new Date(startTime).toISOString()
+        const attemptRuleJson = JSON.stringify(recurrenceRule)
         const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
           body: {
             parent_event_id: parentEventId,
@@ -375,7 +419,7 @@ export function CreateEventPage() {
         })
         if (!recurrenceError && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
-          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false }
+          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
           return true
         }
         const zeroCreated = Boolean(
@@ -392,7 +436,7 @@ export function CreateEventPage() {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
         }
         if (createdEventRef.current) {
-          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated }
+          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
         }
         return false
       }

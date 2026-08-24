@@ -61,7 +61,7 @@ async function isEndpointOwnedByProfile(profileId: string, endpoint: string): Pr
   return Boolean(result.data)
 }
 
-export async function getWebPushState(profileId?: string): Promise<WebPushState> {
+export async function getWebPushState(profileId: string): Promise<WebPushState> {
   if (!canUseWebPush()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
   const registration = await serviceWorkerRegistration()
