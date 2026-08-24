@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RegistrationFormBuilder } from '../components/RegistrationFormBuilder'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -12,7 +12,7 @@ import { supabase } from '../supabaseClient'
 import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
-import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
+import { parseEventTypes, stringifyEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 
 export function EditEventPage() {
@@ -44,6 +44,7 @@ export function EditEventPage() {
   const [submitting, setSubmitting] = useState(false)
   const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
   const [approvedCount, setApprovedCount] = useState(0)
+  const [editLocked, setEditLocked] = useState(false)
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -73,6 +74,12 @@ export function EditEventPage() {
 
       if (user && event.creator_id !== user.id) {
         navigate(`/events/${id}`, { replace: true })
+        return
+      }
+
+      if (isEventEditLocked(event)) {
+        setEditLocked(true)
+        setLoading(false)
         return
       }
 
@@ -223,6 +230,19 @@ export function EditEventPage() {
 <Layout>
         <section className="card">
           <p>{t('editEvent.loading')}</p>
+        </section>
+      </Layout>
+    )
+  }
+
+  if (editLocked) {
+    return (
+      <Layout>
+        <section className="card">
+          <h1>{t('editEvent.title')}</h1>
+          <p className="message warning">{t('editEvent.eventLockedTitle')}</p>
+          <p>{t('editEvent.eventLockedHint')}</p>
+          <Link to={`/events/${id}`} className="secondary-action">{t('editEvent.backToEvent')}</Link>
         </section>
       </Layout>
     )
