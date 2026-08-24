@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RegistrationFormBuilder } from '../components/RegistrationFormBuilder'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -12,7 +12,7 @@ import { supabase } from '../supabaseClient'
 import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
-import { parseEventTypes, stringifyEventTypes } from '../lib/event-utils'
+import { parseEventTypes, stringifyEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 
 export function EditEventPage() {
@@ -44,6 +44,10 @@ export function EditEventPage() {
   const [submitting, setSubmitting] = useState(false)
   const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
   const [approvedCount, setApprovedCount] = useState(0)
+  const [editLocked, setEditLocked] = useState(false)
+  const [eventLifecycle, setEventLifecycle] = useState<{ lifecycle_status: string; start_time: string } | null>(null)
+
+  const isDraft = eventLifecycle?.lifecycle_status === 'draft'
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -75,6 +79,14 @@ export function EditEventPage() {
         navigate(`/events/${id}`, { replace: true })
         return
       }
+
+      if (isEventEditLocked(event)) {
+        setEditLocked(true)
+        setLoading(false)
+        return
+      }
+
+      setEventLifecycle({ lifecycle_status: event.lifecycle_status, start_time: event.start_time })
 
       setTitle(event.title)
       setDescription(event.description ?? '')
@@ -125,6 +137,18 @@ export function EditEventPage() {
     }
   }, [maxCapacity, approvedCount, submitting, t])
 
+  useEffect(() => {
+    if (!eventLifecycle || editLocked) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      if (isEventEditLocked(eventLifecycle)) {
+        setEditLocked(true)
+      }
+    }, 30_000)
+    return () => window.clearInterval(timer)
+  }, [eventLifecycle, editLocked])
+
   const toLocalDatetime = (iso: string) => {
     const d = new Date(iso)
     const offset = d.getTimezoneOffset()
@@ -136,6 +160,12 @@ export function EditEventPage() {
     event.preventDefault()
     if (!user || !id) {
       setMessage(t('editEvent.signInFirst'))
+      return
+    }
+
+    if (eventLifecycle && isEventEditLocked(eventLifecycle)) {
+      setEditLocked(true)
+      setMessage(t('editEvent.eventLockedTitle'))
       return
     }
 
@@ -163,8 +193,8 @@ export function EditEventPage() {
     setSubmitting(true)
     setMessage('')
 
-    const publishIso = publishAt ? new Date(publishAt).toISOString() : null
-    const unpublishIso = unpublishAt ? new Date(unpublishAt).toISOString() : null
+    const publishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
+    const unpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
     if (publishIso && unpublishIso && publishIso >= unpublishIso) {
       setSubmitting(false)
       setMessage(t('editEvent.publicationScheduleInvalid'))
@@ -228,6 +258,19 @@ export function EditEventPage() {
     )
   }
 
+  if (editLocked) {
+    return (
+      <Layout>
+        <section className="card">
+          <h1>{t('editEvent.title')}</h1>
+          <p className="message warning">{t('editEvent.eventLockedTitle')}</p>
+          <p>{t('editEvent.eventLockedHint')}</p>
+          <Link to={`/events/${id}`} className="secondary-action">{t('editEvent.backToEvent')}</Link>
+        </section>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <form className="card" onSubmit={submit}>
@@ -269,14 +312,18 @@ export function EditEventPage() {
           </select>
           <small>{t('editEvent.publicationStatusHint')}</small>
         </label>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
-          <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
-        </label>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
-          <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
-        </label>
+        {!isDraft ? (
+          <>
+            <label className="form-field">
+              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
+              <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
+            </label>
+            <label className="form-field">
+              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
+              <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
+            </label>
+          </>
+        ) : null}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.descriptionLabel')}

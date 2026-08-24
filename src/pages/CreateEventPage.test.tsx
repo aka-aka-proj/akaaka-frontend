@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -215,7 +215,7 @@ describe('CreateEventPage', () => {
 
     expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
     expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動')
-    expect(screen.getByRole('textbox', { name: '活動描述編輯器' }).textContent?.trim()).toBe('來源描述')
+    expect(screen.getByRole('textbox', { name: '描述' }).textContent?.trim()).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
 
@@ -246,5 +246,64 @@ describe('CreateEventPage', () => {
 
     expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform')
     expect((screen.getByRole('radio', { name: /外部報名/ }) as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('disables save-and-publish until imported content is saved as a draft', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: {
+        source_url: 'https://todo.smertw.com/events/6382',
+        provider: 'todo.smertw.com',
+        preview: { title: '來源活動', description: '來源描述' },
+      },
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    const publishButton = () => screen.getByRole('button', { name: '儲存並發布' }) as HTMLButtonElement
+    expect(publishButton().disabled).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: '使用 AI／來源工具' }))
+    await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
+    await user.click(screen.getByRole('button', { name: '預覽來源' }))
+
+    await waitFor(() => expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動'))
+    expect(publishButton().disabled).toBe(true)
+    expect(screen.getByText('外部來源匯入的內容需先儲存為草稿檢查後才能發布。')).toBeTruthy()
+  })
+
+  it('disables save-and-publish while an external-source import is still in flight', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockImplementation(() => new Promise<void>(() => {}))
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    const publishButton = () => screen.getByRole('button', { name: '儲存並發布' }) as HTMLButtonElement
+    expect(publishButton().disabled).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: '使用 AI／來源工具' }))
+    await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
+    await user.click(screen.getByRole('button', { name: '預覽來源' }))
+
+    expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
+    expect((screen.getByRole('button', { name: '讀取來源中…' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(publishButton().disabled).toBe(true)
   })
 })
