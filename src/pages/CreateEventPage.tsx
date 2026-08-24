@@ -75,6 +75,7 @@ export function CreateEventPage() {
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[] } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
@@ -289,58 +290,73 @@ export function CreateEventPage() {
       ])
       .select('id')
       .single()
-    setSubmitting(false)
-
-    if (error) {
-      setMessage(error.message)
-      return
-    }
-
-    let publishInstanceIds: string[] = []
-
-    if (recurrenceEnabled && data && recurrenceRule) {
-      const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
-        body: {
-          parent_event_id: data.id,
-          recurrence_rule: recurrenceRule,
-          start_time: new Date(startTime).toISOString(),
-        },
-      })
-      if (recurrenceError) {
-        setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
+    try {
+      if (error) {
+        setMessage(error.message)
         return
       }
-      if (recurrenceResult && recurrenceResult.success === false) {
-        setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
+
+      const existing = createdEventRef.current
+      let publishInstanceIds: string[] = []
+
+      if (existing) {
+        publishInstanceIds = existing.instanceIds
+      } else if (recurrenceEnabled && data && recurrenceRule) {
+        const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
+          body: {
+            parent_event_id: data.id,
+            recurrence_rule: recurrenceRule,
+            start_time: new Date(startTime).toISOString(),
+          },
+        })
+        if (recurrenceError) {
+          setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
+          return
+        }
+        if (recurrenceResult && recurrenceResult.success === false) {
+          setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
+          return
+        }
+        if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+          publishInstanceIds = recurrenceResult.instance_ids as string[]
+        }
+      }
+
+      const currentEventId = existing ? existing.eventId : data?.id
+      if (!currentEventId) {
+        setMessage('活動建立失敗：缺少活動 ID')
         return
       }
-      if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
-        publishInstanceIds = recurrenceResult.instance_ids as string[]
+      if (!existing) {
+        createdEventRef.current = { eventId: currentEventId, instanceIds: publishInstanceIds }
       }
-    }
 
-    if (shouldPublish && data) {
-      const targetIds = publishInstanceIds.length > 0 ? publishInstanceIds : [data.id]
-      const publicationResults = await Promise.allSettled(
-        targetIds.map((eventId) =>
-          supabase.rpc('set_event_publication', {
-            p_event_id: eventId,
-            p_publication_status: 'published',
-            p_publish_at: null,
-            p_unpublish_at: null,
-          }),
-        ),
-      )
-      const failedCount = publicationResults.filter(
-        (result) => result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error),
-      ).length
-      if (failedCount > 0) {
-        setMessage(t('createEvent.publishPartialFailed', { count: failedCount }))
-        return
+      if (shouldPublish) {
+        const targetIds = publishInstanceIds.length > 0 ? publishInstanceIds : [currentEventId]
+        const publicationResults = await Promise.allSettled(
+          targetIds.map((eventId) =>
+            supabase.rpc('set_event_publication', {
+              p_event_id: eventId,
+              p_publication_status: 'published',
+              p_publish_at: null,
+              p_unpublish_at: null,
+            }),
+          ),
+        )
+        const failedCount = publicationResults.filter(
+          (result) => result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error),
+        ).length
+        if (failedCount > 0) {
+          setMessage(t('createEvent.publishPartialFailed', { count: failedCount }))
+          return
+        }
       }
-    }
 
-    navigate(`/events/${data.id}`, { replace: true })
+      createdEventRef.current = null
+      navigate(`/events/${currentEventId}`, { replace: true })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
