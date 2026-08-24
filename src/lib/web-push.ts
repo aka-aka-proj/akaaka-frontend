@@ -23,13 +23,42 @@ function canUseWebPush() {
 
 const SERVICE_WORKER_TIMEOUT_MS = 5000
 
-// navigator.serviceWorker.ready never rejects, so a stuck registration would
-// hang every push-state consumer forever. Resolve null on timeout instead.
+// navigator.serviceWorker.ready and Supabase queries can both pend forever
+// (stuck registration, captive portal); every await below races a timeout so
+// onboarding always settles instead of hanging on a blank screen.
+function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), SERVICE_WORKER_TIMEOUT_MS)
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      () => {
+        window.clearTimeout(timer)
+        resolve(fallback)
+      },
+    )
+  })
+}
+
 async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
-  return Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<null>((resolve) => window.setTimeout(() => resolve(null), SERVICE_WORKER_TIMEOUT_MS)),
-  ])
+  return withTimeout(navigator.serviceWorker.ready, null)
+}
+
+// A browser-level subscription may belong to a previous account on shared
+// devices; only treat the endpoint as owned when this profile holds its row.
+async function isEndpointOwnedByProfile(profileId: string, endpoint: string): Promise<boolean> {
+  const ownershipQuery = supabase
+    .from('push_subscriptions')
+    .select('endpoint')
+    .eq('profile_id', profileId)
+    .eq('endpoint', endpoint)
+    .maybeSingle() as unknown as Promise<{ data: { endpoint: string } | null; error: { message: string } | null }>
+  const result = await withTimeout(ownershipQuery, null)
+  if (!result) throw new Error('web_push_state_timeout')
+  if (result.error) throw new Error(result.error.message)
+  return Boolean(result.data)
 }
 
 export async function getWebPushState(profileId?: string): Promise<WebPushState> {
@@ -39,16 +68,8 @@ export async function getWebPushState(profileId?: string): Promise<WebPushState>
   if (!registration) return 'unsupported'
   const subscription = await registration.pushManager.getSubscription()
   if (!subscription) return 'unsubscribed'
-  if (profileId) {
-    // On shared browsers the subscription may belong to a previous account;
-    // only report "subscribed" when this profile owns the endpoint row.
-    const { data } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint')
-      .eq('profile_id', profileId)
-      .eq('endpoint', subscription.endpoint)
-      .maybeSingle()
-    if (!data) return 'unsubscribed'
+  if (profileId && !(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) {
+    return 'unsubscribed'
   }
   return 'subscribed'
 }
@@ -61,6 +82,15 @@ export async function enableWebPush(profileId: string) {
 
   const registration = await serviceWorkerRegistration()
   if (!registration) throw new Error('web_push_unsupported')
+
+  // pushManager.subscribe() reuses the existing endpoint, and the
+  // (profile_id, endpoint) upsert would then bind one endpoint to two
+  // profiles — revoke any subscription this profile does not own first.
+  const previous = await registration.pushManager.getSubscription()
+  if (previous && !(await isEndpointOwnedByProfile(profileId, previous.endpoint))) {
+    await previous.unsubscribe()
+  }
+
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: decodeBase64Url(vapidPublicKey),
