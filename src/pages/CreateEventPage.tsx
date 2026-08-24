@@ -11,7 +11,7 @@ import { EVENT_TYPES, SOCIAL_TAGS, PRACTICE_TAGS, getEventTypeI18nKey } from '..
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
-import { generateRecurringDates, validateRecurrenceRule } from '../lib/recurrence'
+import { generateRecurringDates, validateRecurrenceRule, RecurrenceSeriesTooLongError } from '../lib/recurrence'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
 import { MarkdownEditor } from '../components/MarkdownEditor'
@@ -111,6 +111,7 @@ export function CreateEventPage() {
     } else if (recurrenceEndDate) {
       rule.until = new Date(`${recurrenceEndDate}T23:59:59`).toISOString()
     }
+    rule.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     return rule
   }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime])
 
@@ -121,10 +122,18 @@ export function CreateEventPage() {
     if (!recurrenceEnabled || !base || Number.isNaN(base.getTime()) || !recurrenceRule) return null
     const missingEndDate = recurrenceLimitMode === 'until' && !recurrenceEndDate
     if (missingEndDate || validateRecurrenceRule(recurrenceRule)) {
-      return { invalid: true as const, dates: [] as Date[], total: 0 }
+      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0 }
     }
-    const dates = generateRecurringDates(base, recurrenceRule)
-    return { invalid: false as const, dates, total: dates.length + 1 }
+    let dates: Date[]
+    try {
+      dates = generateRecurringDates(base, recurrenceRule)
+    } catch (error) {
+      if (error instanceof RecurrenceSeriesTooLongError) {
+        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0 }
+      }
+      throw error
+    }
+    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1 }
   }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate])
 
   const formatPreviewDate = (date: Date) =>
@@ -603,7 +612,9 @@ export function CreateEventPage() {
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
                   <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
                   {recurrencePreview.invalid ? (
-                    <p>{t('createEvent.recurrencePreviewLimitError')}</p>
+                    recurrencePreview.tooLong
+                      ? <p>{t('createEvent.recurrencePreviewTooLong')}</p>
+                      : <p>{t('createEvent.recurrencePreviewLimitError')}</p>
                   ) : recurrencePreview.dates.length === 0 ? (
                     <p>{t('createEvent.recurrencePreviewNone')}</p>
                   ) : (

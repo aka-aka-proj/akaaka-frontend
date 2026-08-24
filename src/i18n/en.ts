@@ -394,6 +394,7 @@ const en = {
     recurrencePreviewTruncated: 'Preview is limited to the first {shown} events.',
     recurrencePreviewNone: 'No instances would be created with the current settings.',
     recurrencePreviewLimitError: 'Set a valid count or end date.',
+    recurrencePreviewTooLong: 'The series exceeds the maximum of 52 total events including the original. Adjust the interval or end date.',
     formBuilderLabel: 'Registration Form',
     formBuilderHint: 'Edit the question, type, options, and required setting after adding a field.',
     formBuilderAddField: 'Add Field',

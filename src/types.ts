@@ -245,6 +245,7 @@ export interface RecurrenceRule {
   week_ordinal?: number
   count?: number
   until?: string
+  timezone?: string
 }
 
 export interface RegistrationResponse {

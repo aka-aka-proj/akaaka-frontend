@@ -393,6 +393,7 @@ const zhTW = {
     recurrencePreviewTruncated: '預覽僅顯示前 {shown} 場。',
     recurrencePreviewNone: '目前的設定不會產生任何場次，請調整條件。',
     recurrencePreviewLimitError: '請設定有效的次數或結束日期。',
+    recurrencePreviewTooLong: '系列總場次超過上限（含原始活動共 52 場），請調整間隔或結束日期。',
     formBuilderLabel: '報名問卷設定',
     formBuilderHint: '新增欄位後可直接編輯題目、類型、選項與必填狀態。',
     formBuilderAddField: '新增欄位',
