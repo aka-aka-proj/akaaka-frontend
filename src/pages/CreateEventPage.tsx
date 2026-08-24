@@ -7,7 +7,7 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
+import { EVENT_TYPES, SOCIAL_TAGS, PRACTICE_TAGS, getEventTypeI18nKey } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
@@ -15,11 +15,17 @@ import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
-import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
+import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
 const FORM_FIELD_TYPES: RegistrationFormField['type'][] = ['text', 'textarea', 'radio', 'checkbox', 'select']
+
+const VISIBILITY_HINT_KEYS: Record<Visibility, string> = {
+  public: 'createEvent.visibilityPublicHint',
+  connections_only: 'createEvent.visibilityConnectionsOnlyHint',
+  private: 'createEvent.visibilityPrivateHint',
+}
 
 function newFormField(type: RegistrationFormField['type']): RegistrationFormField {
   return {
@@ -53,13 +59,14 @@ export function CreateEventPage() {
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourcePreview, setSourcePreview] = useState<EventSourcePreview | null>(null)
   const [isVenueHosted, setIsVenueHosted] = useState(false)
-  const [visibilityType, setVisibilityType] = useState('public')
+  const [visibilityType, setVisibilityType] = useState<Visibility>('public')
   const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
   const [expandedFieldId, setExpandedFieldId] = useState<string | null>(null)
   const [showFormPreview, setShowFormPreview] = useState(false)
   const [deletedField, setDeletedField] = useState<{ field: RegistrationFormField; index: number } | null>(null)
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null)
   const undoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const publishIntentRef = useRef(false)
   const [recurrenceEnabled, setRecurrenceEnabled] = useState(false)
   const [recurrenceFreq, setRecurrenceFreq] = useState<'weekly' | 'monthly'>('weekly')
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
@@ -217,6 +224,8 @@ export function CreateEventPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const shouldPublish = publishIntentRef.current
+    publishIntentRef.current = false
     if (!user) {
       setMessage(t('createEvent.signInFirst'))
       return
@@ -305,6 +314,19 @@ export function CreateEventPage() {
       }
     }
 
+    if (shouldPublish && data) {
+      const { error: publicationError } = await supabase.rpc('set_event_publication', {
+        p_event_id: data.id,
+        p_publication_status: 'published',
+        p_publish_at: null,
+        p_unpublish_at: null,
+      })
+      if (publicationError) {
+        setMessage(t('createEvent.publishFailed', { message: publicationError.message }))
+        return
+      }
+    }
+
     navigate(`/events/${data.id}`, { replace: true })
   }
 
@@ -364,6 +386,156 @@ export function CreateEventPage() {
           <input aria-label={t('createEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
+          </span>
+          <MarkdownEditor
+            aria-label={t('createEvent.descriptionLabel')}
+            value={description}
+            onChange={setDescription}
+          />
+        </label>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.categoryLabel')}
+          </span>
+          <select value={category} onChange={(e) => setCategory(e.target.value as EventCategory)}>
+            <option value="Social">{t('createEvent.categorySocial')}</option>
+            <option value="Practice">{t('createEvent.categoryPractice')}</option>
+          </select>
+        </label>
+        {category === 'Practice' && (
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', background: 'var(--color-warning-surface)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+            {t('eventDetail.safetyProtocolDesc')}
+          </p>
+        )}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
+          </span>
+          <select 
+            onChange={(e) => addType(e.target.value)}
+            defaultValue=""
+            style={{ marginBottom: '8px', width: '100%' }}
+          >
+            <option value="" disabled>{t('createEvent.selectEventType')}</option>
+            <optgroup label={t('createEvent.categorySocial')}>
+              {SOCIAL_TAGS.map((type) => (
+                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
+              ))}
+            </optgroup>
+            <optgroup label={t('createEvent.categoryPractice')}>
+              {PRACTICE_TAGS.map((type) => (
+                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
+              ))}
+            </optgroup>
+          </select>
+          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
+            {eventType.map(type => (
+              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
+                {t(getEventTypeI18nKey(type))}
+                <button 
+                  type="button" 
+                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
+                  aria-label={t('createEvent.removeType')}
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+          </div>
+        </label>
+        </section>
+        <section className="form-section" aria-labelledby="time-location-title">
+          <div className="form-section-heading"><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
+          </span>
+          <input
+            aria-label={t('createEvent.startTimeLabel')}
+            type="datetime-local"
+            value={startTime}
+            onChange={(event) => setStartTime(event.target.value)}
+          />
+        </label>
+        <label className="checkbox">
+          <input type="checkbox" checked={recurrenceEnabled} onChange={(e) => setRecurrenceEnabled(e.target.checked)} />
+          {t('createEvent.recurrenceLabel')}
+        </label>
+        {recurrenceEnabled && (
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label>
+              {t('createEvent.recurrenceEvery')}
+              <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />
+              <select value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')} style={{ marginLeft: '0.5rem' }}>
+                <option value="weekly">{t('createEvent.recurrenceWeeks')}</option>
+                <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
+              </select>
+            </label>
+            {recurrenceFreq === 'weekly' && (
+              <div className="chip-group">
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
+                  <button key={day} type="button"
+                    className={`chip${recurrenceDays.includes(day) ? ' chip-active' : ''}`}
+                    onClick={() => setRecurrenceDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])}>
+                    {t(`createEvent.recurrence${day}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <label>
+              {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+            </label>
+            <label>
+              {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
+            </label>
+          </div>
+        )}
+        <label className="form-field">
+          <span className="form-label-row">
+            <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationRegionLabel')}
+          </span>
+          <select
+            aria-label={t('createEvent.locationRegionLabel')}
+            value={locationRegion}
+            onChange={(event) => setLocationRegion(event.target.value as TaiwanRegion | '')}
+          >
+            <option value="" disabled>{t('createEvent.locationRegionPlaceholder')}</option>
+            {TAIWAN_REGIONS.map((region) => (
+              <option key={region} value={region}>
+                {t(`events.region${region}` as any)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {locationRegion && locationRegion !== 'Online' && (
+          <label className="form-field">
+            <span className="form-label-row">
+              <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationDetailLabel')}
+            </span>
+            <input
+              aria-label={t('createEvent.locationDetailLabel')}
+              placeholder={t('createEvent.locationDetailPlaceholder')}
+              value={locationDetail}
+              onChange={(event) => setLocationDetail(event.target.value)}
+            />
+            <small>{t('createEvent.locationDetailHint')}</small>
+          </label>
+        )}
+        {locationDetail.trim() ? (
+          <p className="form-field-hint">
+            <Icon href="/form-icons.svg" name="form-location" size={14} /> {t('eventDetail.openInGoogleMaps')}:{' '}
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDetail.trim())}`} target="_blank" rel="noopener noreferrer">
+              {locationDetail.trim()}
+            </a>
+          </p>
+        ) : null}
+        </section>
+        <section className="form-section" aria-labelledby="registration-section-title">
+          <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
+        <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
           <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
             {([['free', t('createEvent.attendanceFeeFree')], ['fixed', t('createEvent.attendanceFeeFixed')], ['see_description', t('createEvent.attendanceFeeDescription')]] as const).map(([value, label]) => (
@@ -402,115 +574,6 @@ export function CreateEventPage() {
           />
           <small>{t('createEvent.externalRegistrationUrlHint')}</small>
         </label> : null}
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.descriptionLabel')}
-          </span>
-          <MarkdownEditor
-            aria-label={t('createEvent.descriptionLabel')}
-            value={description}
-            onChange={setDescription}
-          />
-        </label>
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.categoryLabel')}
-          </span>
-          <select value={category} onChange={(e) => setCategory(e.target.value as EventCategory)}>
-            <option value="Social">{t('createEvent.categorySocial')}</option>
-            <option value="Practice">{t('createEvent.categoryPractice')}</option>
-          </select>
-        </label>
-        {category === 'Practice' && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', background: 'var(--color-warning-surface)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
-            {t('eventDetail.safetyProtocolDesc')}
-          </p>
-        )}
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
-          </span>
-          <select 
-            onChange={(e) => addType(e.target.value)}
-            defaultValue=""
-            style={{ marginBottom: '8px', width: '100%' }}
-          >
-            <option value="" disabled>{t('createEvent.selectEventType')}</option>
-            {EVENT_TYPES.map(type => (
-              <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-            ))}
-          </select>
-          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
-            {eventType.map(type => (
-              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
-                {t(getEventTypeI18nKey(type))}
-                <button 
-                  type="button" 
-                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
-                  aria-label={t('createEvent.removeType')}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
-          </div>
-        </label>
-        </section>
-        <section className="form-section" aria-labelledby="time-location-title">
-          <div className="form-section-heading"><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
-          </span>
-          <input
-            aria-label={t('createEvent.startTimeLabel')}
-            type="datetime-local"
-            value={startTime}
-            onChange={(event) => setStartTime(event.target.value)}
-          />
-        </label>
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationRegionLabel')}
-          </span>
-          <select
-            aria-label={t('createEvent.locationRegionLabel')}
-            value={locationRegion}
-            onChange={(event) => setLocationRegion(event.target.value as TaiwanRegion | '')}
-          >
-            <option value="" disabled>{t('createEvent.locationRegionPlaceholder')}</option>
-            {TAIWAN_REGIONS.map((region) => (
-              <option key={region} value={region}>
-                {t(`events.region${region}` as any)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {locationRegion && locationRegion !== 'Online' && (
-          <label className="form-field">
-            <span className="form-label-row">
-              <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationDetailLabel')}
-            </span>
-            <input
-              aria-label={t('createEvent.locationDetailLabel')}
-              placeholder={t('createEvent.locationDetailPlaceholder')}
-              value={locationDetail}
-              onChange={(event) => setLocationDetail(event.target.value)}
-            />
-          </label>
-        )}
-        {locationDetail.trim() ? (
-          <p className="form-field-hint">
-            <Icon href="/form-icons.svg" name="form-location" size={14} /> {t('eventDetail.openInGoogleMaps')}:{' '}
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDetail.trim())}`} target="_blank" rel="noopener noreferrer">
-              {locationDetail.trim()}
-            </a>
-          </p>
-        ) : null}
-        </section>
-        <section className="form-section" aria-labelledby="registration-section-title">
-          <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
         {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.maxCapacityLabel')}
@@ -560,6 +623,7 @@ export function CreateEventPage() {
               </label>
             ))}
           </div>
+          <p className="form-field-hint">{t(VISIBILITY_HINT_KEYS[visibilityType])}</p>
         </div>
 
         {registrationMode === 'native' ? <fieldset className="card form-builder">
@@ -651,49 +715,16 @@ export function CreateEventPage() {
         </fieldset> : null}
         </section>
 
-        {/* Recurrence */}
-        <section className="form-section" aria-labelledby="advanced-section-title">
-          <div className="form-section-heading"><h2 id="advanced-section-title">{t('createEvent.additionalSection')}</h2><span>4</span></div>
-        <label className="checkbox">
-          <input type="checkbox" checked={recurrenceEnabled} onChange={(e) => setRecurrenceEnabled(e.target.checked)} />
-          {t('createEvent.recurrenceLabel')}
-        </label>
-        {recurrenceEnabled && (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label>
-              {t('createEvent.recurrenceEvery')}
-              <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />
-              <select value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')} style={{ marginLeft: '0.5rem' }}>
-                <option value="weekly">{t('createEvent.recurrenceWeeks')}</option>
-                <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
-              </select>
-            </label>
-            {recurrenceFreq === 'weekly' && (
-              <div className="chip-group">
-                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
-                  <button key={day} type="button"
-                    className={`chip${recurrenceDays.includes(day) ? ' chip-active' : ''}`}
-                    onClick={() => setRecurrenceDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])}>
-                    {t(`createEvent.recurrence${day}`)}
-                  </button>
-                ))}
-              </div>
-            )}
-            <label>
-              {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
-            </label>
-            <label>
-              {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
-            </label>
-          </div>
-        )}
-
-        </section>
         <div className="sticky-action-bar">
           <span>{t('createEvent.draftNotice')}</span>
-          <button type="submit" className="primary-cta" disabled={submitting}>
-            <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveDraft')}
-          </button>
+          <div className="sticky-action-buttons">
+            <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
+              {t('createEvent.saveDraft')}
+            </button>
+            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting}>
+              <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
+            </button>
+          </div>
         </div>
         {message ? <p className="message">{message}</p> : null}
       </form>
