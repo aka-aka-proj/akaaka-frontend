@@ -45,6 +45,7 @@ export function EditEventPage() {
   const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
   const [approvedCount, setApprovedCount] = useState(0)
   const [editLocked, setEditLocked] = useState(false)
+  const [eventLifecycle, setEventLifecycle] = useState<{ lifecycle_status: string; start_time: string } | null>(null)
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -82,6 +83,8 @@ export function EditEventPage() {
         setLoading(false)
         return
       }
+
+      setEventLifecycle({ lifecycle_status: event.lifecycle_status, start_time: event.start_time })
 
       setTitle(event.title)
       setDescription(event.description ?? '')
@@ -132,6 +135,18 @@ export function EditEventPage() {
     }
   }, [maxCapacity, approvedCount, submitting, t])
 
+  useEffect(() => {
+    if (!eventLifecycle || editLocked) {
+      return
+    }
+    const timer = window.setInterval(() => {
+      if (isEventEditLocked(eventLifecycle)) {
+        setEditLocked(true)
+      }
+    }, 30_000)
+    return () => window.clearInterval(timer)
+  }, [eventLifecycle, editLocked])
+
   const toLocalDatetime = (iso: string) => {
     const d = new Date(iso)
     const offset = d.getTimezoneOffset()
@@ -143,6 +158,12 @@ export function EditEventPage() {
     event.preventDefault()
     if (!user || !id) {
       setMessage(t('editEvent.signInFirst'))
+      return
+    }
+
+    if (eventLifecycle && isEventEditLocked(eventLifecycle)) {
+      setEditLocked(true)
+      setMessage(t('editEvent.eventLockedTitle'))
       return
     }
 
