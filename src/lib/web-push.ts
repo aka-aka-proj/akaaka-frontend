@@ -74,6 +74,70 @@ export async function getWebPushState(profileId: string): Promise<WebPushState> 
   return 'subscribed'
 }
 
+type SubscriptionJson = {
+  endpoint?: string
+  keys?: { p256dh?: string; auth?: string }
+}
+
+function extractSubscriptionPayload(subscription: PushSubscription) {
+  const json = subscription.toJSON() as SubscriptionJson
+  const keys = json.keys
+  if (!json.endpoint || !keys?.p256dh || !keys.auth) {
+    throw new Error('web_push_invalid_subscription')
+  }
+  return { endpoint: json.endpoint, p256dh: keys.p256dh, auth: keys.auth }
+}
+
+// api/004 §Validation rules: the controlled RPC rejects a cross-profile
+// transfer when the supplied key material does not match the stored row
+// (possession proof), surfacing the domain exception `endpoint_conflict`.
+function isEndpointConflict(error: { message?: string | null } | null | undefined): boolean {
+  return error?.message === 'endpoint_conflict'
+}
+
+async function subscribeWithApplicationKey(
+  registration: ServiceWorkerRegistration,
+): Promise<PushSubscription> {
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: decodeBase64Url(vapidPublicKey as string),
+  })
+}
+
+// Submit a browser subscription through the controlled RPC. On
+// `endpoint_conflict` the endpoint is held by another account with different
+// key material (typically rotated keys): revoke the browser subscription and
+// re-subscribe, which mints a fresh endpoint the RPC registers conflict-free.
+// The abandoned row is reclaimed later by the fan-out 404/410 path or the
+// scheduled cleanup.
+async function submitSubscription(
+  registration: ServiceWorkerRegistration,
+  subscription: PushSubscription,
+): Promise<PushSubscription> {
+  const payload = extractSubscriptionPayload(subscription)
+  const { error } = await supabase.rpc('subscribe_push_subscription', {
+    p_endpoint: payload.endpoint,
+    p_p256dh: payload.p256dh,
+    p_auth: payload.auth,
+    p_user_agent: navigator.userAgent,
+  })
+  if (!error) return subscription
+
+  if (!isEndpointConflict(error)) throw error
+
+  await subscription.unsubscribe()
+  const replacement = await subscribeWithApplicationKey(registration)
+  const replacementPayload = extractSubscriptionPayload(replacement)
+  const retry = await supabase.rpc('subscribe_push_subscription', {
+    p_endpoint: replacementPayload.endpoint,
+    p_p256dh: replacementPayload.p256dh,
+    p_auth: replacementPayload.auth,
+    p_user_agent: navigator.userAgent,
+  })
+  if (retry.error) throw retry.error
+  return replacement
+}
+
 export async function enableWebPush() {
   if (!canUseWebPush() || !vapidPublicKey) throw new Error('web_push_unsupported')
 
@@ -83,26 +147,34 @@ export async function enableWebPush() {
   const registration = await serviceWorkerRegistration()
   if (!registration) throw new Error('web_push_unsupported')
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: decodeBase64Url(vapidPublicKey),
-  })
-  const json = subscription.toJSON()
-  const keys = json.keys
-  if (!json.endpoint || !keys?.p256dh || !keys.auth) throw new Error('web_push_invalid_subscription')
-
   // push_subscriptions.endpoint has a global unique constraint: a shared
   // browser's subscription can belong to only one profile at a time. The
   // controlled RPC transfers ownership atomically when the previous account
-  // left a row behind (RLS blocks clients from updating it directly).
-  const { error } = await supabase.rpc('subscribe_push_subscription', {
-    p_endpoint: json.endpoint,
-    p_p256dh: keys.p256dh,
-    p_auth: keys.auth,
-    p_user_agent: navigator.userAgent,
-  })
-  if (error) throw error
-  return subscription
+  // left a row behind and the key material proves possession (RLS blocks
+  // clients from updating it directly).
+  const subscription = await subscribeWithApplicationKey(registration)
+  return submitSubscription(registration, subscription)
+}
+
+// api/004 §Frontend refresh lifecycle: once per session, silently re-submit
+// the current browser subscription so active users keep their `updated_at`
+// fresh against the scheduled cleanup threshold (the server also honours
+// recent successful deliveries, but client refreshes cover the
+// no-notifications-yet case). Best-effort by design: any failure leaves push
+// state untouched and must never disturb the session.
+export async function refreshWebPushSubscription(): Promise<boolean> {
+  if (!canUseWebPush() || !vapidPublicKey) return false
+  if (Notification.permission !== 'granted') return false
+  try {
+    const registration = await serviceWorkerRegistration()
+    if (!registration) return false
+    const subscription = await registration.pushManager.getSubscription()
+    if (!subscription) return false
+    await submitSubscription(registration, subscription)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function disableWebPush(profileId: string) {

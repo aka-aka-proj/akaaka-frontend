@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
 import { normalizeSocialLinks } from '../lib/profile'
+import { useWebPushSessionRefresh } from '../hooks/useWebPushSessionRefresh'
 
 interface AuthContextValue {
   user: User | null
@@ -106,6 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id, isAuthLoading])
 
   const hasOnboarded = profile !== null
+
+  // api/004 §Frontend refresh lifecycle: keep active users' push
+  // subscription `updated_at` fresh once per session (best-effort, silent).
+  useWebPushSessionRefresh(session?.user.id ?? null)
 
   const value = useMemo<AuthContextValue>(
     () => ({
