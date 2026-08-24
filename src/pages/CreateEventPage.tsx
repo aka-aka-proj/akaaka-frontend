@@ -296,6 +296,8 @@ export function CreateEventPage() {
       return
     }
 
+    let publishInstanceIds: string[] = []
+
     if (recurrenceEnabled && data && recurrenceRule) {
       const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
         body: {
@@ -312,17 +314,28 @@ export function CreateEventPage() {
         setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
         return
       }
+      if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+        publishInstanceIds = recurrenceResult.instance_ids as string[]
+      }
     }
 
     if (shouldPublish && data) {
-      const { error: publicationError } = await supabase.rpc('set_event_publication', {
-        p_event_id: data.id,
-        p_publication_status: 'published',
-        p_publish_at: null,
-        p_unpublish_at: null,
-      })
-      if (publicationError) {
-        setMessage(t('createEvent.publishFailed', { message: publicationError.message }))
+      const targetIds = publishInstanceIds.length > 0 ? publishInstanceIds : [data.id]
+      const publicationResults = await Promise.allSettled(
+        targetIds.map((eventId) =>
+          supabase.rpc('set_event_publication', {
+            p_event_id: eventId,
+            p_publication_status: 'published',
+            p_publish_at: null,
+            p_unpublish_at: null,
+          }),
+        ),
+      )
+      const failedCount = publicationResults.filter(
+        (result) => result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error),
+      ).length
+      if (failedCount > 0) {
+        setMessage(t('createEvent.publishPartialFailed', { count: failedCount }))
         return
       }
     }
