@@ -15,7 +15,7 @@ import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
-import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
+import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
@@ -100,6 +100,7 @@ export function EventDetailPage() {
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+  const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
@@ -995,9 +996,11 @@ export function EventDetailPage() {
                 {t('eventDetail.publishNow')}
               </button>
             ) : null}
-            <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
-              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
-            </Link>
+            {!isEditLocked ? (
+              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+              </Link>
+            ) : null}
             <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
               <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
             </button>
