@@ -87,14 +87,19 @@ export async function enableWebPush() {
     userVisibleOnly: true,
     applicationServerKey: decodeBase64Url(vapidPublicKey),
   })
+  await submitSubscription(subscription)
+  return subscription
+}
+
+// push_subscriptions.endpoint has a global unique constraint: a shared
+// browser's subscription can belong to only one profile at a time. The
+// controlled RPC transfers ownership atomically when the previous account
+// left a row behind (RLS blocks clients from updating it directly).
+async function submitSubscription(subscription: PushSubscription): Promise<void> {
   const json = subscription.toJSON()
   const keys = json.keys
   if (!json.endpoint || !keys?.p256dh || !keys.auth) throw new Error('web_push_invalid_subscription')
 
-  // push_subscriptions.endpoint has a global unique constraint: a shared
-  // browser's subscription can belong to only one profile at a time. The
-  // controlled RPC transfers ownership atomically when the previous account
-  // left a row behind (RLS blocks clients from updating it directly).
   const { error } = await supabase.rpc('subscribe_push_subscription', {
     p_endpoint: json.endpoint,
     p_p256dh: keys.p256dh,
@@ -102,7 +107,22 @@ export async function enableWebPush() {
     p_user_agent: navigator.userAgent,
   })
   if (error) throw error
-  return subscription
+}
+
+// Session-start refresh (api/004 §Frontend refresh lifecycle): re-submitting
+// the current subscription keeps updated_at fresh for active users so the
+// scheduled cleanup never drops them. Idempotent; safe to call silently.
+export async function refreshWebPushSubscription(): Promise<void> {
+  if (!canUseWebPush() || !vapidPublicKey) return
+  if (Notification.permission !== 'granted') return
+
+  const registration = await serviceWorkerRegistration()
+  if (!registration) return
+
+  const existing = await registration.pushManager.getSubscription()
+  if (!existing) return
+
+  await submitSubscription(existing)
 }
 
 export async function disableWebPush(profileId: string) {

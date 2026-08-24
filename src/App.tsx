@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { AdminRoute } from './components/AdminRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
 import { useT } from './hooks/useT'
+import { refreshWebPushSubscription } from './lib/web-push'
 import { AdminModerationPanel } from './pages/AdminModerationPanel'
 import { AdminRoleUpgrade } from './pages/AdminRoleUpgrade'
 import { AdminIssuesPanel } from './pages/AdminIssuesPanel'
@@ -56,9 +58,24 @@ function RootRedirect() {
   return <Navigate to={`/onboarding?from=${encodeURIComponent(location.pathname)}`} replace state={{ from: location.pathname }} />
 }
 
+// api/004 §Frontend refresh lifecycle: re-submit the browser subscription
+// once per session for logged-in users so scheduled cleanup never drops
+// active devices. Zero-render; failures are intentionally silent.
+function WebPushSessionRefresh() {
+  const { user } = useAuth()
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId) return
+    void refreshWebPushSubscription().catch(() => {})
+  }, [userId])
+  return null
+}
+
 function App() {
   return (
-    <Routes>
+    <>
+      <WebPushSessionRefresh />
+      <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
@@ -292,7 +309,8 @@ function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }
 
