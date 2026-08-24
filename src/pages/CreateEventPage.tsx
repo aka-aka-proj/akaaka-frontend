@@ -331,6 +331,8 @@ export function CreateEventPage() {
     const sharedInstanceFields = () => ({
       title: title.trim(),
       description: description.trim() || null,
+      attendance_fee_type: attendanceFeeType,
+      attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
       category,
       event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
       location_region: locationRegion,
@@ -345,8 +347,6 @@ export function CreateEventPage() {
     })
     const draftPayload = () => ({
       ...sharedInstanceFields(),
-      attendance_fee_type: attendanceFeeType,
-      attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
       start_time: new Date(startTime).toISOString(),
       recurrence_rule: recurrenceRule,
     })

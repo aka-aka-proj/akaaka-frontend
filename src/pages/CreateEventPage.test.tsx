@@ -341,6 +341,8 @@ describe('CreateEventPage', () => {
     await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Original Title')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('radio', { name: '固定金額' }))
+    await user.type(screen.getByLabelText('金額（新台幣）'), '500')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
@@ -348,6 +350,9 @@ describe('CreateEventPage', () => {
     const titleInput = screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement
     await user.clear(titleInput)
     await user.type(titleInput, 'Edited Title')
+    const feeAmountInput = screen.getByLabelText('金額（新台幣）') as HTMLInputElement
+    await user.clear(feeAmountInput)
+    await user.type(feeAmountInput, '300')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
@@ -357,11 +362,17 @@ describe('CreateEventPage', () => {
     const [parentPayload] = update.mock.calls[0]
     expect(parentPayload).toEqual(expect.objectContaining({
       title: 'Edited Title',
+      attendance_fee_type: 'fixed',
+      attendance_fee_amount: 300,
       start_time: expect.any(String),
       recurrence_rule: expect.objectContaining({ frequency: 'weekly' }),
     }))
     const [childPayload] = update.mock.calls[1]
-    expect(childPayload).toEqual(expect.objectContaining({ title: 'Edited Title' }))
+    expect(childPayload).toEqual(expect.objectContaining({
+      title: 'Edited Title',
+      attendance_fee_type: 'fixed',
+      attendance_fee_amount: 300,
+    }))
     expect(Object.keys(childPayload)).not.toContain('start_time')
     expect(Object.keys(childPayload)).not.toContain('recurrence_rule')
   })
