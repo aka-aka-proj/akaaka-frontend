@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -11,11 +11,12 @@ import { EVENT_TYPES, SOCIAL_TAGS, PRACTICE_TAGS, getEventTypeI18nKey } from '..
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
+import { generateRecurringDates, validateRecurrenceRule, RecurrenceSeriesTooLongError } from '../lib/recurrence'
 import { isAllowedEventSourceUrl } from '../lib/event-source'
 import type { EventSourcePreview } from '../lib/event-source'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
-import type { TaiwanRegion, EventCategory, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
+import type { TaiwanRegion, EventCategory, RecurrenceRule, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -37,10 +38,17 @@ function newFormField(type: RegistrationFormField['type']): RegistrationFormFiel
   }
 }
 
+function weekdayOf(timestamp: string): string {
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  return dayNames[new Date(timestamp).getDay()] ?? 'Mon'
+}
+
+const PREVIEW_DATE_LIMIT = 12
+
 export function CreateEventPage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
-  const { t } = useT()
+  const { t, locale } = useT()
   const [searchParams] = useSearchParams()
   const fromEventId = searchParams.get('from_event_id')
   const [title, setTitle] = useState('')
@@ -58,6 +66,7 @@ export function CreateEventPage() {
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourcePreview, setSourcePreview] = useState<EventSourcePreview | null>(null)
+  const [importing, setImporting] = useState(false)
   const [isVenueHosted, setIsVenueHosted] = useState(false)
   const [visibilityType, setVisibilityType] = useState<Visibility>('public')
   const [formFields, setFormFields] = useState<RegistrationFormField[]>([])
@@ -73,19 +82,71 @@ export function CreateEventPage() {
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([])
   const [recurrenceCount, setRecurrenceCount] = useState(4)
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+  const [recurrenceMonthlyBy, setRecurrenceMonthlyBy] = useState<'date' | 'weekday'>('date')
+  const [recurrenceWeekOrdinal, setRecurrenceWeekOrdinal] = useState(1)
+  const [recurrenceLimitMode, setRecurrenceLimitMode] = useState<'count' | 'until'>('count')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const createdEventRef = useRef<{ eventId: string; instanceIds: string[] } | null>(null)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
 
-  const getStartWeekday = () => {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    return dayNames[new Date(startTime).getDay()] ?? 'Mon'
-  }
+  const recurrenceRule = useMemo<RecurrenceRule | null>(() => {
+    if (!recurrenceEnabled) return null
+    const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [weekdayOf(startTime)]
+    const rule: RecurrenceRule = {
+      frequency: recurrenceFreq,
+      interval: recurrenceInterval,
+    }
+    if (recurrenceFreq === 'weekly') {
+      rule.days = selectedRecurrenceDays
+    } else if (recurrenceMonthlyBy === 'weekday') {
+      rule.monthly_by = 'weekday'
+      rule.week_ordinal = recurrenceWeekOrdinal
+      rule.days = selectedRecurrenceDays
+    }
+    if (recurrenceLimitMode === 'count') {
+      rule.count = recurrenceCount
+    } else if (recurrenceEndDate) {
+      rule.until = new Date(`${recurrenceEndDate}T23:59:59`).toISOString()
+    }
+    rule.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return rule
+  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime])
+
+  const effectiveRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : startTime ? [weekdayOf(startTime)] : []
+
+  const recurrencePreview = useMemo(() => {
+    const base = startTime ? new Date(startTime) : null
+    if (!recurrenceEnabled || !base || Number.isNaN(base.getTime()) || !recurrenceRule) return null
+    const missingEndDate = recurrenceLimitMode === 'until' && !recurrenceEndDate
+    if (missingEndDate || validateRecurrenceRule(recurrenceRule)) {
+      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0 }
+    }
+    let dates: Date[]
+    try {
+      dates = generateRecurringDates(base, recurrenceRule)
+    } catch (error) {
+      if (error instanceof RecurrenceSeriesTooLongError) {
+        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0 }
+      }
+      throw error
+    }
+    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1 }
+  }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate])
+
+  const formatPreviewDate = (date: Date) =>
+    new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date)
 
   useEffect(() => {
     if (fromEventId) {
@@ -256,17 +317,16 @@ export function CreateEventPage() {
       return
     }
 
-    setSubmitting(true)
-    const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [getStartWeekday()]
-    const recurrenceRule = recurrenceEnabled ? {
-      frequency: recurrenceFreq,
-      interval: recurrenceInterval,
-      days: recurrenceFreq === 'weekly' ? selectedRecurrenceDays : undefined,
-      count: recurrenceCount,
-      until: recurrenceEndDate ? new Date(`${recurrenceEndDate}T23:59:59`).toISOString() : undefined,
-    } : null
+    if (recurrenceEnabled && (!recurrenceRule || validateRecurrenceRule(recurrenceRule))) {
+      setMessage(t('createEvent.recurrenceInvalid'))
+      return
+    }
 
-    const { data, error } = await supabase
+    setSubmitting(true)
+
+    // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
+    const existing = createdEventRef.current
+    const { data, error } = existing ? { data: null, error: null } : await supabase
       .from('events')
       .insert([
         {
@@ -299,39 +359,58 @@ export function CreateEventPage() {
         return
       }
 
-      const existing = createdEventRef.current
-      let publishInstanceIds: string[] = []
+      let publishInstanceIds = existing?.instanceIds ?? []
 
-      if (existing) {
-        publishInstanceIds = existing.instanceIds
-      } else if (recurrenceEnabled && data && recurrenceRule) {
+      // Re-running create-recurring-events on an unknown/partial state would
+      // duplicate instances (the RPC is not idempotent — spec 007), so only a
+      // confirmed zero-created failure may be retried on the next submit.
+      const ensureRecurrenceInstances = async (parentEventId: string): Promise<boolean> => {
+        if (!recurrenceEnabled || !recurrenceRule) return true
         const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
           body: {
-            parent_event_id: data.id,
+            parent_event_id: parentEventId,
             recurrence_rule: recurrenceRule,
             start_time: new Date(startTime).toISOString(),
           },
         })
-        if (recurrenceError) {
+        if (!recurrenceError && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+          publishInstanceIds = recurrenceResult.instance_ids as string[]
+          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false }
+          return true
+        }
+        const zeroCreated = Boolean(
+          !recurrenceError && recurrenceResult && recurrenceResult.success === false && recurrenceResult.created_instance_count === 0,
+        )
+        if (zeroCreated) {
+          setMessage(t('createEvent.recurrenceCreateRetry'))
+        } else if (recurrenceError) {
           setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
-          return
+        } else {
+          setMessage(`活動已建立，但有 ${recurrenceResult?.failed_instance_count} 個週期場次建立失敗。`)
         }
-        if (recurrenceResult && recurrenceResult.success === false) {
-          setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
-          return
-        }
-        if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+        if (recurrenceError === null && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
         }
+        if (createdEventRef.current) {
+          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated }
+        }
+        return false
       }
 
-      const currentEventId = existing ? existing.eventId : data?.id
+      if (!existing && data?.id) {
+        createdEventRef.current = { eventId: data.id, instanceIds: [], recurrenceRetryable: false }
+      }
+
+      const parentId = existing ? existing.eventId : data?.id
+      if (parentId && (recurrenceEnabled && recurrenceRule) && (!existing || existing.recurrenceRetryable)) {
+        const completed = await ensureRecurrenceInstances(parentId)
+        if (!completed) return
+      }
+
+      const currentEventId = createdEventRef.current ? createdEventRef.current.eventId : data?.id
       if (!currentEventId) {
         setMessage('活動建立失敗：缺少活動 ID')
         return
-      }
-      if (!existing) {
-        createdEventRef.current = { eventId: currentEventId, instanceIds: publishInstanceIds }
       }
 
       if (shouldPublish) {
@@ -506,23 +585,76 @@ export function CreateEventPage() {
                 <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
               </select>
             </label>
-            {recurrenceFreq === 'weekly' && (
+            {recurrenceFreq === 'monthly' && (
+              <label>
+                {t('createEvent.recurrenceMonthlyBy')}:
+                <select value={recurrenceMonthlyBy} onChange={(e) => setRecurrenceMonthlyBy(e.target.value as 'date' | 'weekday')} style={{ marginLeft: '0.5rem' }}>
+                  <option value="date">{t('createEvent.recurrenceByDate')}</option>
+                  <option value="weekday">{t('createEvent.recurrenceByWeekday')}</option>
+                </select>
+              </label>
+            )}
+            {(recurrenceFreq === 'weekly' || (recurrenceFreq === 'monthly' && recurrenceMonthlyBy === 'weekday')) && (
               <div className="chip-group">
                 {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => (
                   <button key={day} type="button"
-                    className={`chip${recurrenceDays.includes(day) ? ' chip-active' : ''}`}
+                    className={`chip${effectiveRecurrenceDays.includes(day) ? ' chip-active' : ''}`}
                     onClick={() => setRecurrenceDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])}>
                     {t(`createEvent.recurrence${day}`)}
                   </button>
                 ))}
               </div>
             )}
-            <label>
-              {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
-            </label>
-            <label>
-              {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
-            </label>
+            {recurrenceFreq === 'monthly' && recurrenceMonthlyBy === 'weekday' && (
+              <label>
+                {t('createEvent.recurrenceOrdinal')}:
+                <select value={recurrenceWeekOrdinal} onChange={(e) => setRecurrenceWeekOrdinal(parseInt(e.target.value))} style={{ marginLeft: '0.5rem' }}>
+                  {[1, 2, 3, 4].map((ordinal) => <option key={ordinal} value={ordinal}>{t(`createEvent.recurrenceOrdinal${ordinal}`)}</option>)}
+                  <option value={5}>{t('createEvent.recurrenceOrdinalLast')}</option>
+                </select>
+              </label>
+            )}
+            <div className="chip-group" role="group" aria-label={t('createEvent.recurrenceLimitLabel')}>
+              <button type="button" aria-pressed={recurrenceLimitMode === 'count'} className={`chip${recurrenceLimitMode === 'count' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('count')}>
+                {t('createEvent.recurrenceLimitCount')}
+              </button>
+              <button type="button" aria-pressed={recurrenceLimitMode === 'until'} className={`chip${recurrenceLimitMode === 'until' ? ' chip-active' : ''}`} onClick={() => setRecurrenceLimitMode('until')}>
+                {t('createEvent.recurrenceLimitUntil')}
+              </button>
+            </div>
+            {recurrenceLimitMode === 'count' ? (
+              <label>
+                {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+              </label>
+            ) : (
+              <label>
+                {t('createEvent.recurrenceEndDate')}: <input type="date" value={recurrenceEndDate} min={startTime ? startTime.slice(0, 10) : undefined} onChange={(e) => setRecurrenceEndDate(e.target.value)} />
+              </label>
+            )}
+            <div aria-live="polite">
+              {recurrencePreview && (
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
+                  <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
+                  {recurrencePreview.invalid ? (
+                    recurrencePreview.tooLong
+                      ? <p>{t('createEvent.recurrencePreviewTooLong')}</p>
+                      : <p>{t('createEvent.recurrencePreviewLimitError')}</p>
+                  ) : recurrencePreview.dates.length === 0 ? (
+                    <p>{t('createEvent.recurrencePreviewNone')}</p>
+                  ) : (
+                    <>
+                      <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
+                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date) => <li key={date.toISOString()}>{formatPreviewDate(date)}</li>)}
+                      </ul>
+                      <p>{t('createEvent.recurrencePreviewTotal', { n: recurrencePreview.total })}</p>
+                      {recurrencePreview.dates.length > PREVIEW_DATE_LIMIT ? (
+                        <p>{t('createEvent.recurrencePreviewTruncated', { shown: PREVIEW_DATE_LIMIT, total: recurrencePreview.total })}</p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
         <label className="form-field">
@@ -746,7 +878,6 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-
         <div className="sticky-action-bar">
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className="sticky-action-buttons">
