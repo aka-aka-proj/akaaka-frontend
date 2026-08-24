@@ -556,6 +556,8 @@ const en = {
     copyEventSuccess: 'Copied to new event creation page',
     viewFormResponses: 'View Form Responses',
     formResponsesTitle: 'Form Responses',
+    formAnswerYes: 'Yes',
+    formAnswerNo: 'No',
     noFormConfig: 'This event has no registration form',
     fillFormBeforeRegister: 'Please fill out the registration form first',
     formValidationError: 'Please check the form fields and try again.',
