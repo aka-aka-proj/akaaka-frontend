@@ -337,6 +337,7 @@ const zhTW = {
     saveAndPublish: '儲存並發布',
     publishFailed: '活動已建立，但發布失敗：{message}',
     publishPartialFailed: '有 {count} 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。',
+    saveAndPublishImportHint: '外部來源匯入的內容需先儲存為草稿檢查後才能發布。',
     locationDetailHint: '建議填寫完整地址（縣市、街道、門牌），系統會自動產生 Google Maps 連結。',
     aiOrganizerTitle: 'AI 整理活動發想',
     aiOrganizerDescription: '輸入零散想法，先整理成可編輯的活動欄位。AI 不會自動發布活動。',

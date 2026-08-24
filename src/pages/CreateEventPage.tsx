@@ -745,12 +745,12 @@ export function CreateEventPage() {
         </section>
 
         <div className="sticky-action-bar">
-          <span>{t('createEvent.draftNotice')}</span>
+          <span>{sourcePreview ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className="sticky-action-buttons">
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {t('createEvent.saveDraft')}
             </button>
-            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting}>
+            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || sourcePreview !== null}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
             </button>
           </div>
