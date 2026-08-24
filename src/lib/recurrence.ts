@@ -121,7 +121,7 @@ function* monthlyCandidates(base: Date, rule: RecurrenceRule): Generator<Date> {
   }
 
   const sourceDay = base.getUTCDate()
-  for (let occurrence = 1, step = 0; step < MAX_MONTH_STEPS; occurrence += rule.interval, step += 1) {
+  for (let occurrence = rule.interval, step = 0; step < MAX_MONTH_STEPS; occurrence += rule.interval, step += 1) {
     const month = base.getUTCMonth() + occurrence
     const year = base.getUTCFullYear() + Math.floor(month / 12)
     const normalizedMonth = ((month % 12) + 12) % 12

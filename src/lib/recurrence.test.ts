@@ -34,6 +34,15 @@ describe('generateRecurringDates', () => {
     ])
   })
 
+  it('V11 monthly by-date steps by interval months from the base event', () => {
+    const dates = generateRecurringDates(new Date('2026-03-15T09:00:00.000Z'), { frequency: 'monthly', interval: 2, count: 4 })
+    expect(iso(dates)).toEqual([
+      '2026-05-15T09:00:00.000Z',
+      '2026-07-15T09:00:00.000Z',
+      '2026-09-15T09:00:00.000Z',
+    ])
+  })
+
   it('V4 monthly weekday mode takes the Nth occurrence of the selected weekday', () => {
     const dates = generateRecurringDates(v1BaseSunday, {
       frequency: 'monthly',
