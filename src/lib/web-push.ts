@@ -21,12 +21,36 @@ function canUseWebPush() {
   )
 }
 
-export async function getWebPushState(): Promise<WebPushState> {
+const SERVICE_WORKER_TIMEOUT_MS = 5000
+
+// navigator.serviceWorker.ready never rejects, so a stuck registration would
+// hang every push-state consumer forever. Resolve null on timeout instead.
+async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => window.setTimeout(() => resolve(null), SERVICE_WORKER_TIMEOUT_MS)),
+  ])
+}
+
+export async function getWebPushState(profileId?: string): Promise<WebPushState> {
   if (!canUseWebPush()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) return 'unsupported'
   const subscription = await registration.pushManager.getSubscription()
-  return subscription ? 'subscribed' : 'unsubscribed'
+  if (!subscription) return 'unsubscribed'
+  if (profileId) {
+    // On shared browsers the subscription may belong to a previous account;
+    // only report "subscribed" when this profile owns the endpoint row.
+    const { data } = await supabase
+      .from('push_subscriptions')
+      .select('endpoint')
+      .eq('profile_id', profileId)
+      .eq('endpoint', subscription.endpoint)
+      .maybeSingle()
+    if (!data) return 'unsubscribed'
+  }
+  return 'subscribed'
 }
 
 export async function enableWebPush(profileId: string) {
@@ -35,7 +59,8 @@ export async function enableWebPush(profileId: string) {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error(permission === 'denied' ? 'web_push_denied' : 'web_push_cancelled')
 
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) throw new Error('web_push_unsupported')
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: decodeBase64Url(vapidPublicKey),
@@ -58,7 +83,8 @@ export async function enableWebPush(profileId: string) {
 
 export async function disableWebPush(profileId: string) {
   if (!('serviceWorker' in navigator)) return
-  const registration = await navigator.serviceWorker.ready
+  const registration = await serviceWorkerRegistration()
+  if (!registration) return
   const subscription = await registration.pushManager.getSubscription()
   if (!subscription) return
 

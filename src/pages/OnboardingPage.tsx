@@ -88,7 +88,7 @@ export function OnboardingPage() {
     }
 
     setProfileSaved(true)
-    const webPushState = await getWebPushState().catch(() => 'unsupported' as const)
+    const webPushState = await getWebPushState(user?.id).catch(() => 'unsupported' as const)
     if (webPushState === 'unsubscribed' || webPushState === 'default') {
       setPushPromptVisible(true)
       return
