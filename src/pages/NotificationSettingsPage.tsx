@@ -85,7 +85,7 @@ export function NotificationSettingsPage() {
 
   useEffect(() => {
     if (!userId) return
-    void getWebPushState().then(setPushState).catch(() => setPushState('unsupported'))
+    void getWebPushState(userId).then(setPushState).catch(() => setPushState('unsupported'))
   }, [userId])
 
   const toggleWebPush = async (enabled: boolean) => {

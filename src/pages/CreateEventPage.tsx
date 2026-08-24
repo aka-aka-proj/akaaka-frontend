@@ -326,29 +326,32 @@ export function CreateEventPage() {
 
     // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
     const existing = createdEventRef.current
+    const draftPayload = () => ({
+      title: title.trim(),
+      description: description.trim() || null,
+      attendance_fee_type: attendanceFeeType,
+      attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
+      category,
+      event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
+      start_time: new Date(startTime).toISOString(),
+      location_region: locationRegion,
+      location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
+      is_venue_hosted: isVenueHosted,
+      visibility_settings: { type: visibilityType },
+      max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+      registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+      registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+      external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
+      source_url: sourceUrl.trim() || null,
+      recurrence_rule: recurrenceRule,
+    })
     const { data, error } = existing ? { data: null, error: null } : await supabase
       .from('events')
       .insert([
         {
           creator_id: user.id,
           lifecycle_status: 'draft',
-          title: title.trim(),
-          description: description.trim() || null,
-          attendance_fee_type: attendanceFeeType,
-          attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
-          category,
-          event_type: eventType.length > 0 ? stringifyEventTypes(eventType) : '[]',
-          start_time: new Date(startTime).toISOString(),
-          location_region: locationRegion,
-          location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
-          is_venue_hosted: isVenueHosted,
-          visibility_settings: { type: visibilityType },
-          max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
-          registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
-          registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
-          external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
-          source_url: sourceUrl.trim() || null,
-          recurrence_rule: recurrenceRule,
+          ...draftPayload(),
         },
       ])
       .select('id')
@@ -357,6 +360,19 @@ export function CreateEventPage() {
       if (error) {
         setMessage(error.message)
         return
+      }
+
+      if (existing) {
+        // The form stays editable between attempts; push any edits into the
+        // persisted draft so retried RPCs match what the user now sees.
+        const { error: syncError } = await supabase
+          .from('events')
+          .update(draftPayload())
+          .eq('id', existing.eventId)
+        if (syncError) {
+          setMessage(syncError.message)
+          return
+        }
       }
 
       let publishInstanceIds = existing?.instanceIds ?? []
