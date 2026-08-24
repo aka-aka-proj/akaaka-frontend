@@ -326,8 +326,8 @@ export function CreateEventPage() {
 
     // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
     const existing = createdEventRef.current
-    // Fields create-recurring-events copies from the parent into every instance at creation time (spec 007) —
-    // the set retried edits must keep in sync across the whole series.
+    // Fields every instance in the series must keep identical (spec 007) — the Edge Function copies
+    // these at creation time, except attendance fee which is pending iac#69; retried edits sync them all.
     const sharedInstanceFields = () => ({
       title: title.trim(),
       description: description.trim() || null,
