@@ -33,6 +33,7 @@ export function MarkdownRenderer({ content, fallback, allowLinks = true }: Markd
         remarkPlugins={[remarkGfm]}
         components={allowLinks ? components : undefined}
         allowedElements={allowLinks ? undefined : announcementAllowedElements}
+        unwrapDisallowed={!allowLinks}
       >
         {content}
       </ReactMarkdown>

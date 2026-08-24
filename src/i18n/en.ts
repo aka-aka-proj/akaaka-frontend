@@ -621,6 +621,7 @@ const en = {
     bodyLengthError: 'The announcement body must be 1 to 1000 characters.',
     markdownError: 'Announcements cannot contain HTML, images, links, or URLs.',
     scheduleRequired: 'Choose a valid scheduled publish time.',
+    loadError: 'Failed to load announcements. Please try again later.',
     status: { draft: 'Draft', scheduled: 'Scheduled', published: 'Published' },
   },
   profile: {

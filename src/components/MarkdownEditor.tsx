@@ -53,6 +53,7 @@ export function MarkdownEditor({
   onChange,
   className,
   allowLinks = true,
+  'aria-label': ariaLabel,
 }: MarkdownEditorProps) {
   const [editing, setEditing] = useState(!value.trim())
   const editorRef = useRef<HTMLDivElement>(null)
@@ -162,7 +163,7 @@ export function MarkdownEditor({
         onPaste={handlePaste}
         role="textbox"
         aria-multiline="true"
-        aria-label="活動描述編輯器"
+        aria-label={ariaLabel ?? '活動描述編輯器'}
         data-placeholder="輸入活動描述…"
       />
     </div>

@@ -39,6 +39,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
   const [openForm, setOpenForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -47,7 +48,12 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
       .eq('event_id', eventId)
       .order('published_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
-    if (!error) setAnnouncements((data ?? []) as EventAnnouncement[])
+    if (error) {
+      setLoadError(true)
+      return
+    }
+    setLoadError(false)
+    setAnnouncements((data ?? []) as EventAnnouncement[])
   }, [eventId])
 
   useEffect(() => {
@@ -61,6 +67,16 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     setPublishAt('')
     setEditingId(null)
     setOpenForm(false)
+  }
+
+  const startNew = () => {
+    setTitle('')
+    setBody('')
+    setPublishMode('draft')
+    setPublishAt('')
+    setEditingId(null)
+    setMessage('')
+    setOpenForm(true)
   }
 
   const edit = (announcement: EventAnnouncement) => {
@@ -93,24 +109,35 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     setBusy(true)
     setMessage('')
     const scheduledAt = publishMode === 'scheduled' ? localDateTimeToIso(publishAt) : null
-    const result = editingId
-      ? await supabase.rpc('update_event_announcement', {
+    let error: { message: string } | null = null
+    if (editingId) {
+      const { error: updateError } = await supabase.rpc('update_event_announcement', {
         p_announcement_id: editingId,
         p_title: title.trim(),
         p_body_markdown: body,
         p_status: publishMode === 'scheduled' ? 'scheduled' : 'draft',
         p_publish_at: scheduledAt,
       })
-      : await supabase.rpc('create_event_announcement', {
+      error = updateError
+      if (!updateError && publishMode === 'now') {
+        const { error: publishError } = await supabase.rpc('publish_event_announcement', {
+          p_announcement_id: editingId,
+        })
+        error = publishError
+      }
+    } else {
+      const { error: createError } = await supabase.rpc('create_event_announcement', {
         p_event_id: eventId,
         p_title: title.trim(),
         p_body_markdown: body,
         p_publish_at: scheduledAt,
         p_publish_now: publishMode === 'now',
       })
+      error = createError
+    }
     setBusy(false)
-    if (result.error) {
-      setMessage(result.error.message)
+    if (error) {
+      setMessage(error.message)
       return
     }
     resetForm()
@@ -139,14 +166,15 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
           <p className="eyebrow">{t('eventAnnouncements.eyebrow')}</p>
           <h3 id="event-announcements-title">{t('eventAnnouncements.title')}</h3>
         </div>
-        {isHost && announcements.length < 5 ? (
-          <button type="button" className="secondary-action" onClick={() => { setMessage(''); setOpenForm(true) }}>
+        {isHost && !loadError && announcements.length < 5 ? (
+          <button type="button" className="secondary-action" onClick={startNew}>
             {t('eventAnnouncements.newAnnouncement')}
           </button>
         ) : null}
       </div>
       {isHost ? <p className="form-hint">{t('eventAnnouncements.limits')}</p> : null}
       {message ? <p className="error-message" role="alert">{message}</p> : null}
+      {loadError ? <p className="error-message" role="alert">{t('eventAnnouncements.loadError')}</p> : null}
       {isHost && openForm ? (
         <div className="event-announcement-editor card">
           <label className="form-field">
@@ -155,7 +183,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
           </label>
           <div className="form-field">
             <span>{t('eventAnnouncements.body')} ({Array.from(body).length}/1000)</span>
-            <MarkdownEditor value={body} onChange={setBody} allowLinks={false} aria-label={t('eventAnnouncements.body')} />
+            <MarkdownEditor key={editingId ?? 'new'} value={body} onChange={setBody} allowLinks={false} aria-label={t('eventAnnouncements.body')} />
           </div>
           <label className="form-field">
             <span>{t('eventAnnouncements.publishMode')}</span>
@@ -179,7 +207,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
           </div>
         </div>
       ) : null}
-      {announcements.length === 0 ? <p className="empty-state">{t('eventAnnouncements.empty')}</p> : null}
+      {!loadError && announcements.length === 0 ? <p className="empty-state">{t('eventAnnouncements.empty')}</p> : null}
       <div className="event-announcement-list">
         {announcements.map((announcement) => (
           <article key={announcement.id} className="event-announcement-card">
