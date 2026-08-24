@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
 
-          decl="$(printf '%s' "${PR_BODY:-}" | awk 'tolower($0) ~ /^consumes-expand:/ {gsub(/\r/,""); sub(/^[^:]*:[[:space:]]*/, ""); print; exit}')"
+          decl="$(printf '%s' "${PR_BODY:-}" | awk 'tolower($0) ~ /^consumes-expand:/ {gsub(/\r/,""); sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print; exit}')"
 
           if [ -z "$decl" ]; then
             fail "PR body is missing the required 'Consumes-Expand:' declaration. Add 'Consumes-Expand: none' or 'Consumes-Expand: <akaaka-iac task PR number(s)>' (comma/space separated). Contract: consumer-switch evidence binding in akaaka-docs/docs/spec/platform/001-vercel-deployment-spec.md."
