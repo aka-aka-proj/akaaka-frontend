@@ -9,7 +9,11 @@ const from = vi.fn()
 const insert = vi.fn()
 const select = vi.fn()
 const single = vi.fn()
+const update = vi.fn()
+const eq = vi.fn()
+const inFn = vi.fn()
 const functionsInvoke = vi.fn()
+const rpc = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -19,18 +23,24 @@ vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
     functions: { invoke: (...args: unknown[]) => functionsInvoke(...args) },
+    rpc: (...args: unknown[]) => rpc(...args),
   },
 }))
 
 describe('CreateEventPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     functionsInvoke.mockResolvedValue({ data: null, error: null })
+    rpc.mockResolvedValue({ data: null, error: null })
     single.mockResolvedValue({ data: { id: 'event-1' }, error: null })
     select.mockReturnValue({ single })
     insert.mockReturnValue({ select })
+    eq.mockResolvedValue({ error: null })
+    inFn.mockResolvedValue({ error: null })
+    update.mockReturnValue({ eq, in: inFn })
     from.mockImplementation((table: string) => {
       if (table === 'events') {
-        return { insert }
+        return { insert, update }
       }
       if (table === 'notifications') {
         const query = {
@@ -305,5 +315,126 @@ describe('CreateEventPage', () => {
     expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
     expect((screen.getByRole('button', { name: '讀取來源中…' }) as HTMLButtonElement).disabled).toBe(true)
     expect(publishButton().disabled).toBe(true)
+  })
+
+  it('syncs edited content to persisted recurring instances on retry', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+      error: null,
+    })
+    rpc.mockImplementation(async (_fn: string, args: Record<string, unknown>) => {
+      if (args.p_event_id === 'inst-3') return { data: null, error: { message: 'publication denied' } }
+      return { data: null, error: null }
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Original Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
+
+    const titleInput = screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement
+    await user.clear(titleInput)
+    await user.type(titleInput, 'Edited Title')
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+    expect(eq).toHaveBeenCalledWith('id', 'event-1')
+    expect(inFn).toHaveBeenCalledWith('id', ['inst-2', 'inst-3'])
+    const [parentPayload] = update.mock.calls[0]
+    expect(parentPayload).toEqual(expect.objectContaining({
+      title: 'Edited Title',
+      start_time: expect.any(String),
+      recurrence_rule: expect.objectContaining({ frequency: 'weekly' }),
+    }))
+    const [childPayload] = update.mock.calls[1]
+    expect(childPayload).toEqual(expect.objectContaining({ title: 'Edited Title' }))
+    expect(Object.keys(childPayload)).not.toContain('start_time')
+    expect(Object.keys(childPayload)).not.toContain('recurrence_rule')
+  })
+
+  it('blocks retry when the start time of an existing series changed', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+      error: null,
+    })
+    rpc.mockImplementation(async (_fn: string, args: Record<string, unknown>) => {
+      if (args.p_event_id === 'inst-3') return { data: null, error: { message: 'publication denied' } }
+      return { data: null, error: null }
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Original Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
+
+    fireEvent.change(screen.getByLabelText('開始時間'), { target: { value: '2026-07-18T12:00' } })
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    await waitFor(() => expect(screen.getByText('週期場次已建立，重試時無法變更開始時間或週期規則；請還原原始排程後再送出。')).toBeTruthy())
+    expect(update).not.toHaveBeenCalled()
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks retry when the recurrence rule of an existing series changed', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+      error: null,
+    })
+    rpc.mockImplementation(async (_fn: string, args: Record<string, unknown>) => {
+      if (args.p_event_id === 'inst-3') return { data: null, error: { message: 'publication denied' } }
+      return { data: null, error: null }
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Original Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
+
+    await user.click(screen.getByRole('button', { name: '一' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    await waitFor(() => expect(screen.getByText('週期場次已建立，重試時無法變更開始時間或週期規則；請還原原始排程後再送出。')).toBeTruthy())
+    expect(update).not.toHaveBeenCalled()
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
   })
 })
