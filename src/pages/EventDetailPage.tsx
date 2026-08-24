@@ -15,7 +15,7 @@ import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
-import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
+import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
@@ -30,6 +30,10 @@ interface Attendee {
 interface PublicCapacitySummary {
   approved_registration_count: number
   capacity_external_guest_count: number
+}
+
+interface FormResponseWithRegistrant extends RegistrationResponse {
+  registration?: { profile_id: string } | null
 }
 
 function getCompatibleFormData(
@@ -70,7 +74,7 @@ export function EventDetailPage() {
   const [publicCapacityOccupied, setPublicCapacityOccupied] = useState<number | null>(null)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
-  const [formResponses, setFormResponses] = useState<RegistrationResponse[]>([])
+  const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
   const [formValidationError, setFormValidationError] = useState('')
@@ -96,6 +100,17 @@ export function EventDetailPage() {
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+  const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
+  const [, setEditLockClock] = useState(0)
+
+  useEffect(() => {
+    if (!eventItem || !isHost || isEditLocked || eventItem.lifecycle_status === 'draft') {
+      return
+    }
+    // Bumping unused state forces a re-render so isEventEditLocked() is re-evaluated after start_time passes.
+    const timer = window.setInterval(() => setEditLockClock((tick) => tick + 1), 30_000)
+    return () => window.clearInterval(timer)
+  }, [eventItem, isHost, isEditLocked])
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
@@ -744,7 +759,7 @@ export function EventDetailPage() {
             ) : null}
             <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
               {eventItem.location_region ? (
-                <div className="event-summary-item">
+                <div className={`event-summary-item${eventItem.location_detail ? ' event-summary-item--full' : ''}`}>
                   <Icon href="/form-icons.svg" name="form-location" size={18} />
                   <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
                 </div>
@@ -986,18 +1001,16 @@ export function EventDetailPage() {
             </span>
           </div>
           <div className="event-admin-actions">
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
-              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
-                {t('eventDetail.unpublishNow')}
-              </button>
-            ) : (
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (
               <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
                 {t('eventDetail.publishNow')}
               </button>
-            )}
-            <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
-              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
-            </Link>
+            ) : null}
+            {!isEditLocked ? (
+              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+              </Link>
+            ) : null}
             <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
               <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
             </button>
@@ -1007,7 +1020,7 @@ export function EventDetailPage() {
                   .from('event_registration_responses')
                   .select('*, registration:event_registrations!inner(profile_id)')
                   .in('registration.event_id', [eventItem.id])
-                if (data) setFormResponses(data as any)
+                if (data) setFormResponses(data as FormResponseWithRegistrant[])
               }}>
                 <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
               </button>
@@ -1019,6 +1032,13 @@ export function EventDetailPage() {
               <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
             </button>
           </div>
+          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+            <div className="event-admin-danger-zone">
+              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
+                {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -1210,11 +1230,44 @@ export function EventDetailPage() {
       {isHost && formResponses.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
-          {formResponses.map((fr) => (
-            <div key={fr.id} style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
-              <pre style={{ fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>{JSON.stringify(fr.responses, null, 2)}</pre>
-            </div>
-          ))}
+          {formResponses.map((fr) => {
+            const fields = (eventItem?.registration_form_config ?? []) as RegistrationFormField[]
+            const respondentId = fr.registration?.profile_id
+            return (
+              <div key={fr.id} className="form-response-item">
+                <p className="form-response-meta">
+                  {respondentId ? (
+                    <Link to={`/profile/${respondentId}`}>{profileNameMap.get(respondentId) || respondentId}</Link>
+                  ) : (
+                    t('eventDetail.unnamedMember')
+                  )}
+                  {' · '}
+                  {new Date(fr.created_at).toLocaleString()}
+                </p>
+                <dl className="form-response-fields">
+                  {Object.entries(fr.responses ?? {}).map(([fieldId, value]) => {
+                    const field = fields.find((f) => f.id === fieldId)
+                    let display: string
+                    if (typeof value === 'boolean') {
+                      display = value ? t('eventDetail.formAnswerYes') : t('eventDetail.formAnswerNo')
+                    } else if (typeof value === 'string') {
+                      display = value
+                    } else if (value === null || value === undefined) {
+                      display = ''
+                    } else {
+                      display = String(value)
+                    }
+                    return (
+                      <div key={fieldId} className="form-response-field">
+                        <dt>{field?.label ?? fieldId}</dt>
+                        <dd>{display}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </div>
+            )
+          })}
         </section>
       ) : null}
 
