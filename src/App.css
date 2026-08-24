@@ -102,6 +102,12 @@
   gap: 0.5rem;
 }
 
+.event-admin-danger-zone {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .secondary-action,
 .danger-action {
   display: inline-flex;
@@ -2390,6 +2396,11 @@ dd {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  overflow-wrap: anywhere;
+}
+
+.event-summary-item--full {
+  grid-column: 1 / -1;
 }
 
 .event-summary-item strong {
@@ -2631,7 +2642,7 @@ dd {
 }
 
 .calendar-actions .share-button,
-.calendar-actions > .calendar-btn {
+.calendar-actions .calendar-btn {
   min-height: 2.25rem;
 }
 
@@ -2651,6 +2662,45 @@ dd {
 
 .calendar-actions .share-button:hover {
   background: #f6f8fa;
+}
+
+.form-response-item {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+}
+
+.form-response-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin: 0 0 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.form-response-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.form-response-field dt {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.form-response-field dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .confirm-dialog {
