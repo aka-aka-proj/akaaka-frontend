@@ -338,6 +338,7 @@ const en = {
     saveAndPublish: 'Save & publish',
     publishFailed: 'Event created, but publishing failed: {message}',
     publishPartialFailed: 'Publishing failed for {count} event(s). Already-published events are unaffected; you can retry later from each event page.',
+    recurrenceCreateRetry: 'The event was created, but recurring instances failed. Click "Save and publish" again to retry.',
     locationDetailHint: 'Tip: enter the full address (city, street, and number) so we can generate a Google Maps link.',
     aiOrganizerTitle: 'Organize event idea with AI',
     aiOrganizerDescription: 'Enter rough ideas to prefill editable event fields. AI will not publish the event.',
