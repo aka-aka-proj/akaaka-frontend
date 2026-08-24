@@ -241,6 +241,8 @@ export interface RecurrenceRule {
   frequency: 'weekly' | 'monthly'
   interval: number
   days?: string[]
+  monthly_by?: 'date' | 'weekday'
+  week_ordinal?: number
   count?: number
   until?: string
 }
