@@ -263,7 +263,9 @@ export function CreateEventPage() {
       until: recurrenceEndDate ? new Date(`${recurrenceEndDate}T23:59:59`).toISOString() : undefined,
     } : null
 
-    const { data, error } = await supabase
+    // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
+    const existing = createdEventRef.current
+    const { data, error } = existing ? { data: null, error: null } : await supabase
       .from('events')
       .insert([
         {
@@ -296,39 +298,38 @@ export function CreateEventPage() {
         return
       }
 
-      const existing = createdEventRef.current
-      let publishInstanceIds: string[] = []
+      let publishInstanceIds = createdEventRef.current?.instanceIds ?? []
 
-      if (existing) {
-        publishInstanceIds = existing.instanceIds
-      } else if (recurrenceEnabled && data && recurrenceRule) {
-        const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
-          body: {
-            parent_event_id: data.id,
-            recurrence_rule: recurrenceRule,
-            start_time: new Date(startTime).toISOString(),
-          },
-        })
-        if (recurrenceError) {
-          setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
-          return
-        }
-        if (recurrenceResult && recurrenceResult.success === false) {
-          setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
-          return
-        }
-        if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
-          publishInstanceIds = recurrenceResult.instance_ids as string[]
+      if (!createdEventRef.current && data?.id) {
+        createdEventRef.current = { eventId: data.id, instanceIds: [] }
+
+        if (recurrenceEnabled && recurrenceRule) {
+          const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
+            body: {
+              parent_event_id: data.id,
+              recurrence_rule: recurrenceRule,
+              start_time: new Date(startTime).toISOString(),
+            },
+          })
+          if (recurrenceError) {
+            setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
+            return
+          }
+          if (recurrenceResult && recurrenceResult.success === false) {
+            setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
+            return
+          }
+          if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+            publishInstanceIds = recurrenceResult.instance_ids as string[]
+            createdEventRef.current = { eventId: data.id, instanceIds: publishInstanceIds }
+          }
         }
       }
 
-      const currentEventId = existing ? existing.eventId : data?.id
+      const currentEventId = createdEventRef.current ? createdEventRef.current.eventId : data?.id
       if (!currentEventId) {
         setMessage('活動建立失敗：缺少活動 ID')
         return
-      }
-      if (!existing) {
-        createdEventRef.current = { eventId: currentEventId, instanceIds: publishInstanceIds }
       }
 
       if (shouldPublish) {
