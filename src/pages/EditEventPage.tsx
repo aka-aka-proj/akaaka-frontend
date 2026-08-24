@@ -47,6 +47,8 @@ export function EditEventPage() {
   const [editLocked, setEditLocked] = useState(false)
   const [eventLifecycle, setEventLifecycle] = useState<{ lifecycle_status: string; start_time: string } | null>(null)
 
+  const isDraft = eventLifecycle?.lifecycle_status === 'draft'
+
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
       setEventType([...eventType, type])
@@ -191,8 +193,8 @@ export function EditEventPage() {
     setSubmitting(true)
     setMessage('')
 
-    const publishIso = publishAt ? new Date(publishAt).toISOString() : null
-    const unpublishIso = unpublishAt ? new Date(unpublishAt).toISOString() : null
+    const publishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
+    const unpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
     if (publishIso && unpublishIso && publishIso >= unpublishIso) {
       setSubmitting(false)
       setMessage(t('editEvent.publicationScheduleInvalid'))
@@ -310,14 +312,18 @@ export function EditEventPage() {
           </select>
           <small>{t('editEvent.publicationStatusHint')}</small>
         </label>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
-          <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
-        </label>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
-          <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
-        </label>
+        {!isDraft ? (
+          <>
+            <label className="form-field">
+              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
+              <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
+            </label>
+            <label className="form-field">
+              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
+              <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
+            </label>
+          </>
+        ) : null}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.descriptionLabel')}

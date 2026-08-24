@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +7,7 @@ import { EditEventPage } from './EditEventPage'
 
 const mockUseAuth = vi.fn()
 const fromMock = vi.fn()
+const rpcMock = vi.fn((..._args: unknown[]) => Promise.resolve({ data: null, error: null }))
 
 let currentEvent: Record<string, unknown> | null = null
 
@@ -62,7 +64,7 @@ vi.mock('../components/PrivacyDisclosure', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (table: string) => fromMock(table),
-    rpc: () => Promise.resolve({ data: null, error: null }),
+    rpc: (...args: unknown[]) => rpcMock(...args),
   },
 }))
 
@@ -70,6 +72,7 @@ describe('EditEventPage edit lock', () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({ user: { id: 'creator-1' }, profile: { role_status: 'general' } })
     fromMock.mockReset()
+    rpcMock.mockClear()
     fromMock.mockImplementation((table: string) => {
       if (table === 'events') {
         return {
@@ -77,6 +80,9 @@ describe('EditEventPage edit lock', () => {
             eq: () => ({
               maybeSingle: () => Promise.resolve({ data: currentEvent, error: null }),
             }),
+          }),
+          update: () => ({
+            eq: () => Promise.resolve({ data: null, error: null }),
           }),
         }
       }
@@ -144,5 +150,56 @@ describe('EditEventPage edit lock', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: '儲存變更' })).toBeTruthy())
     expect(screen.queryByText(LOCKED_TITLE)).toBeNull()
+  })
+
+  it('hides publication schedule controls for drafts', async () => {
+    currentEvent = { ...baseEvent, lifecycle_status: 'draft', publication_status: 'closed', publish_at: '2026-09-01T12:00:00.000Z' }
+    render(
+      <MemoryRouter initialEntries={["/events/event-1/edit"]}>
+        <Routes>
+          <Route path="/events/:id/edit" element={<EditEventPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '儲存變更' })).toBeTruthy())
+    expect(screen.queryByLabelText('自動公開時間（選填）')).toBeNull()
+    expect(screen.queryByLabelText('自動下架時間（選填）')).toBeNull()
+  })
+
+  it('shows publication schedule controls once the event is not a draft', async () => {
+    currentEvent = { ...baseEvent, lifecycle_status: 'published', start_time: '2099-01-01T12:00:00.000Z', publish_at: null }
+    render(
+      <MemoryRouter initialEntries={["/events/event-1/edit"]}>
+        <Routes>
+          <Route path="/events/:id/edit" element={<EditEventPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '儲存變更' })).toBeTruthy())
+    expect(screen.getByLabelText('自動公開時間（選填）')).toBeTruthy()
+    expect(screen.getByLabelText('自動下架時間（選填）')).toBeTruthy()
+  })
+
+  it('submits null schedule times when saving a draft that still carries stale schedules', async () => {
+    currentEvent = { ...baseEvent, lifecycle_status: 'draft', publication_status: 'closed', publish_at: '2026-09-01T12:00:00.000Z' }
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/events/event-1/edit"]}>
+        <Routes>
+          <Route path="/events/:id/edit" element={<EditEventPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '儲存變更' })).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+    await waitFor(() => expect(rpcMock).toHaveBeenCalled())
+    const publicationCall = rpcMock.mock.calls.find(([name]) => name === 'set_event_publication')
+    expect(publicationCall).toBeTruthy()
+    const args = publicationCall![1] as { p_publish_at: unknown; p_unpublish_at: unknown }
+    expect(args.p_publish_at).toBeNull()
+    expect(args.p_unpublish_at).toBeNull()
   })
 })
