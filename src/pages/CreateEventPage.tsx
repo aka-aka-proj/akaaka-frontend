@@ -75,6 +75,7 @@ export function CreateEventPage() {
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [importing, setImporting] = useState(false)
   const createdEventRef = useRef<{ eventId: string; instanceIds: string[] } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
@@ -137,9 +138,11 @@ export function CreateEventPage() {
       return
     }
     setOrganizing(true)
+    setImporting(true)
     setMessage('')
     const { data, error } = await supabase.functions.invoke('import-event-source', { body: { source_url: normalized } })
     setOrganizing(false)
+    setImporting(false)
     if (error || !data?.preview) {
       setMessage(error?.message ?? t('createEvent.sourceImportFailed'))
       return
@@ -225,7 +228,7 @@ export function CreateEventPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const shouldPublish = publishIntentRef.current
+    const shouldPublish = publishIntentRef.current && !importing && sourcePreview === null
     publishIntentRef.current = false
     if (!user) {
       setMessage(t('createEvent.signInFirst'))
@@ -745,12 +748,12 @@ export function CreateEventPage() {
         </section>
 
         <div className="sticky-action-bar">
-          <span>{sourcePreview ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
+          <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className="sticky-action-buttons">
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {t('createEvent.saveDraft')}
             </button>
-            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || sourcePreview !== null}>
+            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
             </button>
           </div>

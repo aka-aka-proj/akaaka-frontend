@@ -7,7 +7,7 @@ import { EditEventPage } from './EditEventPage'
 
 const mockUseAuth = vi.fn()
 const fromMock = vi.fn()
-const rpcMock = vi.fn(() => Promise.resolve({ data: null, error: null }))
+const rpcMock = vi.fn((..._args: unknown[]) => Promise.resolve({ data: null, error: null }))
 
 let currentEvent: Record<string, unknown> | null = null
 
