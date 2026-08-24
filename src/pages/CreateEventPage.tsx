@@ -75,7 +75,7 @@ export function CreateEventPage() {
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const createdEventRef = useRef<{ eventId: string; instanceIds: string[] } | null>(null)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
@@ -298,32 +298,52 @@ export function CreateEventPage() {
         return
       }
 
-      let publishInstanceIds = createdEventRef.current?.instanceIds ?? []
+      let publishInstanceIds = existing?.instanceIds ?? []
 
-      if (!createdEventRef.current && data?.id) {
-        createdEventRef.current = { eventId: data.id, instanceIds: [] }
-
-        if (recurrenceEnabled && recurrenceRule) {
-          const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
-            body: {
-              parent_event_id: data.id,
-              recurrence_rule: recurrenceRule,
-              start_time: new Date(startTime).toISOString(),
-            },
-          })
-          if (recurrenceError) {
-            setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
-            return
-          }
-          if (recurrenceResult && recurrenceResult.success === false) {
-            setMessage(`活動已建立，但有 ${recurrenceResult.failed_instance_count} 個週期場次建立失敗。`)
-            return
-          }
-          if (recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
-            publishInstanceIds = recurrenceResult.instance_ids as string[]
-            createdEventRef.current = { eventId: data.id, instanceIds: publishInstanceIds }
-          }
+      // Re-running create-recurring-events on an unknown/partial state would
+      // duplicate instances (the RPC is not idempotent — spec 007), so only a
+      // confirmed zero-created failure may be retried on the next submit.
+      const ensureRecurrenceInstances = async (parentEventId: string): Promise<boolean> => {
+        if (!recurrenceEnabled || !recurrenceRule) return true
+        const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
+          body: {
+            parent_event_id: parentEventId,
+            recurrence_rule: recurrenceRule,
+            start_time: new Date(startTime).toISOString(),
+          },
+        })
+        if (!recurrenceError && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+          publishInstanceIds = recurrenceResult.instance_ids as string[]
+          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false }
+          return true
         }
+        const zeroCreated = Boolean(
+          !recurrenceError && recurrenceResult && recurrenceResult.success === false && recurrenceResult.created_instance_count === 0,
+        )
+        if (zeroCreated) {
+          setMessage(t('createEvent.recurrenceCreateRetry'))
+        } else if (recurrenceError) {
+          setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
+        } else {
+          setMessage(`活動已建立，但有 ${recurrenceResult?.failed_instance_count} 個週期場次建立失敗。`)
+        }
+        if (recurrenceError === null && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+          publishInstanceIds = recurrenceResult.instance_ids as string[]
+        }
+        if (createdEventRef.current) {
+          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated }
+        }
+        return false
+      }
+
+      if (!existing && data?.id) {
+        createdEventRef.current = { eventId: data.id, instanceIds: [], recurrenceRetryable: false }
+      }
+
+      const parentId = existing ? existing.eventId : data?.id
+      if (parentId && (recurrenceEnabled && recurrenceRule) && (!existing || existing.recurrenceRetryable)) {
+        const completed = await ensureRecurrenceInstances(parentId)
+        if (!completed) return
       }
 
       const currentEventId = createdEventRef.current ? createdEventRef.current.eventId : data?.id
