@@ -101,6 +101,16 @@ export function EventDetailPage() {
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
+  const [, setEditLockClock] = useState(0)
+
+  useEffect(() => {
+    if (!eventItem || isEditLocked) {
+      return
+    }
+    // Bumping unused state forces a re-render so isEventEditLocked() is re-evaluated after start_time passes.
+    const timer = window.setInterval(() => setEditLockClock((tick) => tick + 1), 30_000)
+    return () => window.clearInterval(timer)
+  }, [eventItem, isEditLocked])
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
