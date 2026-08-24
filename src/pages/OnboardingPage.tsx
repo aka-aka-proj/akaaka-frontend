@@ -108,7 +108,7 @@ export function OnboardingPage() {
     setPushPromptBusy(true)
     setPushPromptMessage('')
     try {
-      await enableWebPush(user.id)
+      await enableWebPush()
       await finishOnboarding()
     } catch (error) {
       setPushPromptMessage(error instanceof Error ? error.message : t('onboarding.pushEnableFailed'))
