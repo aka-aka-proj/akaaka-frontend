@@ -114,7 +114,7 @@ describe('OnboardingPage', () => {
 
     await user.click(screen.getByRole('button', { name: '開啟通知' }))
 
-    expect(enableWebPush).toHaveBeenCalledWith('user-1')
+    expect(enableWebPush).toHaveBeenCalledWith()
     expect(refreshProfile).toHaveBeenCalled()
   })
 

@@ -94,7 +94,7 @@ export function NotificationSettingsPage() {
     setPushMessage('')
     try {
       if (enabled) {
-        await enableWebPush(user.id)
+        await enableWebPush()
         setPushState('subscribed')
         setPushMessage(t('notifications.push.enabled'))
       } else {

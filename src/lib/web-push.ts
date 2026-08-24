@@ -74,7 +74,7 @@ export async function getWebPushState(profileId?: string): Promise<WebPushState>
   return 'subscribed'
 }
 
-export async function enableWebPush(profileId: string) {
+export async function enableWebPush() {
   if (!canUseWebPush() || !vapidPublicKey) throw new Error('web_push_unsupported')
 
   const permission = await Notification.requestPermission()
@@ -82,14 +82,6 @@ export async function enableWebPush(profileId: string) {
 
   const registration = await serviceWorkerRegistration()
   if (!registration) throw new Error('web_push_unsupported')
-
-  // pushManager.subscribe() reuses the existing endpoint, and the
-  // (profile_id, endpoint) upsert would then bind one endpoint to two
-  // profiles — revoke any subscription this profile does not own first.
-  const previous = await registration.pushManager.getSubscription()
-  if (previous && !(await isEndpointOwnedByProfile(profileId, previous.endpoint))) {
-    await previous.unsubscribe()
-  }
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
@@ -99,14 +91,16 @@ export async function enableWebPush(profileId: string) {
   const keys = json.keys
   if (!json.endpoint || !keys?.p256dh || !keys.auth) throw new Error('web_push_invalid_subscription')
 
-  const { error } = await supabase.from('push_subscriptions').upsert({
-    profile_id: profileId,
-    endpoint: json.endpoint,
-    p256dh: keys.p256dh,
-    auth: keys.auth,
-    user_agent: navigator.userAgent,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'profile_id,endpoint' })
+  // push_subscriptions.endpoint has a global unique constraint: a shared
+  // browser's subscription can belong to only one profile at a time. The
+  // controlled RPC transfers ownership atomically when the previous account
+  // left a row behind (RLS blocks clients from updating it directly).
+  const { error } = await supabase.rpc('subscribe_push_subscription', {
+    p_endpoint: json.endpoint,
+    p_p256dh: keys.p256dh,
+    p_auth: keys.auth,
+    p_user_agent: navigator.userAgent,
+  })
   if (error) throw error
   return subscription
 }
