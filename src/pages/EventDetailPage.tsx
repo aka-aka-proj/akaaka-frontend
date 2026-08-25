@@ -60,6 +60,8 @@ export function EventDetailPage() {
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
+  const [seriesInstances, setSeriesInstances] = useState<{ id: string; start_time: string; registration_deadline: string | null }[]>([])
+  const [seriesIndex, setSeriesIndex] = useState(0)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
@@ -222,6 +224,34 @@ export function EventDetailPage() {
     setPreviousFormData({})
 
     const currentEvent = eventData as EventItem | null
+
+    // Series context: load sibling instances when this event belongs to a recurring series.
+    if (currentEvent) {
+      const seriesParentId = currentEvent.series_id ?? currentEvent.id
+      const { data: seriesParentRow } = await supabase
+        .from('events')
+        .select('id, start_time, registration_deadline')
+        .eq('id', seriesParentId)
+        .maybeSingle()
+      const { data: seriesChildRows } = await supabase
+        .from('events')
+        .select('id, start_time, registration_deadline')
+        .eq('series_id', seriesParentId)
+        .order('start_time', { ascending: true })
+      if (seriesChildRows && seriesChildRows.length > 0) {
+        type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
+        const parentInstance = (seriesParentRow as SeriesInstance | null) ?? null
+        const instances = [
+          ...(parentInstance ? [parentInstance] : []),
+          ...((seriesChildRows as SeriesInstance[]) ?? []),
+        ].sort((a, b) => a.start_time.localeCompare(b.start_time))
+        const index = instances.findIndex((instance) => instance.id === currentEvent.id)
+        if (index >= 0 && instances.length > 1) {
+          setSeriesInstances(instances)
+          setSeriesIndex(index + 1)
+        }
+      }
+    }
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
       const { data: capacityData, error: capacityError } = await supabase
         .rpc('get_event_capacity', { p_event_id: id })
@@ -707,6 +737,24 @@ export function EventDetailPage() {
       <section className="card event-detail-hero">
         {eventItem ? (
           <>
+            {seriesInstances.length > 0 ? (
+              <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-surface-muted)' }}>
+                <strong>📅 系列活動 第 {seriesIndex}／{seriesInstances.length} 場</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.35rem' }}>
+                  {seriesInstances.map((instance) => {
+                    const closed = instance.registration_deadline ? new Date(instance.registration_deadline).getTime() <= Date.now() : false
+                    const isCurrent = instance.id === eventItem.id
+                    const label = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(instance.start_time))
+                    return (
+                      <span key={instance.id}>
+                        {isCurrent ? <strong>{label}</strong> : <Link to={`/events/${instance.id}`}>{label}</Link>}
+                        {!isCurrent && closed ? <small>（報名已關閉）</small> : null}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
             <h2>{eventItem.title}</h2>
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>

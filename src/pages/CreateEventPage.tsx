@@ -113,8 +113,14 @@ export function CreateEventPage() {
       rule.until = new Date(`${recurrenceEndDate}T23:59:59`).toISOString()
     }
     rule.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (registrationMode === 'native' && registrationDeadline && startTime) {
+      const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
+      if (offsetMinutes > 0) {
+        rule.registration_deadline_offset_minutes = offsetMinutes
+      }
+    }
     return rule
-  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime])
+  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime, registrationDeadline, registrationMode])
 
   const effectiveRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : startTime ? [weekdayOf(startTime)] : []
 
@@ -123,18 +129,20 @@ export function CreateEventPage() {
     if (!recurrenceEnabled || !base || Number.isNaN(base.getTime()) || !recurrenceRule) return null
     const missingEndDate = recurrenceLimitMode === 'until' && !recurrenceEndDate
     if (missingEndDate || validateRecurrenceRule(recurrenceRule)) {
-      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0 }
+      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0, deadlines: null as Date[] | null }
     }
     let dates: Date[]
     try {
       dates = generateRecurringDates(base, recurrenceRule)
     } catch (error) {
       if (error instanceof RecurrenceSeriesTooLongError) {
-        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0 }
+        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0, deadlines: null as Date[] | null }
       }
       throw error
     }
-    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1 }
+    const offsetMinutes = recurrenceRule.registration_deadline_offset_minutes ?? null
+    const deadlines = offsetMinutes !== null ? dates.map((date) => new Date(date.getTime() - offsetMinutes * 60000)) : null
+    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1, deadlines }
   }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate])
 
   const formatPreviewDate = (date: Date) =>
@@ -319,6 +327,12 @@ export function CreateEventPage() {
 
     if (recurrenceEnabled && (!recurrenceRule || validateRecurrenceRule(recurrenceRule))) {
       setMessage(t('createEvent.recurrenceInvalid'))
+      return
+    }
+
+    if (recurrenceEnabled && registrationMode === 'native' && registrationDeadline && startTime
+      && new Date(startTime).getTime() - new Date(registrationDeadline).getTime() <= 0) {
+      setMessage('報名截止晚於或等於活動開始時間，無法建立週期系列；請調整報名截止時間')
       return
     }
 
@@ -690,7 +704,20 @@ export function CreateEventPage() {
                   ) : (
                     <>
                       <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
-                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date) => <li key={date.toISOString()}>{formatPreviewDate(date)}</li>)}
+                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date, index) => {
+                          const deadline = recurrencePreview.deadlines?.[index]
+                          const closed = deadline ? deadline.getTime() <= Date.now() : false
+                          return (
+                            <li key={date.toISOString()}>
+                              {formatPreviewDate(date)}
+                              {deadline ? (
+                                <small style={{ display: 'block', color: closed ? 'var(--color-text-muted)' : undefined }}>
+                                  報名截止：{formatPreviewDate(deadline)}{closed ? '（報名已關閉）' : ''}
+                                </small>
+                              ) : null}
+                            </li>
+                          )
+                        })}
                       </ul>
                       <p>{t('createEvent.recurrencePreviewTotal', { n: recurrencePreview.total })}</p>
                       {recurrencePreview.dates.length > PREVIEW_DATE_LIMIT ? (
@@ -807,6 +834,15 @@ export function CreateEventPage() {
             value={registrationDeadline}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
+          {(() => {
+            if (!recurrenceEnabled || !registrationDeadline || !startTime) return null
+            const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
+            if (offsetMinutes <= 0) {
+              return <small style={{ color: 'var(--color-text-muted)' }}>報名截止需早於活動開始時間，才能為週期系列套用「每場各自截止」</small>
+            }
+            const offsetText = offsetMinutes % 60 === 0 ? `${offsetMinutes / 60} 小時` : `${offsetMinutes} 分鐘`
+            return <small style={{ color: 'var(--color-text-muted)' }}>系列各場次將於各自開始前 {offsetText} 截止（依目前設定換算）</small>
+          })()}
         </label> : null}
         {profile?.role_status === 'venue_approved' && (
           <label className="checkbox">

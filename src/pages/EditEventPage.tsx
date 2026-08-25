@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -46,8 +46,29 @@ export function EditEventPage() {
   const [approvedCount, setApprovedCount] = useState(0)
   const [editLocked, setEditLocked] = useState(false)
   const [eventLifecycle, setEventLifecycle] = useState<{ lifecycle_status: string; start_time: string } | null>(null)
+  const [seriesMembers, setSeriesMembers] = useState<{ id: string; start_time: string; lifecycle_status: string; title?: string }[]>([])
+  const [editScope, setEditScope] = useState<'single' | 'rest_of_series' | 'entire_series'>('single')
+  const [deadlineAction, setDeadlineAction] = useState<'keep' | 'reapply_offset' | 'set_absolute'>('keep')
+  const [batchOffsetMinutes, setBatchOffsetMinutes] = useState('')
+  const [batchAbsoluteDeadline, setBatchAbsoluteDeadline] = useState('')
 
   const isDraft = eventLifecycle?.lifecycle_status === 'draft'
+  const isSeriesMember = seriesMembers.length > 1
+
+  const isMemberLocked = (member: { lifecycle_status: string; start_time: string }) =>
+    member.lifecycle_status !== 'draft'
+    && (['completed', 'archived', 'cancelled'].includes(member.lifecycle_status)
+      || member.start_time <= new Date().toISOString())
+
+  const scopedMembers = useMemo(() => {
+    if (!isSeriesMember || editScope === 'single') return []
+    if (editScope === 'entire_series') return seriesMembers
+    if (eventLifecycle?.start_time) {
+      return seriesMembers.filter((member) => member.start_time >= eventLifecycle.start_time)
+    }
+    return []
+  }, [isSeriesMember, editScope, seriesMembers, eventLifecycle?.start_time])
+  const lockedCount = scopedMembers.filter(isMemberLocked).length
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -119,6 +140,30 @@ export function EditEventPage() {
       setPublicationStatus(event.publication_status ?? (event.lifecycle_status === 'draft' ? 'closed' : 'published'))
       setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
       setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
+
+      // Series context: load sibling instances when this event belongs to a recurring series.
+      const parentId = event.series_id ?? event.id
+      const { data: childRows } = await supabase
+        .from('events')
+        .select('id, start_time, lifecycle_status, title')
+        .eq('series_id', parentId)
+      const childList = ((childRows as { id: string; start_time: string; lifecycle_status: string; title?: string }[] | null) ?? [])
+      if (event.series_id) {
+        const { data: parentRow } = await supabase
+          .from('events')
+          .select('id, start_time, lifecycle_status, title')
+          .eq('id', parentId)
+          .maybeSingle()
+        const members = [...(parentRow ? [parentRow as { id: string; start_time: string; lifecycle_status: string; title?: string }] : []), ...childList]
+        if (members.length > 1) {
+          setSeriesMembers(members)
+        }
+      } else if (childList.length > 0) {
+        setSeriesMembers([
+          { id: event.id, start_time: event.start_time, lifecycle_status: event.lifecycle_status, title: event.title },
+          ...childList,
+        ])
+      }
 
       const { data: regs } = await supabase
         .from('event_registrations')
@@ -200,6 +245,89 @@ export function EditEventPage() {
       return
     }
 
+    if (editScope !== 'single' && isSeriesMember) {
+      if (deadlineAction === 'reapply_offset') {
+        const offsetValue = Number.parseInt(batchOffsetMinutes, 10)
+        if (!Number.isInteger(offsetValue) || offsetValue < 1 || offsetValue > 525600) {
+          setMessage('請輸入有效的相對截止分鐘數（1–525600）')
+          return
+        }
+      }
+      if (deadlineAction === 'set_absolute' && (!batchAbsoluteDeadline || Number.isNaN(new Date(batchAbsoluteDeadline).getTime()))) {
+        setMessage('請提供有效的固定報名截止時間')
+        return
+      }
+
+      setSubmitting(true)
+      setMessage('')
+      try {
+        const payload: Record<string, unknown> = {
+          target_event_id: id,
+          scope: editScope,
+          fields: {
+            title: title.trim(),
+            description: description.trim() || null,
+            attendance_fee_type: attendanceFeeType,
+            attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
+            category,
+            event_type: stringifyEventTypes(eventType),
+            location_region: locationRegion,
+            location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
+            visibility_settings: { type: visibilityType },
+            max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+            registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+            external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
+          },
+        }
+        if (deadlineAction === 'reapply_offset') {
+          payload.deadline = { action: 'reapply_offset', offset_minutes: Number.parseInt(batchOffsetMinutes, 10) }
+        } else if (deadlineAction === 'set_absolute') {
+          payload.deadline = { action: 'set_absolute', absolute: new Date(batchAbsoluteDeadline).toISOString() }
+        }
+
+        interface BatchResult {
+          success?: boolean
+          updated_count?: number
+          skipped_locked_count?: number
+          failed_count?: number
+        }
+        const { data: batchResult, error: batchError } = await supabase.functions.invoke('update-recurring-series', { body: payload })
+        if (batchError) {
+          setMessage(batchError.message)
+          return
+        }
+        const result = batchResult as BatchResult | null
+        if ((result?.failed_count ?? 0) > 0 || result?.success === false) {
+          setMessage(`批次更新部分失敗：已更新 ${result?.updated_count ?? 0} 場、略過 ${result?.skipped_locked_count ?? 0} 場（已開始或已結束）、失敗 ${result?.failed_count ?? 0} 場。`)
+          return
+        }
+
+        // Publication control stays per-event; apply only to the edited instance.
+        const batchPublishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
+        const batchUnpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
+        if (batchPublishIso && batchUnpublishIso && batchPublishIso >= batchUnpublishIso) {
+          setMessage(t('editEvent.publicationScheduleInvalid'))
+          return
+        }
+        const { error: publicationError } = await supabase.rpc('set_event_publication', {
+          p_event_id: id,
+          p_publication_status: publicationStatus,
+          p_publish_at: batchPublishIso,
+          p_unpublish_at: batchUnpublishIso,
+        })
+        if (publicationError) {
+          setMessage(publicationError.message)
+          return
+        }
+
+        setMessage(t('editEvent.eventUpdated'))
+        navigate(`/events/${id}`, { replace: true })
+        return
+      } finally {
+        setSubmitting(false)
+      }
+    }
+
     setSubmitting(true)
     setMessage('')
 
@@ -220,7 +348,7 @@ export function EditEventPage() {
         attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
         category,
         event_type: stringifyEventTypes(eventType),
-        start_time: new Date(startTime).toISOString(),
+        ...(isSeriesMember ? {} : { start_time: new Date(startTime).toISOString() }),
         location_region: locationRegion,
         location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,
@@ -284,6 +412,36 @@ export function EditEventPage() {
   return (
     <Layout>
       <form className="card" onSubmit={submit}>
+        {isSeriesMember ? (
+          <fieldset className="form-field">
+            <legend>{t('editEvent.seriesScopeLabel')}</legend>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> 僅此場</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> 此場與後續場次</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> 整個系列</label>
+            {editScope !== 'single' ? (
+              <>
+                <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                  將更新 {scopedMembers.length - lockedCount} 場{lockedCount > 0 ? `（略過 ${lockedCount} 場已開始或已結束）` : ''}；系列排程不可透過批次編輯變更
+                </small>
+                <fieldset className="form-field" style={{ marginTop: '0.5rem' }}>
+                  <legend>報名截止（批次）</legend>
+                  <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> 不變更（保留各場目前設定）</label>
+                  <label className="checkbox">
+                    <input type="radio" name="deadline-action" value="reapply_offset" checked={deadlineAction === 'reapply_offset'} onChange={() => setDeadlineAction('reapply_offset')} />
+                    重套相對模板：每場開始前
+                    <input aria-label="每場開始前的分鐘數" type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} /> 分鐘
+                  </label>
+                  <label className="checkbox">
+                    <input type="radio" name="deadline-action" value="set_absolute" checked={deadlineAction === 'set_absolute'} onChange={() => setDeadlineAction('set_absolute')} />
+                    全部設為固定日期：
+                    <input aria-label="固定報名截止時間" type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
+                  </label>
+                  {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>警告：所有場次將共用同一報名截止時間</small> : null}
+                </fieldset>
+              </>
+            ) : null}
+          </fieldset>
+        ) : null}
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
           <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -382,8 +540,10 @@ export function EditEventPage() {
             aria-label={t('editEvent.startTimeLabel')}
             type="datetime-local"
             value={startTime}
+            disabled={isSeriesMember}
             onChange={(event) => setStartTime(event.target.value)}
           />
+          {isSeriesMember ? <small style={{ color: 'var(--color-text-muted)' }}>系列成員的開始時間不可個別變更</small> : null}
         </label>
         <label className="form-field">
           <span className="form-label-row">
