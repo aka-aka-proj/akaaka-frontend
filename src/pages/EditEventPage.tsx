@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -55,6 +55,16 @@ export function EditEventPage() {
     }
   }
 
+  // Latest-ref pattern: reload must key on data identity only (id/userId),
+  // so locale changes or navigation identity churn never wipe draft edits.
+  const userId = user?.id ?? null
+  const tRef = useRef(t)
+  const navigateRef = useRef(navigate)
+  useEffect(() => {
+    tRef.current = t
+    navigateRef.current = navigate
+  }, [t, navigate])
+
   useEffect(() => {
     if (!id) {
       return
@@ -68,15 +78,15 @@ export function EditEventPage() {
         .maybeSingle()
 
       if (error || !data) {
-        setMessage(t('editEvent.notFound'))
+        setMessage(tRef.current('editEvent.notFound'))
         setLoading(false)
         return
       }
 
       const event = data as EventItem
 
-      if (user && event.creator_id !== user.id) {
-        navigate(`/events/${id}`, { replace: true })
+      if (userId && event.creator_id !== userId) {
+        navigateRef.current(`/events/${id}`, { replace: true })
         return
       }
 
@@ -121,7 +131,7 @@ export function EditEventPage() {
     }
 
     void loadEvent()
-  }, [id, user, navigate, t])
+  }, [id, userId])
 
   useEffect(() => {
     if (!submitting) {
