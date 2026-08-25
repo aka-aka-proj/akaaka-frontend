@@ -226,32 +226,29 @@ export function EventDetailPage() {
     const currentEvent = eventData as EventItem | null
 
     // Series context: load sibling instances when this event belongs to a recurring series.
+    // Standalone events (no series_id and no recurrence_rule) skip these queries entirely;
+    // parent/child lookups run in parallel so they don't delay capacity/registration loads.
     setSeriesInstances([])
     setSeriesIndex(0)
-    if (currentEvent) {
+    if (currentEvent && (currentEvent.series_id != null || currentEvent.recurrence_rule != null)) {
       const seriesParentId = currentEvent.series_id ?? currentEvent.id
-      const { data: seriesParentRow } = await supabase
-        .from('events')
-        .select('id, start_time, registration_deadline')
-        .eq('id', seriesParentId)
-        .maybeSingle()
-      const { data: seriesChildRows } = await supabase
-        .from('events')
-        .select('id, start_time, registration_deadline')
-        .eq('series_id', seriesParentId)
-        .order('start_time', { ascending: true })
-      if (seriesChildRows && seriesChildRows.length > 0) {
-        type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
-        const parentInstance = (seriesParentRow as SeriesInstance | null) ?? null
-        const instances = [
-          ...(parentInstance ? [parentInstance] : []),
-          ...((seriesChildRows as SeriesInstance[]) ?? []),
-        ].sort((a, b) => a.start_time.localeCompare(b.start_time))
+      const [seriesParentRes, seriesChildRes] = await Promise.all([
+        supabase.from('events').select('id, start_time, registration_deadline').eq('id', seriesParentId).maybeSingle(),
+        supabase.from('events').select('id, start_time, registration_deadline').eq('series_id', seriesParentId).order('start_time', { ascending: true }),
+      ])
+      type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
+      const parentInstance = (seriesParentRes.data as SeriesInstance | null) ?? null
+      const childInstances = ((seriesChildRes.data as SeriesInstance[] | null) ?? [])
+      if (childInstances.length > 0) {
+        const instances = [...(parentInstance ? [parentInstance] : []), ...childInstances]
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
         const index = instances.findIndex((instance) => instance.id === currentEvent.id)
         if (index >= 0 && instances.length > 1) {
           setSeriesInstances(instances)
           setSeriesIndex(index + 1)
         }
+      }
+    }
       }
     }
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {

@@ -43,6 +43,15 @@ function weekdayOf(timestamp: string): string {
   return dayNames[new Date(timestamp).getDay()] ?? 'Mon'
 }
 
+// Retry schedule-lock comparison ignores registration_deadline_offset_minutes:
+// changing only the deadline template never reschedules an occurrence (spec 007).
+function scheduleComparableRule(rule: RecurrenceRule | null): Omit<RecurrenceRule, 'registration_deadline_offset_minutes'> | null {
+  if (!rule) return null
+  const rest = { ...rule }
+  delete rest.registration_deadline_offset_minutes
+  return rest
+}
+
 const PREVIEW_DATE_LIMIT = 12
 
 export function CreateEventPage() {
@@ -388,7 +397,7 @@ export function CreateEventPage() {
         const scheduleChanged =
           existing.seriesStartIso != null &&
           (existing.seriesStartIso !== new Date(startTime).toISOString() ||
-            existing.seriesRuleJson !== JSON.stringify(recurrenceRule))
+            existing.seriesRuleJson !== JSON.stringify(scheduleComparableRule(recurrenceRule)))
         if (childInstanceIds.length > 0 && scheduleChanged) {
           setMessage(t('createEvent.retryScheduleLocked'))
           return
@@ -423,7 +432,7 @@ export function CreateEventPage() {
       const ensureRecurrenceInstances = async (parentEventId: string): Promise<boolean> => {
         if (!recurrenceEnabled || !recurrenceRule) return true
         const attemptStartIso = new Date(startTime).toISOString()
-        const attemptRuleJson = JSON.stringify(recurrenceRule)
+        const attemptRuleJson = JSON.stringify(scheduleComparableRule(recurrenceRule))
         const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
           body: {
             parent_event_id: parentEventId,

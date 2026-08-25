@@ -51,9 +51,10 @@ export function EditEventPage() {
   const [deadlineAction, setDeadlineAction] = useState<'keep' | 'reapply_offset' | 'set_absolute'>('keep')
   const [batchOffsetMinutes, setBatchOffsetMinutes] = useState('')
   const [batchAbsoluteDeadline, setBatchAbsoluteDeadline] = useState('')
+  const loadedSnapshotRef = useRef<Record<string, unknown> | null>(null)
 
   const isDraft = eventLifecycle?.lifecycle_status === 'draft'
-  const isSeriesMember = seriesMembers.length > 1
+  const isSeriesMember = seriesMembers.length > 0
 
   const isMemberLocked = (member: { lifecycle_status: string; start_time: string }) =>
     member.lifecycle_status !== 'draft'
@@ -141,28 +142,43 @@ export function EditEventPage() {
       setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
       setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
 
-      // Series context: load sibling instances when this event belongs to a recurring series.
+      loadedSnapshotRef.current = {
+        title: event.title,
+        description: event.description ?? null,
+        attendance_fee_type: event.attendance_fee_type ?? 'free',
+        attendance_fee_amount: (event.attendance_fee_type === 'fixed' && event.attendance_fee_amount) ? event.attendance_fee_amount : null,
+        category: event.category || 'Social',
+        event_type: stringifyEventTypes(parseEventTypes(event.event_type)),
+        location_region: event.location_region,
+        location_detail: event.location_detail ?? null,
+        visibility_settings: event.visibility_settings ?? { type: 'public' },
+        max_capacity: event.external_registration_url ? null : (event.max_capacity ?? null),
+        registration_form_config: (event.external_registration_url || !event.registration_form_config || event.registration_form_config.length === 0) ? null : event.registration_form_config,
+        external_registration_url: event.external_registration_url ?? null,
+      }
+
+      // Series context (fail-closed): a child stays a locked member even when sibling
+      // lookups return nothing; a parent counts only once at least one child exists (spec 007 retry).
       const parentId = event.series_id ?? event.id
+      const selfEntry = { id: event.id, start_time: event.start_time, lifecycle_status: event.lifecycle_status, title: event.title }
       const { data: childRows } = await supabase
         .from('events')
         .select('id, start_time, lifecycle_status, title')
         .eq('series_id', parentId)
       const childList = ((childRows as { id: string; start_time: string; lifecycle_status: string; title?: string }[] | null) ?? [])
+        .filter((row) => row.id !== event.id)
       if (event.series_id) {
         const { data: parentRow } = await supabase
           .from('events')
           .select('id, start_time, lifecycle_status, title')
           .eq('id', parentId)
           .maybeSingle()
-        const members = [...(parentRow ? [parentRow as { id: string; start_time: string; lifecycle_status: string; title?: string }] : []), ...childList]
-        if (members.length > 1) {
-          setSeriesMembers(members)
-        }
+        const parentEntry = parentRow as { id: string; start_time: string; lifecycle_status: string; title?: string } | null
+        setSeriesMembers([...(parentEntry ? [parentEntry] : []), selfEntry, ...childList])
       } else if (childList.length > 0) {
-        setSeriesMembers([
-          { id: event.id, start_time: event.start_time, lifecycle_status: event.lifecycle_status, title: event.title },
-          ...childList,
-        ])
+        setSeriesMembers([selfEntry, ...childList])
+      } else {
+        setSeriesMembers([])
       }
 
       const { data: regs } = await supabase
@@ -249,12 +265,47 @@ export function EditEventPage() {
       if (deadlineAction === 'reapply_offset') {
         const offsetValue = Number.parseInt(batchOffsetMinutes, 10)
         if (!Number.isInteger(offsetValue) || offsetValue < 1 || offsetValue > 525600) {
-          setMessage('請輸入有效的相對截止分鐘數（1–525600）')
+          setMessage(t('editEvent.batchInvalidOffset'))
           return
         }
       }
       if (deadlineAction === 'set_absolute' && (!batchAbsoluteDeadline || Number.isNaN(new Date(batchAbsoluteDeadline).getTime()))) {
-        setMessage('請提供有效的固定報名截止時間')
+        setMessage(t('editEvent.batchInvalidAbsolute'))
+        return
+      }
+
+      const desiredFields: Record<string, unknown> = {
+        title: title.trim(),
+        description: description.trim() || null,
+        attendance_fee_type: attendanceFeeType,
+        attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
+        category,
+        event_type: stringifyEventTypes(eventType),
+        location_region: locationRegion,
+        location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
+        visibility_settings: { type: visibilityType },
+        max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+        registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+        external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
+      }
+      // Deadline-only submissions must not push unrelated content onto siblings:
+      // diff against the loaded snapshot and send only actual changes.
+      const baseline = loadedSnapshotRef.current ?? {}
+      const changedFields: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(desiredFields)) {
+        if (JSON.stringify(value) !== JSON.stringify(baseline[key])) changedFields[key] = value
+      }
+      if (Object.keys(changedFields).length === 0 && deadlineAction === 'keep') {
+        setMessage(t('editEvent.batchNothingToUpdate'))
+        return
+      }
+
+      // Validate the publication window before any write: a failed schedule check
+      // must not leave the series partially mutated.
+      const batchPublishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
+      const batchUnpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
+      if (batchPublishIso && batchUnpublishIso && batchPublishIso >= batchUnpublishIso) {
+        setMessage(t('editEvent.publicationScheduleInvalid'))
         return
       }
 
@@ -264,20 +315,7 @@ export function EditEventPage() {
         const payload: Record<string, unknown> = {
           target_event_id: id,
           scope: editScope,
-          fields: {
-            title: title.trim(),
-            description: description.trim() || null,
-            attendance_fee_type: attendanceFeeType,
-            attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
-            category,
-            event_type: stringifyEventTypes(eventType),
-            location_region: locationRegion,
-            location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
-            visibility_settings: { type: visibilityType },
-            max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
-            registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
-            external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
-          },
+          fields: changedFields,
         }
         if (deadlineAction === 'reapply_offset') {
           payload.deadline = { action: 'reapply_offset', offset_minutes: Number.parseInt(batchOffsetMinutes, 10) }
@@ -298,17 +336,15 @@ export function EditEventPage() {
         }
         const result = batchResult as BatchResult | null
         if ((result?.failed_count ?? 0) > 0 || result?.success === false) {
-          setMessage(`批次更新部分失敗：已更新 ${result?.updated_count ?? 0} 場、略過 ${result?.skipped_locked_count ?? 0} 場（已開始或已結束）、失敗 ${result?.failed_count ?? 0} 場。`)
+          setMessage(t('editEvent.batchPartialFailure', {
+            updated: result?.updated_count ?? 0,
+            skipped: result?.skipped_locked_count ?? 0,
+            failed: result?.failed_count ?? 0,
+          }))
           return
         }
 
         // Publication control stays per-event; apply only to the edited instance.
-        const batchPublishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
-        const batchUnpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
-        if (batchPublishIso && batchUnpublishIso && batchPublishIso >= batchUnpublishIso) {
-          setMessage(t('editEvent.publicationScheduleInvalid'))
-          return
-        }
         const { error: publicationError } = await supabase.rpc('set_event_publication', {
           p_event_id: id,
           p_publication_status: publicationStatus,
@@ -320,6 +356,12 @@ export function EditEventPage() {
           return
         }
 
+        if ((result?.skipped_locked_count ?? 0) > 0) {
+          alert(t('editEvent.batchSuccessWithSkipped', {
+            updated: result?.updated_count ?? 0,
+            skipped: result?.skipped_locked_count ?? 0,
+          }))
+        }
         setMessage(t('editEvent.eventUpdated'))
         navigate(`/events/${id}`, { replace: true })
         return
@@ -415,28 +457,31 @@ export function EditEventPage() {
         {isSeriesMember ? (
           <fieldset className="form-field">
             <legend>{t('editEvent.seriesScopeLabel')}</legend>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> 僅此場</label>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> 此場與後續場次</label>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> 整個系列</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> {t('editEvent.seriesScopeSingle')}</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> {t('editEvent.seriesScopeRest')}</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> {t('editEvent.seriesScopeEntire')}</label>
             {editScope !== 'single' ? (
               <>
                 <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                  將更新 {scopedMembers.length - lockedCount} 場{lockedCount > 0 ? `（略過 ${lockedCount} 場已開始或已結束）` : ''}；系列排程不可透過批次編輯變更
+                  {t('editEvent.batchAffectedCount', { count: scopedMembers.length - lockedCount })}
+                  {lockedCount > 0 ? t('editEvent.batchSkippedLockedSuffix', { count: lockedCount }) : ''}
+                  {'　'}
+                  {t('editEvent.batchScheduleLockedHint')}
                 </small>
                 <fieldset className="form-field" style={{ marginTop: '0.5rem' }}>
-                  <legend>報名截止（批次）</legend>
-                  <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> 不變更（保留各場目前設定）</label>
+                  <legend>{t('editEvent.batchDeadlineLabel')}</legend>
+                  <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> {t('editEvent.batchDeadlineKeep')}</label>
                   <label className="checkbox">
                     <input type="radio" name="deadline-action" value="reapply_offset" checked={deadlineAction === 'reapply_offset'} onChange={() => setDeadlineAction('reapply_offset')} />
-                    重套相對模板：每場開始前
-                    <input aria-label="每場開始前的分鐘數" type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} /> 分鐘
+                    {t('editEvent.batchDeadlineReapplyLabel')}
+                    <input aria-label={t('editEvent.batchOffsetMinutesAria')} type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} />
                   </label>
                   <label className="checkbox">
                     <input type="radio" name="deadline-action" value="set_absolute" checked={deadlineAction === 'set_absolute'} onChange={() => setDeadlineAction('set_absolute')} />
-                    全部設為固定日期：
-                    <input aria-label="固定報名截止時間" type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
+                    {t('editEvent.batchDeadlineAbsoluteLabel')}
+                    <input aria-label={t('editEvent.batchAbsoluteDeadlineAria')} type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
                   </label>
-                  {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>警告：所有場次將共用同一報名截止時間</small> : null}
+                  {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.batchDeadlineAbsoluteWarning')}</small> : null}
                 </fieldset>
               </>
             ) : null}
@@ -543,7 +588,7 @@ export function EditEventPage() {
             disabled={isSeriesMember}
             onChange={(event) => setStartTime(event.target.value)}
           />
-          {isSeriesMember ? <small style={{ color: 'var(--color-text-muted)' }}>系列成員的開始時間不可個別變更</small> : null}
+          {isSeriesMember ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.startTimeSeriesLockedHint')}</small> : null}
         </label>
         <label className="form-field">
           <span className="form-label-row">
@@ -615,7 +660,7 @@ export function EditEventPage() {
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label> : null}
-        {profile?.role_status === 'venue_approved' && (
+        {profile?.role_status === 'venue_approved' && editScope === 'single' && (
           <label className="checkbox">
             <input
               aria-label={t('editEvent.venueHostedLabel')}
@@ -627,6 +672,9 @@ export function EditEventPage() {
             {t('editEvent.venueHostedLabel')}
           </label>
         )}
+        {profile?.role_status === 'venue_approved' && isSeriesMember && editScope !== 'single' ? (
+          <small style={{ color: 'var(--color-text-muted)', display: 'block' }}>{t('editEvent.batchVenueAutoDerived')}</small>
+        ) : null}
         <div className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.visibilityLabel')}
