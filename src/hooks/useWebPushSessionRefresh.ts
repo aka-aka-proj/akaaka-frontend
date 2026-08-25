@@ -10,8 +10,15 @@ export function useWebPushSessionRefresh(userId: string | null | undefined) {
   const refreshedForUserId = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!userId || refreshedForUserId.current === userId) return
+    // Sign-out clears the marker so signing back in — even with the same
+    // account within this SPA lifetime — counts as a fresh session and
+    // triggers the refresh again.
+    if (!userId) {
+      refreshedForUserId.current = null
+      return
+    }
+    if (refreshedForUserId.current === userId) return
     refreshedForUserId.current = userId
-    void refreshWebPushSubscription()
+    void refreshWebPushSubscription(userId)
   }, [userId])
 }

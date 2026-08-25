@@ -104,6 +104,14 @@ async function subscribeWithApplicationKey(
   })
 }
 
+type SubmitSubscriptionOptions = {
+  // Destructive recovery revokes the subscription before its replacement is
+  // registered, so only interactive flows that surface failures to the user
+  // may use it; background refreshes never retry and would leave push broken
+  // for the whole SPA session on a failed swap.
+  recoverFromEndpointConflict?: boolean
+}
+
 // Submit a browser subscription through the controlled RPC. On
 // `endpoint_conflict` the endpoint is held by another account with different
 // key material (typically rotated keys): revoke the browser subscription and
@@ -113,6 +121,7 @@ async function subscribeWithApplicationKey(
 async function submitSubscription(
   registration: ServiceWorkerRegistration,
   subscription: PushSubscription,
+  { recoverFromEndpointConflict = true }: SubmitSubscriptionOptions = {},
 ): Promise<PushSubscription> {
   const payload = extractSubscriptionPayload(subscription)
   const { error } = await supabase.rpc('subscribe_push_subscription', {
@@ -123,7 +132,7 @@ async function submitSubscription(
   })
   if (!error) return subscription
 
-  if (!isEndpointConflict(error)) throw error
+  if (!isEndpointConflict(error) || !recoverFromEndpointConflict) throw error
 
   await subscription.unsubscribe()
   const replacement = await subscribeWithApplicationKey(registration)
@@ -162,7 +171,7 @@ export async function enableWebPush() {
 // recent successful deliveries, but client refreshes cover the
 // no-notifications-yet case). Best-effort by design: any failure leaves push
 // state untouched and must never disturb the session.
-export async function refreshWebPushSubscription(): Promise<boolean> {
+export async function refreshWebPushSubscription(profileId: string): Promise<boolean> {
   if (!canUseWebPush() || !vapidPublicKey) return false
   if (Notification.permission !== 'granted') return false
   try {
@@ -170,7 +179,16 @@ export async function refreshWebPushSubscription(): Promise<boolean> {
     if (!registration) return false
     const subscription = await registration.pushManager.getSubscription()
     if (!subscription) return false
-    await submitSubscription(registration, subscription)
+    // Ownership gate: on shared browsers the surviving endpoint may belong to
+    // a previously signed-in profile. The passive path never transfers it —
+    // cross-account transfer stays an explicit enableWebPush decision — so
+    // skip silently when this profile does not hold the row.
+    if (!(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) return false
+    // Non-destructive on purpose: an endpoint_conflict here (rotated key
+    // material under a stable endpoint) is left to the explicit
+    // enableWebPush flow or the scheduled cleanup instead of revoking a
+    // working subscription this best-effort path may fail to replace.
+    await submitSubscription(registration, subscription, { recoverFromEndpointConflict: false })
     return true
   } catch {
     return false
