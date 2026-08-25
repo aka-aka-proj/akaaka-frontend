@@ -115,6 +115,11 @@ export function EventDetailPage() {
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
+  const registrationIntakeActive = Boolean(
+    eventItem
+    && eventItem.lifecycle_status !== 'draft'
+    && eventItem.publication_status !== 'closed',
+  )
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -806,9 +811,11 @@ export function EventDetailPage() {
                     : (publicCapacityOccupied === null
                       ? t('eventDetail.capacityRemainingUnknown', { max: eventItem.max_capacity })
                       : t('eventDetail.capacityRemaining', { max: eventItem.max_capacity, remaining: Math.max(0, eventItem.max_capacity - publicCapacityOccupied) }))}
-                  <span className="capacity-status-badge-wrap">
-                    <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
-                  </span>
+                  {registrationIntakeActive ? (
+                    <span className="capacity-status-badge-wrap">
+                      <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
+                    </span>
+                  ) : null}
                   {capacityKnown ? (
                     <span
                       className={`capacity-progress${isAtCapacity ? ' capacity-progress--full' : capacityRatio >= 0.8 ? ' capacity-progress--warning' : ''}`}
@@ -830,7 +837,7 @@ export function EventDetailPage() {
                 <span>
                   <strong>{t('eventDetail.registrationDeadlineLabel')}</strong>
                   {new Date(eventItem.registration_deadline).toLocaleString()}
-                  {!eventItem.max_capacity ? (
+                  {registrationIntakeActive && !eventItem.max_capacity ? (
                     <span className="capacity-status-badge-wrap">
                       <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
                     </span>
@@ -877,11 +884,10 @@ export function EventDetailPage() {
       ) : null}
 
       {isHost && eventItem ? (
-        <div className="host-view-tabs" role="tablist" aria-label={t('eventDetail.managementConsole')}>
+        <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
           <button
             type="button"
-            role="tab"
-            aria-selected={hostConsoleView === 'participants'}
+            aria-pressed={hostConsoleView === 'participants'}
             className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
             onClick={() => setHostConsoleView('participants')}
           >
@@ -889,8 +895,7 @@ export function EventDetailPage() {
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={hostConsoleView === 'management'}
+            aria-pressed={hostConsoleView === 'management'}
             className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
             onClick={() => setHostConsoleView('management')}
           >

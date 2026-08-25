@@ -555,6 +555,8 @@ const zhTW = {
     editEvent: '編輯活動',
     hostTools: '主辦人專用',
     managementConsole: '管理控制台',
+    hostTabParticipants: '參加者視圖',
+    hostTabManagement: '主辦人管理',
     statusPublished: '已公開',
     statusClosed: '已下架',
     draftNotice: '未發布草稿：只有你看得到，尚未開放報名或分享。',

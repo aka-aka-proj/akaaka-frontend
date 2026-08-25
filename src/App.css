@@ -3179,6 +3179,11 @@ dd {
     width: 100%;
   }
 
+  .event-quickfacts-card,
+  .host-view-tabs {
+    width: 100%;
+  }
+
   .calendar-menu-items {
     right: 0;
     left: auto;
