@@ -114,6 +114,33 @@ export function EventDetailPage() {
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
+
+  const isPrivateShareable = Boolean(
+    eventItem
+    && isHost
+    && eventItem.lifecycle_status !== 'draft'
+    && eventItem.visibility_settings?.type === 'private',
+  )
+
+  const copyShareLink = async (rotate: boolean) => {
+    if (!eventItem || !isHost) {
+      return
+    }
+    const { data: token, error } = await supabase.rpc(
+      rotate ? 'rotate_event_share_token' : 'ensure_event_share_token',
+      { p_event_id: eventItem.id },
+    )
+    if (error || typeof token !== 'string' || !token) {
+      showError(error?.message ?? t('events.shareFailed'), error)
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/events/${eventItem.id}?t=${token}`)
+      alert(t('eventDetail.shareLinkCopied'))
+    } catch (copyError) {
+      showError(t('events.shareFailed'), copyError)
+    }
+  }
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -199,12 +226,28 @@ export function EventDetailPage() {
       return
     }
 
-    setEventItem((eventData as EventItem | null) ?? null)
+    let currentEvent = (eventData as EventItem | null) ?? null
+
+    // Private-event share link (ADR-022): RLS hides private rows from non-creators,
+    // so retry through the controlled read-only token path and strip the token
+    // from the URL once it has been used.
+    if (!currentEvent && id) {
+      const shareToken = new URLSearchParams(window.location.search).get('t')
+      if (shareToken) {
+        const { data: tokenData } = await supabase
+          .rpc('get_event_by_share_token', { p_token: shareToken })
+          .maybeSingle()
+        if (tokenData) {
+          currentEvent = tokenData as EventItem
+          window.history.replaceState(window.history.state, '', window.location.pathname)
+        }
+      }
+    }
+
+    setEventItem(currentEvent)
     setThreads((threadData as EventThread[]) ?? [])
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
-
-    const currentEvent = eventData as EventItem | null
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
       const { data: capacityData, error: capacityError } = await supabase
         .rpc('get_event_capacity', { p_event_id: id })
@@ -223,11 +266,11 @@ export function EventDetailPage() {
       setPublicCapacityOccupied(null)
     }
 
-    if (user && eventData) {
+    if (user && currentEvent) {
       const { data: reportStats } = await supabase
         .from('profile_report_stats')
         .select('report_count')
-        .eq('profile_id', (eventData as EventItem).creator_id)
+        .eq('profile_id', currentEvent.creator_id)
         .maybeSingle()
       setCreatorReportCount(Number(reportStats?.report_count ?? 0))
     }
@@ -286,7 +329,7 @@ export function EventDetailPage() {
 
     // External events never expose native registration state or registrant profiles.
     const allRegs = user
-      ? (eventData && (eventData as EventItem).external_registration_url
+      ? (currentEvent && currentEvent.external_registration_url
           ? []
           : (await supabase
             .from('event_registrations')
@@ -1032,6 +1075,16 @@ export function EventDetailPage() {
             <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
               <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
             </button>
+            {isPrivateShareable ? (
+              <>
+                <button type="button" className="secondary-action" onClick={() => void copyShareLink(false)}>
+                  <Icon href="/form-icons.svg" name="form-eye" size={14} /> {t('eventDetail.copyShareLink')}
+                </button>
+                <button type="button" className="secondary-action" onClick={() => void copyShareLink(true)}>
+                  {t('eventDetail.rotateShareLink')}
+                </button>
+              </>
+            ) : null}
           </div>
           {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
             <div className="event-admin-danger-zone">
