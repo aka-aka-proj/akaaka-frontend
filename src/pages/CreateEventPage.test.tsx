@@ -448,4 +448,75 @@ describe('CreateEventPage', () => {
     expect(update).not.toHaveBeenCalled()
     expect(functionsInvoke).toHaveBeenCalledTimes(1)
   })
+
+  it('surfaces partial instance-creation failures instead of treating them as full success', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: { success: false, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 1, instance_ids: ['event-1', 'inst-2'] },
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Partial Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('活動已建立，但已建立 2 個週期場次、1 個建立失敗；失敗的場次可稍後從各活動頁重試。')).toBeTruthy(),
+    )
+    expect(rpc).not.toHaveBeenCalled()
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(update).toHaveBeenCalled())
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a zero-created failure retryable so resubmit recreates the series', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke
+      .mockResolvedValueOnce({
+        data: { success: false, parent_id: 'event-1', instance_count: 3, created_instance_count: 0, failed_instance_count: 2, instance_ids: ['event-1'] },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+        error: null,
+      })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Zero Created Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('活動已建立，但週期場次建立失敗；請再按一次「儲存並發布」完成場次建立。')).toBeTruthy(),
+    )
+    expect(rpc).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledTimes(2))
+  })
 })
