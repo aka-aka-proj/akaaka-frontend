@@ -417,7 +417,9 @@ export function CreateEventPage() {
             start_time: new Date(startTime).toISOString(),
           },
         })
-        if (!recurrenceError && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+        // instance_ids is always present per spec 007 (HTTP 200 even on
+        // failure), so only an explicit success !== false means fully created.
+        if (!recurrenceError && recurrenceResult && recurrenceResult.success !== false && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
           createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
           return true
@@ -426,11 +428,11 @@ export function CreateEventPage() {
           !recurrenceError && recurrenceResult && recurrenceResult.success === false && recurrenceResult.created_instance_count === 0,
         )
         if (zeroCreated) {
-          setMessage(t('createEvent.recurrenceCreateRetry'))
+          setMessage(t('createEvent.recurrenceCreateRetry', { action: shouldPublish ? t('createEvent.saveAndPublish') : t('createEvent.saveDraft') }))
         } else if (recurrenceError) {
           setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
         } else {
-          setMessage(`活動已建立，但有 ${recurrenceResult?.failed_instance_count} 個週期場次建立失敗。`)
+          setMessage(t('createEvent.recurrencePartialFailed', { created: Number(recurrenceResult?.created_instance_count ?? 0), failed: Number(recurrenceResult?.failed_instance_count ?? 0) }))
         }
         if (recurrenceError === null && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
