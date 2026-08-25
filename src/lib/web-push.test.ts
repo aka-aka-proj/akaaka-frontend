@@ -275,4 +275,25 @@ describe('web-push session refresh', () => {
 
     await expect(enableWebPush()).rejects.toMatchObject({ message: 'invalid_subscription_payload' })
   })
+
+  it('fails loudly when standard mode resolves NULL (contract drift)', async () => {
+    vi.stubGlobal('Notification', {
+      permission: 'granted',
+      requestPermission: vi.fn(async () => 'granted'),
+    })
+    const registration = fakeRegistration(null)
+    registration.pushManager.subscribe.mockImplementation(async () =>
+      fakeSubscription('https://push.local/e3'))
+    vi.stubGlobal('navigator', {
+      userAgent: 'vitest',
+      serviceWorker: { ready: Promise.resolve(registration) },
+    })
+    // A successful RPC that resolves NULL outside refresh mode means the
+    // server contract drifted (api/004 §Response); enabling must not report
+    // success against a subscription the server did not actually register.
+    rpcMock.mockResolvedValue({ data: null, error: null })
+    const { enableWebPush } = await loadModule()
+
+    await expect(enableWebPush()).rejects.toMatchObject({ message: 'web_push_not_owned' })
+  })
 })

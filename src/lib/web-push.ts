@@ -143,8 +143,9 @@ type SubmitSubscriptionOptions = {
 // re-subscribe, which mints a fresh endpoint the RPC registers conflict-free.
 // The abandoned row is reclaimed later by the fan-out 404/410 path or the
 // scheduled cleanup.
-// Returns NULL only in refresh mode (`not_owned`); standard mode always
-// resolves with the submitted subscription or throws.
+// Returns NULL when the RPC resolves NULL: in refresh mode that is
+// `not_owned` (skip silently); outside refresh mode it surfaces contract
+// drift so interactive callers can fail loudly instead of faking success.
 async function submitSubscription(
   registration: ServiceWorkerRegistration,
   subscription: PushSubscription,
@@ -159,7 +160,12 @@ async function submitSubscription(
     ...(mode ? { p_mode: mode } : {}),
   })
   if (!error) {
-    if (mode === 'refresh' && data === null) return null
+    // api/004 §Response: refresh maps a foreign-held endpoint to NULL
+    // (`not_owned`) so the passive caller silently skips. Outside refresh
+    // mode a successful NULL means the RPC contract drifted (deployment
+    // mismatch) — surfacing NULL lets interactive callers fail loudly
+    // instead of reporting success against an unregistered subscription.
+    if (data === null) return null
     return subscription
   }
 
@@ -195,9 +201,8 @@ export async function enableWebPush() {
   // clients from updating it directly).
   const subscription = await subscribeWithApplicationKey(registration)
   const submitted = await submitSubscription(registration, subscription)
-  // Standard mode never yields NULL (`not_owned` is refresh-only); a null here
-  // would mean the RPC contract drifted — fail loudly instead of reporting a
-  // successful enable.
+  // Only reachable on contract drift: standard mode always records the row,
+  // so NULL here means the server did not actually register anything.
   if (!submitted) throw new Error('web_push_not_owned')
   return submitted
 }
