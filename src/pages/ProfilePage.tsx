@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -133,7 +133,7 @@ export function ProfilePage() {
     ? canViewBio(user?.id, profile.id, bioVisibility)
     : false
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!targetProfileId) {
       return
     }
@@ -224,11 +224,11 @@ export function ProfilePage() {
         setIsEventNotificationSubscribed(Boolean(subscription))
       }
     }
-  }
+  }, [targetProfileId, user, isOwner])
 
   useEffect(() => {
     void loadProfile()
-  }, [targetProfileId, user?.id])
+  }, [loadProfile])
 
   const recommend = async () => {
     if (!user || !targetProfileId) {

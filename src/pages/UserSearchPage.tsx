@@ -81,7 +81,7 @@ export function UserSearchPage() {
     }
     void load()
     return () => { cancelled = true }
-  }, [query, user?.id])
+  }, [query, user])
 
   return <Layout>
     <section className="card user-search-page">

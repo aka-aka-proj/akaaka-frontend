@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { DeleteConfirmationDialog } from '../components/DeleteConfirmationDialog'
@@ -31,7 +31,7 @@ export function FollowingPage() {
   const [message, setMessage] = useState('')
   const [pendingUnfollowIds, setPendingUnfollowIds] = useState<string[]>([])
 
-  const loadFollowing = async () => {
+  const loadFollowing = useCallback(async () => {
     if (!user) return
     setLoading(true)
     setMessage('')
@@ -81,11 +81,11 @@ export function FollowingPage() {
     setProfiles(followedIds.map((id) => profileMap.get(id)).filter((profile): profile is Profile => Boolean(profile)))
     setSelectedIds(new Set())
     setLoading(false)
-  }
+  }, [user])
 
   useEffect(() => {
     void loadFollowing()
-  }, [user?.id])
+  }, [loadFollowing])
 
   const filteredProfiles = useMemo(() => {
     const query = search.trim().toLocaleLowerCase()

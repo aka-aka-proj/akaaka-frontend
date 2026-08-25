@@ -32,7 +32,7 @@ export function MyReportsPage() {
     }
 
     void loadReports()
-  }, [user?.id])
+  }, [user])
 
   return (
     <Layout>

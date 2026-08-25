@@ -7,8 +7,11 @@ import { UserSearchPage } from './UserSearchPage'
 
 const from = vi.fn()
 
+// Mock must keep `user` identity stable across renders, like AuthProvider.
+const stableViewerUser = vi.hoisted(() => ({ id: 'viewer-user' }))
+
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'viewer-user' } }),
+  useAuth: () => ({ user: stableViewerUser }),
 }))
 
 vi.mock('../context/LanguageContext', () => ({

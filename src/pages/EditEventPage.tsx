@@ -121,7 +121,7 @@ export function EditEventPage() {
     }
 
     void loadEvent()
-  }, [id, user?.id])
+  }, [id, user, navigate, t])
 
   useEffect(() => {
     if (!submitting) {
