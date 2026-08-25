@@ -280,12 +280,19 @@ export function EventDetailPage() {
     let currentEvent = (eventData as EventItem | null) ?? null
     let usedShareToken: string | null = null
 
-    // Private-event share link (ADR-022): RLS hides private rows from non-creators,
-    // so retry through the controlled read-only token path. The fragment token is
-    // consumed into sessionStorage (same-tab reload support) and stripped from the URL.
+    // Private-event share link (ADR-022): consume the fragment token
+    // unconditionally — even when RLS already grants a direct read — so the
+    // bearer token never lingers in the address bar or history.
+    const hashToken = readShareTokenFromHash()
+    if (id && hashToken) {
+      storeShareToken(id, hashToken)
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    }
+
+    // Non-creators cannot read private rows directly; fall back to the
+    // controlled read-only token path via same-tab session storage.
     if (!currentEvent && id) {
-      const hashToken = readShareTokenFromHash()
-      const shareToken = hashToken ?? readStoredShareToken(id)
+      const shareToken = readStoredShareToken(id)
       if (shareToken) {
         const { data: tokenData, error: tokenError } = await supabase
           .rpc('get_event_by_share_token', { p_token: shareToken })
@@ -297,11 +304,7 @@ export function EventDetailPage() {
         if (tokenData && (tokenData as EventItem).id === id) {
           currentEvent = tokenData as EventItem
           usedShareToken = shareToken
-          storeShareToken(id, shareToken)
         }
-      }
-      if (hashToken) {
-        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
       }
     }
 
@@ -917,11 +920,13 @@ export function EventDetailPage() {
                   </a>
                 </div>
               </details>
-              <ShareButton
-                title={eventItem.title}
-                text={eventItem.description ?? ''}
-                url={sharedEventUrl}
-              />
+              {!(isHost && eventItem.visibility_settings?.type === 'private') ? (
+                <ShareButton
+                  title={eventItem.title}
+                  text={eventItem.description ?? ''}
+                  url={sharedEventUrl}
+                />
+              ) : null}
               {isHost ? (
                 <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
                   {t('shareModal.broadcastToX')}
