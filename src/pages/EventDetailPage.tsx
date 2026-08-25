@@ -105,14 +105,23 @@ export function EventDetailPage() {
   const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
   const [, setEditLockClock] = useState(0)
 
+  const deadlinePending = Boolean(
+    eventItem?.registration_deadline
+    && new Date(eventItem.registration_deadline).getTime() > Date.now(),
+  )
+
   useEffect(() => {
-    if (!eventItem || !isHost || isEditLocked || eventItem.lifecycle_status === 'draft') {
+    const hostNeedsEditLockClock = Boolean(
+      eventItem && isHost && !isEditLocked && eventItem.lifecycle_status !== 'draft',
+    )
+    if (!eventItem || (!hostNeedsEditLockClock && !deadlinePending)) {
       return
     }
-    // Bumping unused state forces a re-render so isEventEditLocked() is re-evaluated after start_time passes.
+    // Bumping unused state forces a re-render so isEventEditLocked() and
+    // deadline-derived values are re-evaluated as time passes.
     const timer = window.setInterval(() => setEditLockClock((tick) => tick + 1), 30_000)
     return () => window.clearInterval(timer)
-  }, [eventItem, isHost, isEditLocked])
+  }, [eventItem, isHost, isEditLocked, deadlinePending])
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
@@ -923,9 +932,15 @@ export function EventDetailPage() {
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationNotice')}</p>
-          <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="primary-cta">
-            {t('eventDetail.externalRegistrationCta')}
-          </a>
+          {registrationEntryBlocked ? (
+            <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+              {t('eventDetail.registrationClosedCta')}
+            </button>
+          ) : (
+            <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="primary-cta">
+              {t('eventDetail.externalRegistrationCta')}
+            </a>
+          )}
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
@@ -937,10 +952,21 @@ export function EventDetailPage() {
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !user && !isHost && !eventItem.external_registration_url ? (
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
-          <p className="registration-hint">{t('eventDetail.loginToRegister')}</p>
-          <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className="primary-cta">
-            {t('eventDetail.loginToRegisterCta')}
-          </Link>
+          {registrationEntryBlocked ? (
+            <>
+              <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+                {t('eventDetail.registrationClosedCta')}
+              </button>
+              <p className="registration-hint">{t('eventDetail.registrationClosed')}</p>
+            </>
+          ) : (
+            <>
+              <p className="registration-hint">{t('eventDetail.loginToRegister')}</p>
+              <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className="primary-cta">
+                {t('eventDetail.loginToRegisterCta')}
+              </Link>
+            </>
+          )}
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
