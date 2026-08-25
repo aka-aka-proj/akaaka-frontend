@@ -249,8 +249,6 @@ export function EventDetailPage() {
         }
       }
     }
-      }
-    }
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
       const { data: capacityData, error: capacityError } = await supabase
         .rpc('get_event_capacity', { p_event_id: id })
