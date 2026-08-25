@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -46,8 +46,30 @@ export function EditEventPage() {
   const [approvedCount, setApprovedCount] = useState(0)
   const [editLocked, setEditLocked] = useState(false)
   const [eventLifecycle, setEventLifecycle] = useState<{ lifecycle_status: string; start_time: string } | null>(null)
+  const [seriesMembers, setSeriesMembers] = useState<{ id: string; start_time: string; lifecycle_status: string; title?: string }[]>([])
+  const [editScope, setEditScope] = useState<'single' | 'rest_of_series' | 'entire_series'>('single')
+  const [deadlineAction, setDeadlineAction] = useState<'keep' | 'reapply_offset' | 'set_absolute'>('keep')
+  const [batchOffsetMinutes, setBatchOffsetMinutes] = useState('')
+  const [batchAbsoluteDeadline, setBatchAbsoluteDeadline] = useState('')
+  const loadedSnapshotRef = useRef<Record<string, unknown> | null>(null)
 
   const isDraft = eventLifecycle?.lifecycle_status === 'draft'
+  const isSeriesMember = seriesMembers.length > 0
+
+  const isMemberLocked = (member: { lifecycle_status: string; start_time: string }) =>
+    member.lifecycle_status !== 'draft'
+    && (['completed', 'archived', 'cancelled'].includes(member.lifecycle_status)
+      || member.start_time <= new Date().toISOString())
+
+  const scopedMembers = useMemo(() => {
+    if (!isSeriesMember || editScope === 'single') return []
+    if (editScope === 'entire_series') return seriesMembers
+    if (eventLifecycle?.start_time) {
+      return seriesMembers.filter((member) => member.start_time >= eventLifecycle.start_time)
+    }
+    return []
+  }, [isSeriesMember, editScope, seriesMembers, eventLifecycle?.start_time])
+  const lockedCount = scopedMembers.filter(isMemberLocked).length
 
   const addType = (type: string) => {
     if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
@@ -119,6 +141,45 @@ export function EditEventPage() {
       setPublicationStatus(event.publication_status ?? (event.lifecycle_status === 'draft' ? 'closed' : 'published'))
       setPublishAt(event.publish_at ? toLocalDatetime(event.publish_at) : '')
       setUnpublishAt(event.unpublish_at ? toLocalDatetime(event.unpublish_at) : '')
+
+      loadedSnapshotRef.current = {
+        title: event.title,
+        description: event.description ?? null,
+        attendance_fee_type: event.attendance_fee_type ?? 'free',
+        attendance_fee_amount: (event.attendance_fee_type === 'fixed' && event.attendance_fee_amount) ? event.attendance_fee_amount : null,
+        category: event.category || 'Social',
+        event_type: stringifyEventTypes(parseEventTypes(event.event_type)),
+        location_region: event.location_region,
+        location_detail: event.location_detail ?? null,
+        visibility_settings: event.visibility_settings ?? { type: 'public' },
+        max_capacity: event.external_registration_url ? null : (event.max_capacity ?? null),
+        registration_form_config: (event.external_registration_url || !event.registration_form_config || event.registration_form_config.length === 0) ? null : event.registration_form_config,
+        external_registration_url: event.external_registration_url ?? null,
+      }
+
+      // Series context (fail-closed): a child stays a locked member even when sibling
+      // lookups return nothing; a parent counts only once at least one child exists (spec 007 retry).
+      const parentId = event.series_id ?? event.id
+      const selfEntry = { id: event.id, start_time: event.start_time, lifecycle_status: event.lifecycle_status, title: event.title }
+      const { data: childRows } = await supabase
+        .from('events')
+        .select('id, start_time, lifecycle_status, title')
+        .eq('series_id', parentId)
+      const childList = ((childRows as { id: string; start_time: string; lifecycle_status: string; title?: string }[] | null) ?? [])
+        .filter((row) => row.id !== event.id)
+      if (event.series_id) {
+        const { data: parentRow } = await supabase
+          .from('events')
+          .select('id, start_time, lifecycle_status, title')
+          .eq('id', parentId)
+          .maybeSingle()
+        const parentEntry = parentRow as { id: string; start_time: string; lifecycle_status: string; title?: string } | null
+        setSeriesMembers([...(parentEntry ? [parentEntry] : []), selfEntry, ...childList])
+      } else if (childList.length > 0) {
+        setSeriesMembers([selfEntry, ...childList])
+      } else {
+        setSeriesMembers([])
+      }
 
       const { data: regs } = await supabase
         .from('event_registrations')
@@ -200,6 +261,115 @@ export function EditEventPage() {
       return
     }
 
+    if (editScope !== 'single' && isSeriesMember) {
+      if (deadlineAction === 'reapply_offset') {
+        const offsetValue = Number.parseInt(batchOffsetMinutes, 10)
+        if (!Number.isInteger(offsetValue) || offsetValue < 1 || offsetValue > 525600) {
+          setMessage(t('editEvent.batchInvalidOffset'))
+          return
+        }
+      }
+      if (deadlineAction === 'set_absolute' && (!batchAbsoluteDeadline || Number.isNaN(new Date(batchAbsoluteDeadline).getTime()))) {
+        setMessage(t('editEvent.batchInvalidAbsolute'))
+        return
+      }
+
+      const desiredFields: Record<string, unknown> = {
+        title: title.trim(),
+        description: description.trim() || null,
+        attendance_fee_type: attendanceFeeType,
+        attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
+        category,
+        event_type: stringifyEventTypes(eventType),
+        location_region: locationRegion,
+        location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
+        visibility_settings: { type: visibilityType },
+        max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
+        registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
+        external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
+      }
+      // Deadline-only submissions must not push unrelated content onto siblings:
+      // diff against the loaded snapshot and send only actual changes.
+      const baseline = loadedSnapshotRef.current ?? {}
+      const changedFields: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(desiredFields)) {
+        if (JSON.stringify(value) !== JSON.stringify(baseline[key])) changedFields[key] = value
+      }
+      if (Object.keys(changedFields).length === 0 && deadlineAction === 'keep') {
+        setMessage(t('editEvent.batchNothingToUpdate'))
+        return
+      }
+
+      // Validate the publication window before any write: a failed schedule check
+      // must not leave the series partially mutated.
+      const batchPublishIso = !isDraft && publishAt ? new Date(publishAt).toISOString() : null
+      const batchUnpublishIso = !isDraft && unpublishAt ? new Date(unpublishAt).toISOString() : null
+      if (batchPublishIso && batchUnpublishIso && batchPublishIso >= batchUnpublishIso) {
+        setMessage(t('editEvent.publicationScheduleInvalid'))
+        return
+      }
+
+      setSubmitting(true)
+      setMessage('')
+      try {
+        const payload: Record<string, unknown> = {
+          target_event_id: id,
+          scope: editScope,
+          fields: changedFields,
+        }
+        if (deadlineAction === 'reapply_offset') {
+          payload.deadline = { action: 'reapply_offset', offset_minutes: Number.parseInt(batchOffsetMinutes, 10) }
+        } else if (deadlineAction === 'set_absolute') {
+          payload.deadline = { action: 'set_absolute', absolute: new Date(batchAbsoluteDeadline).toISOString() }
+        }
+
+        interface BatchResult {
+          success?: boolean
+          updated_count?: number
+          skipped_locked_count?: number
+          failed_count?: number
+        }
+        const { data: batchResult, error: batchError } = await supabase.functions.invoke('update-recurring-series', { body: payload })
+        if (batchError) {
+          setMessage(batchError.message)
+          return
+        }
+        const result = batchResult as BatchResult | null
+        if ((result?.failed_count ?? 0) > 0 || result?.success === false) {
+          setMessage(t('editEvent.batchPartialFailure', {
+            updated: result?.updated_count ?? 0,
+            skipped: result?.skipped_locked_count ?? 0,
+            failed: result?.failed_count ?? 0,
+          }))
+          return
+        }
+
+        // Publication control stays per-event; apply only to the edited instance.
+        const { error: publicationError } = await supabase.rpc('set_event_publication', {
+          p_event_id: id,
+          p_publication_status: publicationStatus,
+          p_publish_at: batchPublishIso,
+          p_unpublish_at: batchUnpublishIso,
+        })
+        if (publicationError) {
+          setMessage(publicationError.message)
+          return
+        }
+
+        if ((result?.skipped_locked_count ?? 0) > 0) {
+          alert(t('editEvent.batchSuccessWithSkipped', {
+            updated: result?.updated_count ?? 0,
+            skipped: result?.skipped_locked_count ?? 0,
+          }))
+        }
+        setMessage(t('editEvent.eventUpdated'))
+        navigate(`/events/${id}`, { replace: true })
+        return
+      } finally {
+        setSubmitting(false)
+      }
+    }
+
     setSubmitting(true)
     setMessage('')
 
@@ -220,7 +390,7 @@ export function EditEventPage() {
         attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
         category,
         event_type: stringifyEventTypes(eventType),
-        start_time: new Date(startTime).toISOString(),
+        ...(isSeriesMember ? {} : { start_time: new Date(startTime).toISOString() }),
         location_region: locationRegion,
         location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,
@@ -284,6 +454,39 @@ export function EditEventPage() {
   return (
     <Layout>
       <form className="card" onSubmit={submit}>
+        {isSeriesMember ? (
+          <fieldset className="form-field">
+            <legend>{t('editEvent.seriesScopeLabel')}</legend>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> {t('editEvent.seriesScopeSingle')}</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> {t('editEvent.seriesScopeRest')}</label>
+            <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> {t('editEvent.seriesScopeEntire')}</label>
+            {editScope !== 'single' ? (
+              <>
+                <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                  {t('editEvent.batchAffectedCount', { count: scopedMembers.length - lockedCount })}
+                  {lockedCount > 0 ? t('editEvent.batchSkippedLockedSuffix', { count: lockedCount }) : ''}
+                  {'　'}
+                  {t('editEvent.batchScheduleLockedHint')}
+                </small>
+                <fieldset className="form-field" style={{ marginTop: '0.5rem' }}>
+                  <legend>{t('editEvent.batchDeadlineLabel')}</legend>
+                  <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> {t('editEvent.batchDeadlineKeep')}</label>
+                  <label className="checkbox">
+                    <input type="radio" name="deadline-action" value="reapply_offset" checked={deadlineAction === 'reapply_offset'} onChange={() => setDeadlineAction('reapply_offset')} />
+                    {t('editEvent.batchDeadlineReapplyLabel')}
+                    <input aria-label={t('editEvent.batchOffsetMinutesAria')} type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} />
+                  </label>
+                  <label className="checkbox">
+                    <input type="radio" name="deadline-action" value="set_absolute" checked={deadlineAction === 'set_absolute'} onChange={() => setDeadlineAction('set_absolute')} />
+                    {t('editEvent.batchDeadlineAbsoluteLabel')}
+                    <input aria-label={t('editEvent.batchAbsoluteDeadlineAria')} type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
+                  </label>
+                  {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.batchDeadlineAbsoluteWarning')}</small> : null}
+                </fieldset>
+              </>
+            ) : null}
+          </fieldset>
+        ) : null}
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
           <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -382,8 +585,10 @@ export function EditEventPage() {
             aria-label={t('editEvent.startTimeLabel')}
             type="datetime-local"
             value={startTime}
+            disabled={isSeriesMember}
             onChange={(event) => setStartTime(event.target.value)}
           />
+          {isSeriesMember ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.startTimeSeriesLockedHint')}</small> : null}
         </label>
         <label className="form-field">
           <span className="form-label-row">
@@ -455,7 +660,7 @@ export function EditEventPage() {
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label> : null}
-        {profile?.role_status === 'venue_approved' && (
+        {profile?.role_status === 'venue_approved' && editScope === 'single' && (
           <label className="checkbox">
             <input
               aria-label={t('editEvent.venueHostedLabel')}
@@ -467,6 +672,9 @@ export function EditEventPage() {
             {t('editEvent.venueHostedLabel')}
           </label>
         )}
+        {profile?.role_status === 'venue_approved' && isSeriesMember && editScope !== 'single' ? (
+          <small style={{ color: 'var(--color-text-muted)', display: 'block' }}>{t('editEvent.batchVenueAutoDerived')}</small>
+        ) : null}
         <div className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.visibilityLabel')}

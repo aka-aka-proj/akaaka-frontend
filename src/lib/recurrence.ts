@@ -141,12 +141,12 @@ function nthWeekdayOfMonth(year: number, month: number, weekday: number, ordinal
 
 function modeAllowedFields(rule: UnvalidatedRecurrenceRule): Set<string> {
   if (rule.frequency === 'weekly') {
-    return new Set(['frequency', 'interval', 'days', 'count', 'until', 'timezone'])
+    return new Set(['frequency', 'interval', 'days', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
   }
   if (rule.monthly_by === 'weekday') {
-    return new Set(['frequency', 'interval', 'monthly_by', 'week_ordinal', 'days', 'count', 'until', 'timezone'])
+    return new Set(['frequency', 'interval', 'monthly_by', 'week_ordinal', 'days', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
   }
-  return new Set(['frequency', 'interval', 'monthly_by', 'count', 'until', 'timezone'])
+  return new Set(['frequency', 'interval', 'monthly_by', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
 }
 
 export function validateRecurrenceRule(rule: UnvalidatedRecurrenceRule): string | null {
@@ -175,6 +175,11 @@ export function validateRecurrenceRule(rule: UnvalidatedRecurrenceRule): string 
 
   if (typeof rule.timezone !== 'string' || !isValidTimeZone(rule.timezone)) {
     return 'timezone must be a valid IANA time zone name'
+  }
+  if (rule.registration_deadline_offset_minutes !== undefined) {
+    if (!Number.isInteger(rule.registration_deadline_offset_minutes) || rule.registration_deadline_offset_minutes < 1 || rule.registration_deadline_offset_minutes > 525600) {
+      return 'registration_deadline_offset_minutes must be an integer between 1 and 525600'
+    }
   }
   if ((rule.count !== undefined) === hasUntil) {
     return 'provide either count or until, not both'

@@ -87,6 +87,8 @@ export function EventDetailPage() {
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
+  const [seriesInstances, setSeriesInstances] = useState<{ id: string; start_time: string; registration_deadline: string | null }[]>([])
+  const [seriesIndex, setSeriesIndex] = useState(0)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
@@ -331,6 +333,31 @@ export function EventDetailPage() {
     setThreads((threadData as EventThread[]) ?? [])
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
+
+    // Series context: load sibling instances when this event belongs to a recurring series.
+    // Standalone events (no series_id and no recurrence_rule) skip these queries entirely;
+    // parent/child lookups run in parallel so they don't delay capacity/registration loads.
+    setSeriesInstances([])
+    setSeriesIndex(0)
+    if (currentEvent && (currentEvent.series_id != null || currentEvent.recurrence_rule != null)) {
+      const seriesParentId = currentEvent.series_id ?? currentEvent.id
+      const [seriesParentRes, seriesChildRes] = await Promise.all([
+        supabase.from('events').select('id, start_time, registration_deadline').eq('id', seriesParentId).maybeSingle(),
+        supabase.from('events').select('id, start_time, registration_deadline').eq('series_id', seriesParentId).order('start_time', { ascending: true }),
+      ])
+      type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
+      const parentInstance = (seriesParentRes.data as SeriesInstance | null) ?? null
+      const childInstances = ((seriesChildRes.data as SeriesInstance[] | null) ?? [])
+      if (childInstances.length > 0) {
+        const instances = [...(parentInstance ? [parentInstance] : []), ...childInstances]
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+        const index = instances.findIndex((instance) => instance.id === currentEvent.id)
+        if (index >= 0 && instances.length > 1) {
+          setSeriesInstances(instances)
+          setSeriesIndex(index + 1)
+        }
+      }
+    }
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
       const capacityResponse = usedShareToken
         ? await supabase.rpc('get_event_capacity_by_share_token', { p_token: usedShareToken }).maybeSingle()
@@ -817,6 +844,24 @@ export function EventDetailPage() {
       <section className="card event-detail-hero">
         {eventItem ? (
           <>
+            {seriesInstances.length > 0 ? (
+              <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-surface-muted)' }}>
+                <strong>📅 系列活動 第 {seriesIndex}／{seriesInstances.length} 場</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.35rem' }}>
+                  {seriesInstances.map((instance) => {
+                    const closed = instance.registration_deadline ? new Date(instance.registration_deadline).getTime() <= Date.now() : false
+                    const isCurrent = instance.id === eventItem.id
+                    const label = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(instance.start_time))
+                    return (
+                      <span key={instance.id}>
+                        {isCurrent ? <strong>{label}</strong> : <Link to={`/events/${instance.id}`}>{label}</Link>}
+                        {!isCurrent && closed ? <small>（報名已關閉）</small> : null}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
             <h2>{eventItem.title}</h2>
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>
