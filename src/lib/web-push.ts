@@ -1,6 +1,9 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
 
 const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 export type WebPushState = 'unsupported' | 'default' | 'denied' | 'subscribed' | 'unsubscribed'
 
@@ -61,6 +64,20 @@ async function isEndpointOwnedByProfile(profileId: string, endpoint: string): Pr
   return Boolean(result.data)
 }
 
+// The shared Supabase client resolves the JWT lazily during each request's
+// fetch phase, so it always sends whichever session is current at THAT moment
+// — an in-flight refresh surviving an account switch would submit with the
+// NEW account's token (TOCTOU against any earlier ownership check). Reading
+// the session here yields the identity a submit can be pinned to.
+async function currentSessionUser(): Promise<{ id: string; accessToken: string } | null> {
+  const session = await withTimeout(
+    supabase.auth.getSession().then(({ data }) => data.session),
+    null,
+  )
+  if (!session?.user.id || !session.access_token) return null
+  return { id: session.user.id, accessToken: session.access_token }
+}
+
 export async function getWebPushState(profileId: string): Promise<WebPushState> {
   if (!canUseWebPush()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
@@ -110,6 +127,9 @@ type SubmitSubscriptionOptions = {
   // may use it; background refreshes never retry and would leave push broken
   // for the whole SPA session on a failed swap.
   recoverFromEndpointConflict?: boolean
+  // Overrides the shared client so callers can pin the exact access token
+  // (and therefore identity) the submission is made with.
+  client?: SupabaseClient
 }
 
 // Submit a browser subscription through the controlled RPC. On
@@ -121,10 +141,10 @@ type SubmitSubscriptionOptions = {
 async function submitSubscription(
   registration: ServiceWorkerRegistration,
   subscription: PushSubscription,
-  { recoverFromEndpointConflict = true }: SubmitSubscriptionOptions = {},
+  { recoverFromEndpointConflict = true, client = supabase }: SubmitSubscriptionOptions = {},
 ): Promise<PushSubscription> {
   const payload = extractSubscriptionPayload(subscription)
-  const { error } = await supabase.rpc('subscribe_push_subscription', {
+  const { error } = await client.rpc('subscribe_push_subscription', {
     p_endpoint: payload.endpoint,
     p_p256dh: payload.p256dh,
     p_auth: payload.auth,
@@ -137,7 +157,7 @@ async function submitSubscription(
   await subscription.unsubscribe()
   const replacement = await subscribeWithApplicationKey(registration)
   const replacementPayload = extractSubscriptionPayload(replacement)
-  const retry = await supabase.rpc('subscribe_push_subscription', {
+  const retry = await client.rpc('subscribe_push_subscription', {
     p_endpoint: replacementPayload.endpoint,
     p_p256dh: replacementPayload.p256dh,
     p_auth: replacementPayload.auth,
@@ -179,16 +199,34 @@ export async function refreshWebPushSubscription(profileId: string): Promise<boo
     if (!registration) return false
     const subscription = await registration.pushManager.getSubscription()
     if (!subscription) return false
+    // Session-consistency gate (cheap bounded local read): skip before any
+    // network work when the live session already belongs to another account.
+    const entrySession = await currentSessionUser()
+    if (!entrySession || entrySession.id !== profileId) return false
     // Ownership gate: on shared browsers the surviving endpoint may belong to
     // a previously signed-in profile. The passive path never transfers it —
     // cross-account transfer stays an explicit enableWebPush decision — so
     // skip silently when this profile does not hold the row.
     if (!(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) return false
+    // Re-read after the async ownership round-trip and pin THAT token: the
+    // shared client resolves its JWT lazily during fetch, so submitting
+    // through it could attach a newly signed-in account's token and transfer
+    // the just-validated endpoint. A dedicated client bound to the validated
+    // access token keeps submit identity === validated identity even if the
+    // app session flips mid-flight.
+    const submitSession = await currentSessionUser()
+    if (!submitSession || submitSession.id !== profileId) return false
+    const pinnedClient = createClient(supabaseUrl, supabaseAnonKey, {
+      accessToken: async () => submitSession.accessToken,
+    })
     // Non-destructive on purpose: an endpoint_conflict here (rotated key
     // material under a stable endpoint) is left to the explicit
     // enableWebPush flow or the scheduled cleanup instead of revoking a
     // working subscription this best-effort path may fail to replace.
-    await submitSubscription(registration, subscription, { recoverFromEndpointConflict: false })
+    await submitSubscription(registration, subscription, {
+      recoverFromEndpointConflict: false,
+      client: pinnedClient,
+    })
     return true
   } catch {
     return false
