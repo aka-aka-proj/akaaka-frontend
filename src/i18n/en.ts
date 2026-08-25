@@ -438,6 +438,7 @@ const en = {
   editEvent: {
     title: 'Edit Event',
     titleLabel: 'Title',
+    seriesScopeLabel: 'Edit scope',
     descriptionLabel: 'Description',
     eventTypeLabel: 'Event type',
     selectEventType: 'Select event type',

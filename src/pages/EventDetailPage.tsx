@@ -226,6 +226,8 @@ export function EventDetailPage() {
     const currentEvent = eventData as EventItem | null
 
     // Series context: load sibling instances when this event belongs to a recurring series.
+    setSeriesInstances([])
+    setSeriesIndex(0)
     if (currentEvent) {
       const seriesParentId = currentEvent.series_id ?? currentEvent.id
       const { data: seriesParentRow } = await supabase

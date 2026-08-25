@@ -437,6 +437,7 @@ const zhTW = {
   editEvent: {
     title: '編輯活動',
     titleLabel: '標題',
+    seriesScopeLabel: '編輯範圍',
     descriptionLabel: '描述',
     eventTypeLabel: '活動類型',
     selectEventType: '請選擇活動類型',
