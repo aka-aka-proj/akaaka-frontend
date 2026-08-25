@@ -2420,7 +2420,7 @@ dd {
   margin-top: 0.1rem;
 }
 
-.event-summary-item span {
+.event-summary-item > span {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -2456,6 +2456,12 @@ dd {
   background: #0d6efd;
   color: #fff;
   font-weight: 700;
+}
+
+.primary-cta--disabled {
+  border-color: #9ca3af;
+  background: #9ca3af;
+  cursor: not-allowed;
 }
 
 .primary-cta:hover {
@@ -2626,13 +2632,150 @@ dd {
   margin-top: 0.1rem;
 }
 
-/* ── Calendar Actions ── */
+/* ── Quick Facts Sidebar Card ── */
 
-.calendar-actions {
+.event-quickfacts-card {
+  grid-column: 2;
+}
+
+.event-quickfacts-card > h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.event-quickfacts-card .event-summary-grid {
+  margin: 0.75rem 0 0;
+}
+
+/* ── Capacity Status Badge & Progress ── */
+
+.capacity-status-badge-wrap {
+  display: flex;
+  margin-top: 0.15rem;
+}
+
+.capacity-status-badge {
+  width: fit-content;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.capacity-status-badge--open {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.capacity-status-badge--full {
+  border-color: #dc2626;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.capacity-status-badge--closed {
+  border-color: #9ca3af;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.capacity-progress {
+  display: block;
+  height: 0.5rem;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.capacity-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #0d6efd;
+  transition: width 0.25s ease-out;
+}
+
+.capacity-progress--warning .capacity-progress-fill {
+  background: #f59e0b;
+}
+
+.capacity-progress--full .capacity-progress-fill {
+  background: #dc2626;
+}
+
+/* ── Host View Tabs ── */
+
+.host-view-tabs {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface-muted);
+  width: fit-content;
+}
+
+.host-view-tab {
+  min-height: 2rem;
+  padding: 0.25rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--color-text-secondary, inherit);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.host-view-tab:hover {
+  background: rgba(13, 110, 253, 0.08);
+}
+
+.host-view-tab--active {
+  border-color: var(--color-border);
+  background: #fff;
+  color: var(--color-text-strong);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+/* ── Unified Event Action Bar ── */
+
+.event-action-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding-top: 0.25rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.event-action-bar > .event-bookmark-control > button,
+.event-action-bar > details > summary,
+.event-action-bar > button,
+.event-action-bar > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.event-action-bar > .event-bookmark-control > button:hover,
+.event-action-bar > details > summary:hover,
+.event-action-bar > button:hover,
+.event-action-bar > a:hover {
+  background: #f6f8fa;
 }
 
 .calendar-menu {
@@ -2667,29 +2810,6 @@ dd {
   width: 100%;
   justify-content: flex-start;
   border: 0;
-}
-
-.calendar-actions .share-button,
-.calendar-actions .calendar-btn {
-  min-height: 2.25rem;
-}
-
-.calendar-actions .share-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid #d0d7de;
-  border-radius: 0.375rem;
-  background: #fff;
-  color: inherit;
-  font: inherit;
-  font-size: 0.8125rem;
-  cursor: pointer;
-}
-
-.calendar-actions .share-button:hover {
-  background: #f6f8fa;
 }
 
 .form-response-item {
