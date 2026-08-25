@@ -37,7 +37,7 @@ export function IssuesPage() {
     }
 
     void loadIssues()
-  }, [user?.id])
+  }, [user])
 
   return (
     <Layout>

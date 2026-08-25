@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
@@ -13,7 +13,7 @@ export function MyRegistrationsPage() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) {
       return
     }
@@ -31,11 +31,11 @@ export function MyRegistrationsPage() {
     }
 
     setRegistrations((data as Registration[]) ?? [])
-  }
+  }, [user])
 
   useEffect(() => {
     void load()
-  }, [user?.id])
+  }, [load])
 
   const handleCancel = async (eventId: string) => {
     if (!user) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { supabase } from '../supabaseClient'
@@ -43,7 +43,7 @@ export function NotificationsPage() {
   const [mfaAssuranceLevel, setMfaAssuranceLevel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const { data, error } = await supabase
@@ -106,11 +106,11 @@ export function NotificationsPage() {
       setApplicationProfiles({})
     }
     setLoading(false)
-  }
+  }, [user])
 
   useEffect(() => {
     void loadNotifications()
-  }, [user?.id])
+  }, [loadNotifications])
 
   useEffect(() => {
     if (user?.app_metadata?.role !== 'admin') return

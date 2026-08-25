@@ -1,5 +1,5 @@
 import type { Session, User, UserIdentity } from '@supabase/supabase-js'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const loading = isAuthLoading || isInitialProfileLoad
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     const userId = session?.user.id
     if (!userId) {
       setProfile(null)
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setIsProfileLoading(true)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
-    
+
     setIsProfileLoading(false)
     setIsInitialProfileLoad(false)
 
@@ -63,14 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const newProfile = data ? mapProfileRow(data) : null
-    
+
     setProfile((prevProfile) => {
       if (JSON.stringify(prevProfile) === JSON.stringify(newProfile)) {
         return prevProfile
       }
       return newProfile
     })
-  }
+  }, [session?.user.id])
 
   useEffect(() => {
     const initAuth = async () => {
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     void refreshProfile()
-  }, [session?.user.id, isAuthLoading])
+  }, [session?.user.id, isAuthLoading, refreshProfile])
 
   const hasOnboarded = profile !== null
 
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasOnboarded,
       refreshProfile,
     }),
-    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded],
+    [loading, isProfileLoading, isInitialProfileLoad, profile, session, hasOnboarded, refreshProfile],
   )
 
 

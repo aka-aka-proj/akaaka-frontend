@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 export interface AppError {
   title?: string
@@ -22,7 +22,8 @@ const ErrorContext = createContext<ErrorContextType | undefined>(undefined)
 export function ErrorProvider({ children }: { children: ReactNode }) {
   const [error, setErrorState] = useState<AppError | null>(null)
 
-  const showError = (
+  // Stable identity: consumers list showError/clearError in hook deps.
+  const showError = useCallback((
     err: AppError | Error | string,
     response?: any,
     debugInfo?: any
@@ -48,11 +49,11 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
         debugInfo: err.debugInfo !== undefined ? err.debugInfo : debugInfo,
       })
     }
-  }
+  }, [])
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setErrorState(null)
-  }
+  }, [])
 
   return (
     <ErrorContext.Provider value={{ error, showError, clearError }}>

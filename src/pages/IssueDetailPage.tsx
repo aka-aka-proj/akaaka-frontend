@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -34,7 +34,7 @@ export function IssueDetailPage() {
   const [comment, setComment] = useState('')
   const [message, setMessage] = useState('')
 
-  const loadIssue = async () => {
+  const loadIssue = useCallback(async () => {
     if (!id) {
       return
     }
@@ -65,11 +65,11 @@ export function IssueDetailPage() {
       ...(issueData as Omit<IssueDetail, 'comments'>),
       comments: (commentsData as IssueComment[]) ?? [],
     })
-  }
+  }, [id, t])
 
   useEffect(() => {
     void loadIssue()
-  }, [id, user?.id])
+  }, [loadIssue, user?.id])
 
   const postComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

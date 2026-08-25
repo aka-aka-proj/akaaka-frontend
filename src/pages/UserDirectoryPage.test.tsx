@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserDirectoryPage } from './UserDirectoryPage'
 
 const from = vi.fn()
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'viewer-user' } }) }))
+// Mock must keep `user` identity stable across renders, like AuthProvider.
+const stableViewerUser = vi.hoisted(() => ({ id: 'viewer-user' }))
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: stableViewerUser }) }))
 vi.mock('../context/LanguageContext', () => ({ useLanguage: () => ({ locale: 'en', setLocale: () => {} }) }))
 vi.mock('../supabaseClient', () => ({ supabase: { from: (...args: unknown[]) => from(...args) } }))
 vi.mock('../components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <div>{children}</div> }))

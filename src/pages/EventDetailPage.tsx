@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -161,7 +161,7 @@ export function EventDetailPage() {
     return t('eventDetail.daysAgo', { count: Math.floor(elapsedHours / 24) })
   }
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) {
       return
     }
@@ -348,11 +348,12 @@ export function EventDetailPage() {
     } else {
       setAttendees([])
 }
-  }
+
+  }, [id, user, t, showError])
 
   useEffect(() => {
     void load()
-  }, [id, user?.id])
+  }, [load])
 
   const handleRegister = async () => {
     if (!id || !user) {
