@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rpcMock = vi.hoisted(() => vi.fn())
 const fromMock = vi.hoisted(() => vi.fn())
+const authSessionMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../supabaseClient', () => ({
   supabase: {
     rpc: rpcMock,
     from: fromMock,
+    auth: { getSession: authSessionMock },
   },
 }))
 
@@ -49,6 +51,13 @@ function mockOwnershipQuery(result: { data: { endpoint: string } | null; error: 
   return builder
 }
 
+function stubSessionUser(id: string | null) {
+  authSessionMock.mockResolvedValue({
+    data: { session: id === null ? null : { user: { id } } },
+    error: null,
+  })
+}
+
 function stubBrowserCapability() {
   Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
   Object.defineProperty(window, 'PushManager', { value: function PushManagerStub() {}, configurable: true })
@@ -62,6 +71,8 @@ describe('web-push session refresh', () => {
     vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'BMockPublicKey')
     rpcMock.mockReset()
     fromMock.mockReset()
+    authSessionMock.mockReset()
+    stubSessionUser('profile-a')
     vi.stubGlobal('Notification', { permission: 'granted' })
     vi.stubGlobal('navigator', { userAgent: 'vitest', serviceWorker: { ready: Promise.resolve(null) } })
   })
@@ -115,10 +126,28 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
+    stubSessionUser('profile-b')
     mockOwnershipQuery({ data: null, error: null })
     const { refreshWebPushSubscription } = await loadModule()
 
     await expect(refreshWebPushSubscription('profile-b')).resolves.toBe(false)
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(subscription.unsubscribe).not.toHaveBeenCalled()
+  })
+
+  it('aborts when the live session switched accounts before submit (TOCTOU)', async () => {
+    const subscription = fakeSubscription('https://push.local/e1')
+    vi.stubGlobal('navigator', {
+      userAgent: 'vitest',
+      serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
+    })
+    mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
+    authSessionMock
+      .mockResolvedValueOnce({ data: { session: { user: { id: 'profile-a' } } }, error: null })
+      .mockResolvedValueOnce({ data: { session: { user: { id: 'user-b' } } }, error: null })
+    const { refreshWebPushSubscription } = await loadModule()
+
+    await expect(refreshWebPushSubscription('profile-a')).resolves.toBe(false)
     expect(rpcMock).not.toHaveBeenCalled()
     expect(subscription.unsubscribe).not.toHaveBeenCalled()
   })

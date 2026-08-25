@@ -61,6 +61,14 @@ async function isEndpointOwnedByProfile(profileId: string, endpoint: string): Pr
   return Boolean(result.data)
 }
 
+// The Supabase client always sends whichever session JWT is current at call
+// time, so an in-flight refresh that survives an account switch would submit
+// with the NEW account's token (TOCTOU against any earlier ownership check).
+async function sessionMatchesProfile(profileId: string): Promise<boolean> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user.id === profileId
+}
+
 export async function getWebPushState(profileId: string): Promise<WebPushState> {
   if (!canUseWebPush()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
@@ -179,11 +187,21 @@ export async function refreshWebPushSubscription(profileId: string): Promise<boo
     if (!registration) return false
     const subscription = await registration.pushManager.getSubscription()
     if (!subscription) return false
+    // Session-consistency gate (cheap local read): skip before any network
+    // work when the live session already belongs to another account.
+    if (!(await sessionMatchesProfile(profileId))) return false
     // Ownership gate: on shared browsers the surviving endpoint may belong to
     // a previously signed-in profile. The passive path never transfers it —
     // cross-account transfer stays an explicit enableWebPush decision — so
     // skip silently when this profile does not hold the row.
     if (!(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) return false
+    // Re-verify the session after the async ownership round-trip: the RPC is
+    // sent with the CURRENT JWT, so submitting here without this check could
+    // transfer the just-validated endpoint to a newly signed-in account.
+    // Everything from this point to supabase.rpc(...) inside
+    // submitSubscription runs synchronously — no await seam remains for the
+    // account switch to slip through.
+    if (!(await sessionMatchesProfile(profileId))) return false
     // Non-destructive on purpose: an endpoint_conflict here (rotated key
     // material under a stable endpoint) is left to the explicit
     // enableWebPush flow or the scheduled cleanup instead of revoking a
