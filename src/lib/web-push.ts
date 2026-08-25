@@ -130,6 +130,11 @@ type SubmitSubscriptionOptions = {
   // Overrides the shared client so callers can pin the exact access token
   // (and therefore identity) the submission is made with.
   client?: SupabaseClient
+  // api/004 §p_mode: 'refresh' marks the passive session-start path. The RPC
+  // then returns NULL when another profile holds the endpoint instead of
+  // raising endpoint_conflict — the caller silently skips and never acquires
+  // someone else's subscription.
+  mode?: 'standard' | 'refresh'
 }
 
 // Submit a browser subscription through the controlled RPC. On
@@ -138,19 +143,25 @@ type SubmitSubscriptionOptions = {
 // re-subscribe, which mints a fresh endpoint the RPC registers conflict-free.
 // The abandoned row is reclaimed later by the fan-out 404/410 path or the
 // scheduled cleanup.
+// Returns NULL only in refresh mode (`not_owned`); standard mode always
+// resolves with the submitted subscription or throws.
 async function submitSubscription(
   registration: ServiceWorkerRegistration,
   subscription: PushSubscription,
-  { recoverFromEndpointConflict = true, client = supabase }: SubmitSubscriptionOptions = {},
-): Promise<PushSubscription> {
+  { recoverFromEndpointConflict = true, client = supabase, mode }: SubmitSubscriptionOptions = {},
+): Promise<PushSubscription | null> {
   const payload = extractSubscriptionPayload(subscription)
-  const { error } = await client.rpc('subscribe_push_subscription', {
+  const { data, error } = await client.rpc('subscribe_push_subscription', {
     p_endpoint: payload.endpoint,
     p_p256dh: payload.p256dh,
     p_auth: payload.auth,
     p_user_agent: navigator.userAgent,
+    ...(mode ? { p_mode: mode } : {}),
   })
-  if (!error) return subscription
+  if (!error) {
+    if (mode === 'refresh' && data === null) return null
+    return subscription
+  }
 
   if (!isEndpointConflict(error) || !recoverFromEndpointConflict) throw error
 
@@ -162,6 +173,7 @@ async function submitSubscription(
     p_p256dh: replacementPayload.p256dh,
     p_auth: replacementPayload.auth,
     p_user_agent: navigator.userAgent,
+    ...(mode ? { p_mode: mode } : {}),
   })
   if (retry.error) throw retry.error
   return replacement
@@ -182,7 +194,12 @@ export async function enableWebPush() {
   // left a row behind and the key material proves possession (RLS blocks
   // clients from updating it directly).
   const subscription = await subscribeWithApplicationKey(registration)
-  return submitSubscription(registration, subscription)
+  const submitted = await submitSubscription(registration, subscription)
+  // Standard mode never yields NULL (`not_owned` is refresh-only); a null here
+  // would mean the RPC contract drifted — fail loudly instead of reporting a
+  // successful enable.
+  if (!submitted) throw new Error('web_push_not_owned')
+  return submitted
 }
 
 // api/004 §Frontend refresh lifecycle: once per session, silently re-submit
@@ -203,31 +220,31 @@ export async function refreshWebPushSubscription(profileId: string): Promise<boo
     // network work when the live session already belongs to another account.
     const entrySession = await currentSessionUser()
     if (!entrySession || entrySession.id !== profileId) return false
-    // Ownership gate: on shared browsers the surviving endpoint may belong to
-    // a previously signed-in profile. The passive path never transfers it —
-    // cross-account transfer stays an explicit enableWebPush decision — so
-    // skip silently when this profile does not hold the row.
-    if (!(await isEndpointOwnedByProfile(profileId, subscription.endpoint))) return false
-    // Re-read after the async ownership round-trip and pin THAT token: the
-    // shared client resolves its JWT lazily during fetch, so submitting
-    // through it could attach a newly signed-in account's token and transfer
-    // the just-validated endpoint. A dedicated client bound to the validated
-    // access token keeps submit identity === validated identity even if the
-    // app session flips mid-flight.
+    // Re-read and pin THAT token before submitting: the shared client resolves
+    // its JWT lazily during fetch, so submitting through it could attach a
+    // newly signed-in account's token and transfer the endpoint. A dedicated
+    // client bound to the validated access token keeps submit identity ===
+    // validated identity even if the app session flips mid-flight.
     const submitSession = await currentSessionUser()
     if (!submitSession || submitSession.id !== profileId) return false
     const pinnedClient = createClient(supabaseUrl, supabaseAnonKey, {
       accessToken: async () => submitSession.accessToken,
     })
-    // Non-destructive on purpose: an endpoint_conflict here (rotated key
-    // material under a stable endpoint) is left to the explicit
-    // enableWebPush flow or the scheduled cleanup instead of revoking a
-    // working subscription this best-effort path may fail to replace.
-    await submitSubscription(registration, subscription, {
+    // api/004 §p_mode: refresh mode moves ownership discrimination into the
+    // RPC. An endpoint removed by scheduled cleanup is re-created
+    // automatically (returning-owner recovery); a foreign-held endpoint comes
+    // back as NULL (`not_owned`) and this passive path skips without
+    // transferring or mutating anything. Non-destructive on purpose: an
+    // endpoint_conflict here (rotated key material under a stable endpoint)
+    // is left to the explicit enableWebPush flow or the scheduled cleanup
+    // instead of revoking a working subscription this best-effort path may
+    // fail to replace.
+    const submitted = await submitSubscription(registration, subscription, {
       recoverFromEndpointConflict: false,
       client: pinnedClient,
+      mode: 'refresh',
     })
-    return true
+    return submitted !== null
   } catch {
     return false
   }
