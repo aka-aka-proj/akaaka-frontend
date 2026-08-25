@@ -72,6 +72,7 @@ export function EventDetailPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [publicCapacityOccupied, setPublicCapacityOccupied] = useState<number | null>(null)
+  const [capacityQueryFailed, setCapacityQueryFailed] = useState(false)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
   const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
@@ -117,9 +118,11 @@ export function EventDetailPage() {
     : false
   const registrationIntakeActive = Boolean(
     eventItem
-    && eventItem.lifecycle_status !== 'draft'
+    && (eventItem.lifecycle_status === 'published' || eventItem.lifecycle_status === 'registration_open')
     && eventItem.publication_status !== 'closed',
   )
+  const registrationEntryBlocked = !registrationIntakeActive
+    || Boolean(eventItem?.registration_deadline && isRegistrationClosed)
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -229,7 +232,9 @@ export function EventDetailPage() {
 
       if (capacityError || !capacityData) {
         setPublicCapacityOccupied(null)
+        setCapacityQueryFailed(true)
       } else {
+        setCapacityQueryFailed(false)
         const capacitySummary = capacityData as PublicCapacitySummary
         setPublicCapacityOccupied(
           Number(capacitySummary.approved_registration_count ?? 0)
@@ -238,6 +243,7 @@ export function EventDetailPage() {
       }
     } else {
       setPublicCapacityOccupied(null)
+      setCapacityQueryFailed(false)
     }
 
     if (user && eventData) {
@@ -801,7 +807,7 @@ export function EventDetailPage() {
               <Icon href="/form-icons.svg" name="form-calendar" size={18} />
               <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
             </div>
-            {eventItem.max_capacity ? (
+            {eventItem.max_capacity && !eventItem.external_registration_url ? (
               <div className={`event-summary-item event-summary-item--full${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
                 <Icon href="/form-icons.svg" name="form-user" size={18} />
                 <span>
@@ -809,7 +815,7 @@ export function EventDetailPage() {
                   {isHost
                     ? t('eventDetail.capacityHost', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
                     : (publicCapacityOccupied === null
-                      ? t('eventDetail.capacityRemainingUnknown', { max: eventItem.max_capacity })
+                      ? t(capacityQueryFailed ? 'eventDetail.capacityRemainingUnavailable' : 'eventDetail.capacityRemainingUnknown', { max: eventItem.max_capacity })
                       : t('eventDetail.capacityRemaining', { max: eventItem.max_capacity, remaining: Math.max(0, eventItem.max_capacity - publicCapacityOccupied) }))}
                   {registrationIntakeActive ? (
                     <span className="capacity-status-badge-wrap">
@@ -831,7 +837,7 @@ export function EventDetailPage() {
                 </span>
               </div>
             ) : null}
-            {eventItem.registration_deadline ? (
+            {eventItem.registration_deadline && !eventItem.external_registration_url ? (
               <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
                 <Icon href="/form-icons.svg" name="form-calendar" size={18} />
                 <span>
@@ -965,7 +971,7 @@ export function EventDetailPage() {
             ) : null}
 
             </div>
-          ) : eventItem.registration_deadline && isRegistrationClosed ? (
+          ) : registrationEntryBlocked ? (
             <>
               <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
                 {t('eventDetail.registrationClosedCta')}
