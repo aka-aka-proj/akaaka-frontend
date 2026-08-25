@@ -98,6 +98,7 @@ export function EventDetailPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
+  const [hostConsoleView, setHostConsoleView] = useState<'participants' | 'management'>('participants')
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
   const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
@@ -114,6 +115,11 @@ export function EventDetailPage() {
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
+  const registrationIntakeActive = Boolean(
+    eventItem
+    && eventItem.lifecycle_status !== 'draft'
+    && eventItem.publication_status !== 'closed',
+  )
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -128,6 +134,17 @@ export function EventDetailPage() {
   }, [attendees.length, capacityExternalGuests.length, eventItem?.max_capacity])
   const capacityOccupied = isHost ? totalCapacityOccupied : publicCapacityOccupied
   const isAtCapacity = Boolean(eventItem?.max_capacity && capacityOccupied !== null && capacityOccupied >= eventItem.max_capacity)
+  const capacityKnown = Boolean(isHost) || publicCapacityOccupied !== null
+  const capacityOccupiedValue = isHost ? totalCapacityOccupied : (publicCapacityOccupied ?? 0)
+  const capacityRatio = eventItem?.max_capacity
+    ? Math.min(1, capacityOccupiedValue / eventItem.max_capacity)
+    : 0
+  const capacityBadgeKind = isRegistrationClosed ? 'closed' : isAtCapacity ? 'full' : 'open'
+  const capacityBadgeKey = isRegistrationClosed
+    ? 'eventDetail.statusBadgeRegClosed'
+    : isAtCapacity
+      ? 'eventDetail.statusBadgeFull'
+      : 'eventDetail.statusBadgeOpen'
   const pendingInvitations = useMemo(
     () => invitations.filter((inv) => inv.status === 'pending'),
     [invitations],
@@ -758,48 +775,83 @@ export function EventDetailPage() {
               </span>
             </div>
             ) : null}
-            <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
-              {eventItem.location_region ? (
-                <div className={`event-summary-item${eventItem.location_detail ? ' event-summary-item--full' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-location" size={18} />
-                  <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
-                </div>
-              ) : null}
-              {eventItem.location_detail ? (
-                <div className="event-summary-item">
-                  <Icon href="/form-icons.svg" name="form-location" size={18} />
-                  <span><strong>{t('eventDetail.mapLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{t('eventDetail.openInGoogleMaps')}</a></span>
-                </div>
-              ) : null}
+          </>
+        ) : (
+          <p>{t('eventDetail.notFound')}</p>
+        )}
+      </section>
+
+      {eventItem ? (
+        <aside className="card event-quickfacts-card" aria-label={t('eventDetail.summaryLabel')}>
+          <h3>{t('eventDetail.quickFactsTitle')}</h3>
+          <div className="event-summary-grid">
+            {eventItem.location_region ? (
               <div className="event-summary-item">
-                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
-                <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
+                <Icon href="/form-icons.svg" name="form-location" size={18} />
+                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
               </div>
-              {eventItem.max_capacity ? (
-                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-user" size={18} />
-                  <span><strong>{t('eventDetail.capacityLabel')}</strong>
-                    {isHost
-                      ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
-                      : (publicCapacityOccupied === null
-                        ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: '?' })
-                        : (isAtCapacity
-                          ? t('eventDetail.full')
-                          : t('eventDetail.capacity', { max: eventItem.max_capacity, current: publicCapacityOccupied })))}</span>
-                </div>
-              ) : null}
-              {eventItem.registration_deadline ? (
-                <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-calendar" size={18} />
-                  <span><strong>{t('eventDetail.registrationDeadlineLabel')}</strong>{new Date(eventItem.registration_deadline).toLocaleString()}</span>
-                </div>
-              ) : null}
+            ) : null}
+            {eventItem.location_detail ? (
               <div className="event-summary-item">
-                <Icon href="/form-icons.svg" name="form-edit" size={18} />
-                <span><strong>{t('eventDetail.attendanceFeeLabel')}</strong>{getAttendanceFeeLabel(eventItem.attendance_fee_type ?? 'free', eventItem.attendance_fee_amount, locale)}</span>
+                <Icon href="/form-icons.svg" name="form-location" size={18} />
+                <span><strong>{t('eventDetail.mapLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{t('eventDetail.openInGoogleMaps')}</a></span>
               </div>
+            ) : null}
+            <div className="event-summary-item">
+              <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+              <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
             </div>
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
+            {eventItem.max_capacity ? (
+              <div className={`event-summary-item event-summary-item--full${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                <Icon href="/form-icons.svg" name="form-user" size={18} />
+                <span>
+                  <strong>{t('eventDetail.capacityLabel')}</strong>
+                  {isHost
+                    ? t('eventDetail.capacityHost', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
+                    : (publicCapacityOccupied === null
+                      ? t('eventDetail.capacityRemainingUnknown', { max: eventItem.max_capacity })
+                      : t('eventDetail.capacityRemaining', { max: eventItem.max_capacity, remaining: Math.max(0, eventItem.max_capacity - publicCapacityOccupied) }))}
+                  {registrationIntakeActive ? (
+                    <span className="capacity-status-badge-wrap">
+                      <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
+                    </span>
+                  ) : null}
+                  {capacityKnown ? (
+                    <span
+                      className={`capacity-progress${isAtCapacity ? ' capacity-progress--full' : capacityRatio >= 0.8 ? ' capacity-progress--warning' : ''}`}
+                      role="progressbar"
+                      aria-label={t('eventDetail.capacityProgressLabel')}
+                      aria-valuemin={0}
+                      aria-valuemax={eventItem.max_capacity}
+                      aria-valuenow={Math.min(capacityOccupiedValue, eventItem.max_capacity)}
+                    >
+                      <span className="capacity-progress-fill" style={{ width: `${Math.round(capacityRatio * 100)}%` }} />
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            ) : null}
+            {eventItem.registration_deadline ? (
+              <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
+                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                <span>
+                  <strong>{t('eventDetail.registrationDeadlineLabel')}</strong>
+                  {new Date(eventItem.registration_deadline).toLocaleString()}
+                  {registrationIntakeActive && !eventItem.max_capacity ? (
+                    <span className="capacity-status-badge-wrap">
+                      <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            ) : null}
+            <div className="event-summary-item">
+              <Icon href="/form-icons.svg" name="form-edit" size={18} />
+              <span><strong>{t('eventDetail.attendanceFeeLabel')}</strong>{getAttendanceFeeLabel(eventItem.attendance_fee_type ?? 'free', eventItem.attendance_fee_amount, locale)}</span>
+            </div>
+          </div>
+          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? (
+            <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
               {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
               <details className="calendar-menu">
                 <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
@@ -822,12 +874,35 @@ export function EventDetailPage() {
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}
-            </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>{user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}</div> : null}
-          </>
-        ) : (
-          <p>{t('eventDetail.notFound')}</p>
-        )}
-      </section>
+            </div>
+          ) : isHost ? (
+            <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+              {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
+
+      {isHost && eventItem ? (
+        <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
+          <button
+            type="button"
+            aria-pressed={hostConsoleView === 'participants'}
+            className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
+            onClick={() => setHostConsoleView('participants')}
+          >
+            {t('eventDetail.hostTabParticipants')}
+          </button>
+          <button
+            type="button"
+            aria-pressed={hostConsoleView === 'management'}
+            className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
+            onClick={() => setHostConsoleView('management')}
+          >
+            {t('eventDetail.hostTabManagement')}
+          </button>
+        </div>
+      ) : null}
 
       {eventItem ? (
         <EventAnnouncements
@@ -891,7 +966,12 @@ export function EventDetailPage() {
 
             </div>
           ) : eventItem.registration_deadline && isRegistrationClosed ? (
-            <p className="message">{t('eventDetail.registrationClosed')}</p>
+            <>
+              <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+                {t('eventDetail.registrationClosedCta')}
+              </button>
+              <p className="registration-hint">{t('eventDetail.registrationClosed')}</p>
+            </>
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
@@ -990,7 +1070,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {isHost && eventItem ? (
+      {isHost && hostConsoleView === 'management' && eventItem ? (
         <section className="card event-admin-section" aria-labelledby="event-management-title">
           <div className="section-heading-row">
             <div>
@@ -1044,7 +1124,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Host Review Section - All Registrations */}
-      {isHost && registrations.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && registrations.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
           {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending', 'cancellation_rejected'] as const).map((status) => {
@@ -1128,7 +1208,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Attendees Section */}
-      {isHost && attendees.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && attendees.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.attendees')} ({attendees.length})</h3>
           <ul>
@@ -1148,7 +1228,7 @@ export function EventDetailPage() {
       ) : null}
       
       {/* External Guests Section (host only) */}
-      {isHost && externalGuests.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && externalGuests.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.externalGuests')} ({externalGuests.length})</h3>
           <ul>
@@ -1199,7 +1279,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Pending Invitations Section (host only) */}
-      {isHost && pendingInvitations.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && pendingInvitations.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.invitations')} ({pendingInvitations.length})</h3>
           <ul>
@@ -1228,7 +1308,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {isHost && formResponses.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && formResponses.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
           {formResponses.map((fr) => {
