@@ -546,6 +546,7 @@ const zhTW = {
     capacityHost: '已報名：{current} / {max}',
     capacityRemaining: '剩餘名額：{remaining} 人（上限 {max} 人）',
     capacityRemainingUnknown: '剩餘名額：查詢中（上限 {max} 人）',
+    capacityRemainingUnavailable: '剩餘名額：暫時無法取得（上限 {max} 人）',
     startTimeLabel: '開始時間',
     registrationDeadlineLabel: '報名截止時間',
     attendanceFeeLabel: '參加費用',

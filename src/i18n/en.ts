@@ -547,6 +547,7 @@ const en = {
     capacityHost: 'Registered: {current} / {max}',
     capacityRemaining: '{remaining} of {max} spots left',
     capacityRemainingUnknown: 'Spots left: unknown (limit {max})',
+    capacityRemainingUnavailable: 'Spots left: temporarily unavailable (limit {max})',
     startTimeLabel: 'Start time',
     registrationDeadlineLabel: 'Registration deadline',
     attendanceFeeLabel: 'Attendance fee',

@@ -2464,7 +2464,7 @@ dd {
   cursor: not-allowed;
 }
 
-.primary-cta:hover {
+.primary-cta:not(.primary-cta--disabled):hover {
   background: #0b5ed7;
 }
 
