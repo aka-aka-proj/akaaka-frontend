@@ -47,16 +47,6 @@ async function loadModule(): Promise<WebPushModule> {
   return import('./web-push')
 }
 
-function mockOwnershipQuery(result: { data: { endpoint: string } | null; error: unknown }) {
-  const builder = {
-    select: vi.fn(() => builder),
-    eq: vi.fn(() => builder),
-    maybeSingle: vi.fn(async () => result),
-  }
-  fromMock.mockReturnValue(builder)
-  return builder
-}
-
 function stubSessionUser(id: string | null, token = id === null ? null : `token-${id}`) {
   authSessionMock.mockResolvedValue({
     data: {
@@ -119,13 +109,11 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
-    const ownership = mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
-    pinnedRpcMock.mockResolvedValue({ error: null })
+    pinnedRpcMock.mockResolvedValue({ data: 'sub-id', error: null })
     const { refreshWebPushSubscription } = await loadModule()
 
     await expect(refreshWebPushSubscription('profile-a')).resolves.toBe(true)
-    expect(ownership.eq).toHaveBeenCalledWith('profile_id', 'profile-a')
-    expect(ownership.eq).toHaveBeenCalledWith('endpoint', 'https://push.local/e1')
+    expect(fromMock).not.toHaveBeenCalled()
     expect(rpcMock).not.toHaveBeenCalled()
     expect(createClientMock).toHaveBeenCalledWith('https://supa.test', 'anon-key', expect.objectContaining({
       accessToken: expect.any(Function),
@@ -136,6 +124,7 @@ describe('web-push session refresh', () => {
       p_p256dh: 'p256dh-https://push.local/e1',
       p_auth: 'auth-https://push.local/e1',
       p_user_agent: 'vitest',
+      p_mode: 'refresh',
     })
     const options = createClientMock.mock.calls[0][2] as { accessToken: () => Promise<string> }
     await expect(options.accessToken()).resolves.toBe('token-profile-a')
@@ -147,8 +136,7 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
-    mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
-    pinnedRpcMock.mockResolvedValue({ error: null })
+    pinnedRpcMock.mockResolvedValue({ data: 'sub-id', error: null })
     // Both validation reads see profile-a; every LATER read (e.g. a lazy JWT
     // lookup during fetch) sees user-b — yet the pinned client must keep
     // returning token-profile-a.
@@ -178,7 +166,6 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
-    mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
     pinnedRpcMock.mockResolvedValue({ error: { message: 'unauthenticated' } })
     const { refreshWebPushSubscription } = await loadModule()
 
@@ -192,11 +179,26 @@ describe('web-push session refresh', () => {
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
     stubSessionUser('profile-b')
-    mockOwnershipQuery({ data: null, error: null })
+    // api/004 §Response: refresh maps a foreign-held endpoint to NULL (`not_owned`).
+    pinnedRpcMock.mockResolvedValue({ data: null, error: null })
     const { refreshWebPushSubscription } = await loadModule()
 
     await expect(refreshWebPushSubscription('profile-b')).resolves.toBe(false)
-    expect(pinnedRpcMock).not.toHaveBeenCalled()
+    expect(pinnedRpcMock).toHaveBeenCalledTimes(1)
+    expect(pinnedRpcMock).toHaveBeenCalledWith('subscribe_push_subscription', expect.objectContaining({ p_mode: 'refresh' }))
+    expect(subscription.unsubscribe).not.toHaveBeenCalled()
+  })
+
+  it('re-registers automatically when scheduled cleanup removed the stored row', async () => {
+    const subscription = fakeSubscription('https://push.local/e1')
+    vi.stubGlobal('navigator', {
+      userAgent: 'vitest',
+      serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
+    })
+    pinnedRpcMock.mockResolvedValue({ data: 'recovered-sub-id', error: null })
+    const { refreshWebPushSubscription } = await loadModule()
+
+    await expect(refreshWebPushSubscription('profile-a')).resolves.toBe(true)
     expect(subscription.unsubscribe).not.toHaveBeenCalled()
   })
 
@@ -206,7 +208,6 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
-    mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
     stubSessionFlip('profile-a', 'user-b')
     const { refreshWebPushSubscription } = await loadModule()
 
@@ -222,7 +223,6 @@ describe('web-push session refresh', () => {
       userAgent: 'vitest',
       serviceWorker: { ready: Promise.resolve(fakeRegistration(subscription)) },
     })
-    mockOwnershipQuery({ data: { endpoint: 'https://push.local/e1' }, error: null })
     pinnedRpcMock.mockResolvedValue({ error: { code: 'P0001', message: 'endpoint_conflict' } })
     const { refreshWebPushSubscription } = await loadModule()
 
@@ -274,5 +274,26 @@ describe('web-push session refresh', () => {
     const { enableWebPush } = await loadModule()
 
     await expect(enableWebPush()).rejects.toMatchObject({ message: 'invalid_subscription_payload' })
+  })
+
+  it('fails loudly when standard mode resolves NULL (contract drift)', async () => {
+    vi.stubGlobal('Notification', {
+      permission: 'granted',
+      requestPermission: vi.fn(async () => 'granted'),
+    })
+    const registration = fakeRegistration(null)
+    registration.pushManager.subscribe.mockImplementation(async () =>
+      fakeSubscription('https://push.local/e3'))
+    vi.stubGlobal('navigator', {
+      userAgent: 'vitest',
+      serviceWorker: { ready: Promise.resolve(registration) },
+    })
+    // A successful RPC that resolves NULL outside refresh mode means the
+    // server contract drifted (api/004 §Response); enabling must not report
+    // success against a subscription the server did not actually register.
+    rpcMock.mockResolvedValue({ data: null, error: null })
+    const { enableWebPush } = await loadModule()
+
+    await expect(enableWebPush()).rejects.toMatchObject({ message: 'web_push_not_owned' })
   })
 })
