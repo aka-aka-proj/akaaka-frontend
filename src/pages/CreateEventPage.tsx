@@ -428,11 +428,11 @@ export function CreateEventPage() {
           !recurrenceError && recurrenceResult && recurrenceResult.success === false && recurrenceResult.created_instance_count === 0,
         )
         if (zeroCreated) {
-          setMessage(t('createEvent.recurrenceCreateRetry'))
+          setMessage(t('createEvent.recurrenceCreateRetry', { action: shouldPublish ? t('createEvent.saveAndPublish') : t('createEvent.saveDraft') }))
         } else if (recurrenceError) {
           setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
         } else {
-          setMessage(`活動已建立，但已建立 ${recurrenceResult?.created_instance_count ?? 0} 個週期場次、${recurrenceResult?.failed_instance_count ?? 0} 個建立失敗；失敗的場次可稍後從各活動頁重試。`)
+          setMessage(t('createEvent.recurrencePartialFailed', { created: Number(recurrenceResult?.created_instance_count ?? 0), failed: Number(recurrenceResult?.failed_instance_count ?? 0) }))
         }
         if (recurrenceError === null && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
