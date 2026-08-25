@@ -36,6 +36,33 @@ interface FormResponseWithRegistrant extends RegistrationResponse {
   registration?: { profile_id: string } | null
 }
 
+const SHARE_TOKEN_STORAGE_PREFIX = 'event-share-token:'
+
+function readShareTokenFromHash(): string | null {
+  const hash = window.location.hash
+  if (!hash.startsWith('#t=')) {
+    return null
+  }
+  return hash.slice(3) || null
+}
+
+function readStoredShareToken(eventId: string): string | null {
+  try {
+    return sessionStorage.getItem(SHARE_TOKEN_STORAGE_PREFIX + eventId)
+  } catch {
+    // Storage unavailable (e.g. blocked cookies); the hash token still works.
+    return null
+  }
+}
+
+function storeShareToken(eventId: string, token: string): void {
+  try {
+    sessionStorage.setItem(SHARE_TOKEN_STORAGE_PREFIX + eventId, token)
+  } catch {
+    // Storage unavailable; the current-page session keeps working via state.
+  }
+}
+
 function getCompatibleFormData(
   fields: RegistrationFormField[],
   responses: Record<string, unknown>,
@@ -115,30 +142,54 @@ export function EventDetailPage() {
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
 
+  const [shareLinkPending, setShareLinkPending] = useState(false)
+  const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false)
+
   const isPrivateShareable = Boolean(
     eventItem
     && isHost
     && eventItem.lifecycle_status !== 'draft'
+    && eventItem.publication_status === 'published'
     && eventItem.visibility_settings?.type === 'private',
   )
 
-  const copyShareLink = async (rotate: boolean) => {
-    if (!eventItem || !isHost) {
-      return
+  const sharedEventUrl = (() => {
+    if (!eventItem) {
+      return window.location.href
     }
-    const { data: token, error } = await supabase.rpc(
-      rotate ? 'rotate_event_share_token' : 'ensure_event_share_token',
-      { p_event_id: eventItem.id },
-    )
-    if (error || typeof token !== 'string' || !token) {
-      showError(error?.message ?? t('events.shareFailed'), error)
-      return
-    }
+    const storedToken = readStoredShareToken(eventItem.id)
+    return storedToken
+      ? `${window.location.origin}/events/${eventItem.id}#t=${storedToken}`
+      : window.location.href
+  })()
+
+  const deliverShareUrl = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/events/${eventItem.id}?t=${token}`)
+      await navigator.clipboard.writeText(url)
       alert(t('eventDetail.shareLinkCopied'))
-    } catch (copyError) {
-      showError(t('events.shareFailed'), copyError)
+    } catch {
+      // Clipboard denied/unavailable — surface the full URL for manual copy.
+      window.prompt(t('events.shareFailed'), url)
+    }
+  }
+
+  const copyShareLink = async (rotate: boolean) => {
+    if (!eventItem || !isHost || shareLinkPending) {
+      return
+    }
+    setShareLinkPending(true)
+    try {
+      const { data: token, error } = await supabase.rpc(
+        rotate ? 'rotate_event_share_token' : 'ensure_event_share_token',
+        { p_event_id: eventItem.id },
+      )
+      if (error || typeof token !== 'string' || !token) {
+        showError(error?.message ?? t('events.shareFailed'), error)
+        return
+      }
+      await deliverShareUrl(`${window.location.origin}/events/${eventItem.id}#t=${token}`)
+    } finally {
+      setShareLinkPending(false)
     }
   }
   const capacityExternalGuests = useMemo(
@@ -227,20 +278,30 @@ export function EventDetailPage() {
     }
 
     let currentEvent = (eventData as EventItem | null) ?? null
+    let usedShareToken: string | null = null
 
     // Private-event share link (ADR-022): RLS hides private rows from non-creators,
-    // so retry through the controlled read-only token path and strip the token
-    // from the URL once it has been used.
+    // so retry through the controlled read-only token path. The fragment token is
+    // consumed into sessionStorage (same-tab reload support) and stripped from the URL.
     if (!currentEvent && id) {
-      const shareToken = new URLSearchParams(window.location.search).get('t')
+      const hashToken = readShareTokenFromHash()
+      const shareToken = hashToken ?? readStoredShareToken(id)
       if (shareToken) {
-        const { data: tokenData } = await supabase
+        const { data: tokenData, error: tokenError } = await supabase
           .rpc('get_event_by_share_token', { p_token: shareToken })
           .maybeSingle()
-        if (tokenData) {
-          currentEvent = tokenData as EventItem
-          window.history.replaceState(window.history.state, '', window.location.pathname)
+        if (tokenError) {
+          showError(tokenError.message, tokenError)
+          return
         }
+        if (tokenData && (tokenData as EventItem).id === id) {
+          currentEvent = tokenData as EventItem
+          usedShareToken = shareToken
+          storeShareToken(id, shareToken)
+        }
+      }
+      if (hashToken) {
+        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
       }
     }
 
@@ -249,9 +310,10 @@ export function EventDetailPage() {
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
-      const { data: capacityData, error: capacityError } = await supabase
-        .rpc('get_event_capacity', { p_event_id: id })
-        .maybeSingle()
+      const capacityResponse = usedShareToken
+        ? await supabase.rpc('get_event_capacity_by_share_token', { p_token: usedShareToken }).maybeSingle()
+        : await supabase.rpc('get_event_capacity', { p_event_id: id }).maybeSingle()
+      const { data: capacityData, error: capacityError } = capacityResponse
 
       if (capacityError || !capacityData) {
         setPublicCapacityOccupied(null)
@@ -858,7 +920,7 @@ export function EventDetailPage() {
               <ShareButton
                 title={eventItem.title}
                 text={eventItem.description ?? ''}
-                url={window.location.href}
+                url={sharedEventUrl}
               />
               {isHost ? (
                 <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
@@ -1077,10 +1139,10 @@ export function EventDetailPage() {
             </button>
             {isPrivateShareable ? (
               <>
-                <button type="button" className="secondary-action" onClick={() => void copyShareLink(false)}>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => void copyShareLink(false)}>
                   <Icon href="/form-icons.svg" name="form-eye" size={14} /> {t('eventDetail.copyShareLink')}
                 </button>
-                <button type="button" className="secondary-action" onClick={() => void copyShareLink(true)}>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => setRotateConfirmOpen(true)}>
                   {t('eventDetail.rotateShareLink')}
                 </button>
               </>
@@ -1397,6 +1459,28 @@ export function EventDetailPage() {
               </button>
               <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
                 {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && rotateConfirmOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setRotateConfirmOpen(false)
+        }}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="rotate-share-link-dialog-title">
+            <h3 id="rotate-share-link-dialog-title">{t('eventDetail.rotateShareLinkConfirmTitle')}</h3>
+            <p>{t('eventDetail.rotateShareLinkWarning')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="secondary-action" onClick={() => setRotateConfirmOpen(false)}>
+                {t('common.cancelReply')}
+              </button>
+              <button type="button" className="danger-action" disabled={shareLinkPending} onClick={() => {
+                setRotateConfirmOpen(false)
+                void copyShareLink(true)
+              }}>
+                {t('eventDetail.rotateShareLink')}
               </button>
             </div>
           </div>
