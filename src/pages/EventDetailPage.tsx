@@ -13,6 +13,7 @@ import { MarkdownRenderer } from '../components/MarkdownRenderer'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventAnnouncements } from '../components/EventAnnouncements'
 import { SeriesNavigation } from '../components/SeriesNavigation'
+import { SeriesRegistrationFlow } from '../components/SeriesRegistrationFlow'
 import { useIsEventInSeries } from '../hooks/useEventSeries'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
@@ -1184,6 +1185,17 @@ export function EventDetailPage() {
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
+          {eventItem.series_id && (
+            <SeriesRegistrationFlow
+              event={eventItem}
+              userId={user.id}
+              eventId={id!}
+              submitting={submitting}
+              setSubmitting={setSubmitting}
+              onRegistrationChanged={() => void load()}
+              showError={showError}
+            />
+          )}
           {!myRegistration && isAtCapacity ? (
             <p className="registration-hint">{t('eventDetail.waitlistHint')}</p>
           ) : null}
