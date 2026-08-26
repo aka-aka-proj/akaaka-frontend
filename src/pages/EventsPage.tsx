@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
+import { SeriesCard } from '../components/SeriesCard'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -13,7 +14,7 @@ import type { EventItem, EventCategory, TaiwanRegion } from '../types'
 import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
-type CategoryFilter = 'all' | EventCategory
+type CategoryFilter = 'all' | EventCategory | 'series'
 const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
 const EVENT_PAGE_SIZE = 50
 
@@ -32,6 +33,7 @@ export function EventsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
+  const [seriesList, setSeriesList] = useState<{ seriesId: string; memberEvents: EventItem[] }[]>([])
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -74,6 +76,51 @@ export function EventsPage() {
 
     void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
+
+  useEffect(() => {
+    const loadSeries = async () => {
+      if (categoryFilter !== 'series') return
+      const { data: seriesData } = await supabase
+        .from('event_series')
+        .select('id')
+        .eq('lifecycle_status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (!seriesData || seriesData.length === 0) {
+        setSeriesList([])
+        return
+      }
+
+      const results: { seriesId: string; memberEvents: EventItem[] }[] = []
+      for (const s of seriesData as { id: string }[]) {
+        const { data: members } = await supabase
+          .from('event_series_membership')
+          .select('event_id')
+          .eq('series_id', s.id)
+          .order('position', { ascending: true })
+
+        if (!members || members.length === 0) continue
+
+        const memberIds = (members as { event_id: string }[]).map((m) => m.event_id)
+        const { data: events } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', memberIds)
+          .eq('lifecycle_status', 'published')
+
+        if (events && events.length > 0) {
+          results.push({
+            seriesId: s.id,
+            memberEvents: (events as EventItem[]).filter((e) => canSeeEvent(e, user?.id)),
+          })
+        }
+      }
+      setSeriesList(results)
+    }
+
+    void loadSeries()
+  }, [categoryFilter, user])
 
   const loadMoreEvents = async () => {
     if (eventsLoading || !hasMoreEvents) return
@@ -193,6 +240,13 @@ export function EventsPage() {
           >
             {t('events.categoryPractice')}
           </button>
+          <button
+            type="button"
+            className={`category-tab${categoryFilter === 'series' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('series')}
+          >
+            {t('eventSeries.navigationLabel')}
+          </button>
         </div>
 
         <label className="search-field" htmlFor="search-activities">
@@ -299,6 +353,11 @@ export function EventsPage() {
             >
               {t('events.myEvents')}
             </button>
+                {user && (
+                  <Link to="/events/series/new" className="chip chip-neutral" style={{ marginLeft: '0.5rem' }}>
+                    {t('eventSeries.createSeriesTitle')}
+                  </Link>
+                )}
               </div>
             )}
             {activeFilterCount > 0 ? <button type="button" className="clear-filters" onClick={clearFilters}>{t('events.clearFilters')}</button> : null}
@@ -307,7 +366,19 @@ export function EventsPage() {
 
         {message ? <p className="message">{message}</p> : null}
 
-        {eventsLoading && events.length === 0 ? (
+        {categoryFilter === 'series' ? (
+          seriesList.length === 0 ? (
+            <p className="empty-state">{t('eventSeries.noEligibleEvents')}</p>
+          ) : (
+            <ul className="series-grid">
+              {seriesList.map((s) => (
+                <li key={s.seriesId}>
+                  <SeriesCard seriesId={s.seriesId} memberEvents={s.memberEvents} />
+                </li>
+              ))}
+            </ul>
+          )
+        ) : eventsLoading && events.length === 0 ? (
           <p className="empty-state" role="status">{t('common.loading')}</p>
         ) : events.length === 0 ? (
           <div className="empty-state">
