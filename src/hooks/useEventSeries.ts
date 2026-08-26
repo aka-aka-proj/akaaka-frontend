@@ -22,6 +22,8 @@ export interface EventSeriesWithMembers extends EventSeries {
   members: EventSeriesMember[]
 }
 
+const EMPTY_MEMBERS: EventSeriesMember[] = []
+
 export function useEventSeries(seriesId: string | null): EventSeriesWithMembers | null {
   const [series, setSeries] = useState<EventSeriesWithMembers | null>(null)
 
@@ -78,6 +80,8 @@ export function useIsEventInSeries(eventId: string | undefined): {
   const [seriesId, setSeriesId] = useState<string | null>(null)
 
   useEffect(() => {
+    setLoading(true)
+    setSeriesId(null)
     if (!eventId) {
       setLoading(false)
       return
@@ -109,11 +113,7 @@ export function useIsEventInSeries(eventId: string | undefined): {
 
 export function useSeriesMembersEvents(seriesId: string | null): EventSeriesMember[] {
   const series = useEventSeries(seriesId)
-
-  return useMemo(() => {
-    if (!series) return []
-    return series.members
-  }, [series?.members])
+  return series?.members ?? EMPTY_MEMBERS
 }
 
 export function useCurrentSeriesEventPosition(

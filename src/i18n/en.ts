@@ -8,6 +8,7 @@ const en = {
     remove: 'Remove',
     language: 'Language',
     back: 'Back',
+    more: 'more',
   },
   errorPopup: {
     title: 'An Error Occurred',
@@ -153,6 +154,15 @@ const en = {
     bookmarkError: 'Unable to update saved status. Please try again.',
     externalRegistration: 'External registration',
     loadMore: 'Load more events',
+  },
+  eventSeries: {
+    listLabel: 'Event series',
+    navigationLabel: 'Event series',
+    requiredBadge: 'Whole series required',
+    sessionNumber: 'Session {number}',
+    viewDetails: 'View series events',
+    prevEvent: 'Previous session',
+    nextEvent: 'Next session',
   },
   notifications: {
     title: 'Notifications',

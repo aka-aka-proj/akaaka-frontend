@@ -2,8 +2,10 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useT } from '../hooks/useT'
-import { useEventSeries, useSeriesMembersEvents } from '../hooks/useEventSeries'
+import { useEventSeries, type EventSeriesMember } from '../hooks/useEventSeries'
 import type { EventItem } from '../types'
+
+const EMPTY_MEMBERS: EventSeriesMember[] = []
 
 interface SeriesCardProps {
   seriesId: string
@@ -13,7 +15,7 @@ interface SeriesCardProps {
 export function SeriesCard({ seriesId, memberEvents }: SeriesCardProps) {
   const { t } = useT()
   const series = useEventSeries(seriesId)
-  const members = useSeriesMembersEvents(seriesId)
+  const members = series?.members ?? EMPTY_MEMBERS
 
   const sortedMemberEvents = useMemo(() => {
     return [...memberEvents].sort((a, b) => {
@@ -23,7 +25,7 @@ export function SeriesCard({ seriesId, memberEvents }: SeriesCardProps) {
     })
   }, [memberEvents, members])
 
-  if (!series) return null
+  if (!series || sortedMemberEvents.length === 0) return null
 
   const previewEvents = sortedMemberEvents.slice(0, 3)
   const remainingCount = sortedMemberEvents.length - 3
@@ -65,15 +67,9 @@ export function SeriesCard({ seriesId, memberEvents }: SeriesCardProps) {
       </div>
 
       <div className="series-card-actions">
-        <Link to={`/events/${sortedMemberEvents[0]?.id}`} className="link-button">
+        <Link to={`/events/${sortedMemberEvents[0].id}`} className="link-button">
           {t('eventSeries.viewDetails')}
           <Icon href="/action-icons.svg" name="action-chevron-right" size={12} />
-        </Link>
-        <Link
-          to={`/events/${sortedMemberEvents[0]?.id}`}
-          className="primary-cta primary-cta--small"
-        >
-          {t('eventSeries.registerWholeSeries', { count: sortedMemberEvents.length })}
         </Link>
       </div>
     </article>
