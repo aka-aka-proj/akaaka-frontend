@@ -954,16 +954,10 @@ export function EventDetailPage() {
         <aside className="card event-quickfacts-card" aria-label={t('eventDetail.summaryLabel')}>
           <h3>{t('eventDetail.quickFactsTitle')}</h3>
           <div className="event-summary-grid">
-            {eventItem.location_region ? (
-              <div className="event-summary-item">
-                <Icon href="/form-icons.svg" name="form-location" size={18} />
-                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}`)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
-              </div>
-            ) : null}
             {eventItem.location_detail ? (
               <div className="event-summary-item">
                 <Icon href="/form-icons.svg" name="form-location" size={18} />
-                <span><strong>{t('eventDetail.mapLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{t('eventDetail.openInGoogleMaps')}</a></span>
+                <span><strong>{t('eventDetail.locationLabel')}</strong>{eventItem.location_detail}</span>
               </div>
             ) : null}
             <div className="event-summary-item">
@@ -1056,22 +1050,27 @@ export function EventDetailPage() {
 
       {isHost && eventItem ? (
         <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
-          <button
-            type="button"
-            aria-pressed={hostConsoleView === 'participants'}
-            className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
-            onClick={() => setHostConsoleView('participants')}
-          >
-            {t('eventDetail.hostTabParticipants')}
-          </button>
-          <button
-            type="button"
-            aria-pressed={hostConsoleView === 'management'}
-            className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
-            onClick={() => setHostConsoleView('management')}
-          >
-            {t('eventDetail.hostTabManagement')}
-          </button>
+          <span className="host-view-tabs-label">
+            <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.hostTools')}
+          </span>
+          <div className="host-view-tab-group">
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'participants'}
+              className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('participants')}
+            >
+              {t('eventDetail.hostTabParticipants')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'management'}
+              className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('management')}
+            >
+              {t('eventDetail.hostTabManagement')}
+            </button>
+          </div>
         </div>
       ) : null}
 
