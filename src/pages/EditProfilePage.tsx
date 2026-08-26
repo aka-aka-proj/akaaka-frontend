@@ -282,7 +282,7 @@ export function EditProfilePage() {
                         ))
                       }}
                     />
-                    {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
+                    {t(`profile.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}`)}
                   </label>
                 ))}
               </div>

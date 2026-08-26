@@ -83,7 +83,7 @@ export function RegistrationFormBuilder({ fields, setFields }: RegistrationFormB
     setDraggedFieldId(null)
   }
 
-  const fieldTypeLabel = (type: RegistrationFormField['type']) => t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}` as any)
+  const fieldTypeLabel = (type: RegistrationFormField['type']) => t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}`)
 
   return (
     <fieldset className="card form-builder">
@@ -122,7 +122,7 @@ export function RegistrationFormBuilder({ fields, setFields }: RegistrationFormB
         )
       })}
       {showPreview && <div className="form-builder-preview" aria-label={t('createEvent.formBuilderPreview')}>{fields.length === 0 ? <p>{t('createEvent.formBuilderEmpty')}</p> : fields.map((field) => <label key={field.id}><span>{field.label || t('createEvent.formBuilderUntitled')}{field.required ? ' *' : ''}</span>{field.type === 'textarea' ? <textarea disabled /> : field.type === 'select' ? <select disabled><option>{t('createEvent.formBuilderSelectPlaceholder')}</option></select> : field.type === 'radio' || field.type === 'checkbox' ? <span className="form-builder-preview-options">{field.options?.map((option, index) => <label key={index}><input type={field.type === 'radio' ? 'radio' : 'checkbox'} disabled /> {option || `${t('createEvent.formBuilderOption')} ${index + 1}`}</label>)}</span> : <input disabled />}</label>)}</div>}
-      {!showPreview && <div className="form-builder-add-row"><select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={fields.length >= MAX_FORM_FIELDS}><option value="">+ {t('createEvent.formBuilderAddField')}</option>{FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}` as any)}</option>)}</select>{fields.length >= MAX_FORM_FIELDS ? <span className="form-builder-limit">{t('createEvent.formBuilderLimit')}</span> : null}</div>}
+      {!showPreview && <div className="form-builder-add-row"><select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={fields.length >= MAX_FORM_FIELDS}><option value="">+ {t('createEvent.formBuilderAddField')}</option>{FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}</select>{fields.length >= MAX_FORM_FIELDS ? <span className="form-builder-limit">{t('createEvent.formBuilderLimit')}</span> : null}</div>}
       {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
     </fieldset>
   )

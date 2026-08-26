@@ -583,7 +583,7 @@ export function ProfilePage() {
                   <div className="profile-attribute">
                     <span className="attribute-label">{t('profile.genderIdentityLabel')}</span>
                     <span className="profile-chip">
-                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
+                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}`)}
                     </span>
                   </div>
                 ) : null}
@@ -593,7 +593,7 @@ export function ProfilePage() {
                     <div className="profile-chip-list">
                       {profile.metadata.bdsm_roles.map((r) => (
                         <span className="profile-chip" key={r}>
-                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)}
+                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}`)}
                         </span>
                       ))}
                     </div>

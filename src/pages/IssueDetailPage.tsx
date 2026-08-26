@@ -96,7 +96,7 @@ export function IssueDetailPage() {
         {issue ? (
           <>
             <h2>{issue.title}</h2>
-            <span className={`status status-${issue.status}`}>{t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}` as any)}</span>
+            <span className={`status status-${issue.status}`}>{t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}`)}</span>
             <p>{issue.description}</p>
             {issue.log_url ? (
               <p>

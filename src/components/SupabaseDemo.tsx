@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 
+interface DemoTodo {
+  id: number;
+  task: string;
+}
+
 export default function SupabaseDemo() {
-  const [user, setUser] = useState<any>(null);
-  const [todos, setTodos] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [todos, setTodos] = useState<DemoTodo[]>([]);
   const [newTodo, setNewTodo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,13 +20,13 @@ export default function SupabaseDemo() {
     (async () => {
       try {
         const { data } = await supabase.auth.getUser();
-        setUser((data as any)?.user ?? null);
+        setUser(data.user ?? null);
       } catch {
         // ignore
       }
       await fetchTodos();
     })();
-    const { data: listener } = supabase.auth.onAuthStateChange((_: string, session: { user?: { email?: string } | null } | null) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
     return () => { listener.subscription.unsubscribe(); };
@@ -56,7 +62,7 @@ export default function SupabaseDemo() {
     setLoading(false);
     if (error) { setMsg(error.message); return; }
     setMsg('登入成功');
-    setUser((data as any).user ?? null);
+    setUser(data.user ?? null);
   }
 
   async function signOut() {
@@ -94,7 +100,7 @@ export default function SupabaseDemo() {
       {msg && <div style={{ color: 'crimson', marginBottom: 12 }}>{msg}</div>}
 
       <ul>
-        {todos.map((t: any) => (
+        {todos.map((t) => (
           <li key={t.id}>{t.task}</li>
         ))}
       </ul>

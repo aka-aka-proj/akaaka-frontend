@@ -72,7 +72,7 @@ export function EditEventPage() {
   const lockedCount = scopedMembers.filter(isMemberLocked).length
 
   const addType = (type: string) => {
-    if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
+    if (type && !eventType.includes(type) && EVENT_TYPES.some((supported) => supported === type)) {
       setEventType([...eventType, type])
     }
   }
@@ -602,7 +602,7 @@ export function EditEventPage() {
             <option value="" disabled>{t('editEvent.locationRegionPlaceholder')}</option>
             {TAIWAN_REGIONS.map((region) => (
               <option key={region} value={region}>
-                {t(`events.region${region}` as any)}
+                {t(`events.region${region}`)}
               </option>
             ))}
 </select>

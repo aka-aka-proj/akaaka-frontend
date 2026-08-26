@@ -59,7 +59,7 @@ export function IssuesPage() {
               <li key={issue.id}>
                 <Link to={`/issues/${issue.id}`}>
                   <h4>{issue.title}</h4>
-                  <span className={`status status-${issue.status}`}>{t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}` as any)}</span>
+                  <span className={`status status-${issue.status}`}>{t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}`)}</span>
                   <small>{new Date(issue.created_at).toLocaleDateString()}</small>
                 </Link>
               </li>

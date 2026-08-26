@@ -97,7 +97,7 @@ export function BookmarksPage() {
                   </div>
                   <p className="event-card-description">{event.description ?? t('events.noDescription')}</p>
                   <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> <span>{new Date(event.start_time).toLocaleString()}</span></p>
-                  {event.location_region ? <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}` as any)}{event.location_detail ? ` — ${event.location_detail}` : ''}</span></p> : null}
+                  {event.location_region ? <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}`)}{event.location_detail ? ` — ${event.location_detail}` : ''}</span></p> : null}
                 </article>
               </li>
             ))}

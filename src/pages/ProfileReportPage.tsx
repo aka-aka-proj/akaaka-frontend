@@ -42,7 +42,7 @@ export function ProfileReportPage() {
 
   const getCategoryLabel = (category: string) => {
     const key = category.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
-    return t(`report.${key}` as any) || category
+    return t(`report.${key}`) || category
   }
 
   return (

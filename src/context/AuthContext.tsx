@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components -- React context module intentionally co-locates Provider and hook; fast-refresh limitation accepted and documented (issue #99).
 import type { Session, User, UserIdentity } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
