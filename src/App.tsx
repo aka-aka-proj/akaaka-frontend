@@ -17,6 +17,7 @@ import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { BookmarksPage } from './pages/BookmarksPage'
+import { CreateEventSeriesPage } from './pages/CreateEventSeriesPage'
 import { FollowingPage } from './pages/FollowingPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
@@ -90,6 +91,14 @@ function App() {
       <Route
         path="/events/bookmarks"
         element={<ProtectedRoute><BookmarksPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/events/series/new"
+        element={
+          <ProtectedRoute>
+            <CreateEventSeriesPage />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/events/:id/edit"
