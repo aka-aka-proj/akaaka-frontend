@@ -10,6 +10,7 @@ import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { MarkdownRenderer } from '../components/MarkdownRenderer'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventAnnouncements } from '../components/EventAnnouncements'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
@@ -735,8 +736,7 @@ export function EventDetailPage() {
     await load()
   }
 
-  const postThread = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const postThread = async () => {
     if (!id || !user || !content.trim()) {
       return
     }
@@ -1574,20 +1574,26 @@ export function EventDetailPage() {
           </div>
           {discussionStatus ? <p className="discussion-status" role="status">{discussionStatus}</p> : null}
         </div>
-        <form className="discussion-composer" onSubmit={postThread}>
-          <textarea
-            aria-label={t('eventDetail.discussion')}
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder={t('eventDetail.postComment')}
-            rows={3}
-          />
-          <div className="discussion-form-actions">
-            <button type="submit" className="primary-cta" disabled={postingThread || !content.trim()}>
-              <Icon href="/action-icons.svg" name="action-reply" size={16} /> {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
-            </button>
-          </div>
-        </form>
+        <MarkdownEditor
+          value={content}
+          onChange={(newValue) => {
+            setContent(newValue)
+          }}
+          className="discussion-composer"
+          aria-label={t('eventDetail.discussion')}
+          allowLinks={true}
+        />
+        <div className="discussion-form-actions">
+          <button
+            type="button"
+            className="primary-cta"
+            disabled={postingThread || !content.trim()}
+            onClick={postThread as any}
+          >
+            <Icon href="/action-icons.svg" name="action-reply" size={16} />
+            {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
+          </button>
+        </div>
         {visibleThreads.length === 0 ? (
           <div className="empty-state">
             <p>{t('eventDetail.discussionEmpty')}</p>
