@@ -25,7 +25,7 @@ export function SeriesCard({ series, memberEvents }: SeriesCardProps) {
   if (sortedMemberEvents.length === 0) return null
 
   const previewEvents = sortedMemberEvents.slice(0, 3)
-  const remainingCount = sortedMemberEvents.length - 3
+  const remainingCount = Math.max(members.length - previewEvents.length, 0)
 
   return (
     <article className="series-card card">
