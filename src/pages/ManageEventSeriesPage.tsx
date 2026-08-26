@@ -1,0 +1,364 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Layout } from '../components/Layout'
+import { Icon } from '../components/Icon'
+import { useAuth } from '../context/AuthContext'
+import { useT } from '../hooks/useT'
+import { supabase } from '../supabaseClient'
+import type { EventItem } from '../types'
+
+interface SeriesDetail {
+  id: string
+  creator_id: string
+  title: string
+  description: string | null
+  is_whole_series_required: boolean
+  display_order: number
+  lifecycle_status: 'draft' | 'published' | 'archived' | 'cancelled'
+}
+
+interface SeriesMemberRow {
+  id: string
+  event_id: string
+  position: number
+  event: EventItem | null
+}
+
+export function ManageEventSeriesPage() {
+  const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const { t } = useT()
+  const navigate = useNavigate()
+
+  const [series, setSeries] = useState<SeriesDetail | null>(null)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [isWholeSeriesRequired, setIsWholeSeriesRequired] = useState(false)
+  const [members, setMembers] = useState<SeriesMemberRow[]>([])
+  const [allMyEvents, setAllMyEvents] = useState<EventItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [showAddPicker, setShowAddPicker] = useState(false)
+
+  useEffect(() => {
+    if (!user || !id) return
+    let cancelled = false
+
+    const load = async () => {
+      const { data: seriesData, error: seriesError } = await supabase
+        .from('event_series')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (cancelled) return
+
+      if (seriesError || !seriesData) {
+        setMessage('Series not found')
+        setLoading(false)
+        return
+      }
+
+      if ((seriesData as SeriesDetail).creator_id !== user.id) {
+        setMessage('Only the series host can manage this series')
+        setLoading(false)
+        return
+      }
+
+      setSeries(seriesData as SeriesDetail)
+      setTitle((seriesData as SeriesDetail).title)
+      setDescription((seriesData as SeriesDetail).description ?? '')
+      setIsWholeSeriesRequired((seriesData as SeriesDetail).is_whole_series_required)
+
+      const { data: membersData } = await supabase
+        .from('event_series_membership')
+        .select('id, event_id, position, event:events(*)')
+        .eq('series_id', id)
+        .order('position', { ascending: true })
+
+      if (cancelled) return
+      setMembers((membersData as SeriesMemberRow[]) ?? [])
+
+      // Load host's other events (for add picker)
+      const existingIds = ((membersData as SeriesMemberRow[]) ?? []).map((m) => m.event_id)
+      const { data: myEventsData } = await supabase
+        .from('events')
+        .select('*')
+        .eq('creator_id', user.id)
+        .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+        .not('id', 'in', `(${existingIds.join(',')})`)
+        .order('start_time', { ascending: false })
+
+      if (cancelled) return
+      setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+      setLoading(false)
+    }
+
+    void load()
+    return () => { cancelled = true }
+  }, [user, id])
+
+  const canAdd = useMemo(() => members.length > 0 && allMyEvents.length > 0, [members, allMyEvents])
+
+  const handleSave = async () => {
+    if (!user || !id) return
+    setSaving(true)
+    setMessage('')
+
+    const { error } = await supabase
+      .from('event_series')
+      .update({
+        title: title.trim(),
+        description: description.trim() || null,
+        is_whole_series_required: isWholeSeriesRequired,
+      })
+      .eq('id', id)
+
+    setSaving(false)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setMessage(t('eventSeries.manageSaved'))
+  }
+
+  const handleAddEvent = async (eventId: string) => {
+    if (!id) return
+    setSaving(true)
+    const nextPosition = members.length + 1
+
+    const { error } = await supabase.from('event_series_membership').insert([
+      { series_id: id, event_id: eventId, position: nextPosition },
+    ])
+
+    setSaving(false)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    // Refetch
+    const { data: membersData } = await supabase
+      .from('event_series_membership')
+      .select('id, event_id, position, event:events(*)')
+      .eq('series_id', id)
+      .order('position', { ascending: true })
+    setMembers((membersData as SeriesMemberRow[]) ?? [])
+
+    const { data: myEventsData } = await supabase
+      .from('events')
+      .select('*')
+      .eq('creator_id', user!.id)
+      .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+      .not('id', 'in', `(${membersData.map((m) => m.event_id).join(',')})`)
+      .order('start_time', { ascending: false })
+    setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+    setShowAddPicker(false)
+  }
+
+  const handleRemoveEvent = async (membershipId: string) => {
+    if (!id) return
+    setSaving(true)
+
+    const { error } = await supabase.from('event_series_membership').delete().eq('id', membershipId)
+
+    setSaving(false)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    // Refetch and renormalize positions
+    const { data: membersData } = await supabase
+      .from('event_series_membership')
+      .select('id, event_id, position, event:events(*)')
+      .eq('series_id', id)
+      .order('position', { ascending: true })
+
+    const remaining = (membersData as SeriesMemberRow[]) ?? []
+    // Renormalize positions 1..n
+    for (let i = 0; i < remaining.length; i++) {
+      if (remaining[i].position !== i + 1) {
+        await supabase
+          .from('event_series_membership')
+          .update({ position: i + 1 })
+          .eq('id', remaining[i].id)
+      }
+    }
+    const normalized = remaining.map((m, i) => ({ ...m, position: i + 1 }))
+    setMembers(normalized)
+
+    const { data: myEventsData } = await supabase
+      .from('events')
+      .select('*')
+      .eq('creator_id', user!.id)
+      .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+      .not('id', 'in', `(${normalized.map((m) => m.event_id).join(',')})`)
+      .order('start_time', { ascending: false })
+    setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+  }
+
+  const handleMove = async (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= members.length) return
+    const next = [...members]
+    const a = next[index]
+    const b = next[target]
+    const aPos = a.position
+    const bPos = b.position
+    next[index] = { ...a, position: bPos }
+    next[target] = { ...b, position: aPos }
+    setMembers(next)
+
+    // Persist the swap
+    await supabase.from('event_series_membership').update({ position: aPos }).eq('id', b.id)
+    await supabase.from('event_series_membership').update({ position: bPos }).eq('id', a.id)
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <p>{t('common.loading')}</p>
+      </Layout>
+    )
+  }
+
+  if (!series) {
+    return (
+      <Layout>
+        <p>{message || t('eventDetail.notFound')}</p>
+      </Layout>
+    )
+  }
+
+  return (
+    <Layout>
+      <div className="card">
+        <div className="create-event-header">
+          <h1>{t('eventSeries.manageSeriesTitle')}</h1>
+          <Link to={`/events/${members[0]?.event_id ?? ''}`} className="link-button">
+            <Icon href="/action-icons.svg" name="action-chevron-left" size={14} />
+            {t('eventSeries.backToSeries')}
+          </Link>
+        </div>
+
+        {message && <p className="message">{message}</p>}
+
+        <div className="form-section" aria-labelledby="manage-basic-title">
+          <h2 id="manage-basic-title">{t('eventSeries.basicInfo')}</h2>
+
+          <label className="form-field">
+            <span>{t('eventSeries.seriesName')} *</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+
+          <label className="form-field">
+            <span>{t('eventSeries.seriesDescription')}</span>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </label>
+
+          <label className="checkbox" style={{ marginTop: '1rem' }}>
+            <input
+              type="checkbox"
+              checked={isWholeSeriesRequired}
+              onChange={(e) => setIsWholeSeriesRequired(e.target.checked)}
+            />
+            <div>
+              <strong>{t('eventSeries.requiredBadge')}</strong>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{t('eventSeries.wholeSeriesHint')}</p>
+            </div>
+          </label>
+
+          <div style={{ marginTop: '1rem' }}>
+            <button type="button" className="primary-cta primary-cta--small" disabled={saving} onClick={() => void handleSave()}>
+              {saving ? t('common.processing') : t('eventSeries.saveSeries')}
+            </button>
+          </div>
+        </div>
+
+        <div className="form-section" aria-labelledby="manage-members-title">
+          <div className="form-section-heading">
+            <h2 id="manage-members-title">{t('eventSeries.memberEvents', { count: members.length })}</h2>
+            {canAdd && (
+              <button type="button" className="secondary-action" onClick={() => setShowAddPicker(true)}>
+                {t('eventSeries.addEvent')}
+              </button>
+            )}
+          </div>
+
+          <ol className="series-manage-list">
+            {members.map((member, index) => (
+              <li key={member.id} className="series-manage-item">
+                <span className="series-manage-position">{index + 1}</span>
+                <div className="series-manage-info">
+                  <span className="series-manage-title">{member.event?.title ?? '?'}</span>
+                  <span className="series-manage-time">
+                    {member.event ? new Date(member.event.start_time).toLocaleString() : ''}
+                  </span>
+                </div>
+                <div className="series-manage-actions">
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => void handleMove(index, -1)}
+                    disabled={index === 0}
+                    aria-label={t('eventSeries.moveUp')}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => void handleMove(index, 1)}
+                    disabled={index === members.length - 1}
+                    aria-label={t('eventSeries.moveDown')}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-action"
+                    onClick={() => void handleRemoveEvent(member.id)}
+                    disabled={saving}
+                  >
+                    {t('eventSeries.removeEvent')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ol>
+          {members.length === 0 && (
+            <p style={{ color: 'var(--color-text-secondary)' }}>{t('eventSeries.noEligibleEvents')}</p>
+          )}
+        </div>
+
+        {showAddPicker && (
+          <div className="modal-overlay" role="presentation" onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowAddPicker(false)
+          }}>
+            <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="add-event-title">
+              <div className="report-modal-header">
+                <h3 id="add-event-title">{t('eventSeries.addEvent')}</h3>
+                <button type="button" className="modal-close" onClick={() => setShowAddPicker(false)} aria-label={t('common.close')}>×</button>
+              </div>
+              <div className="modal-body" style={{ padding: '1rem' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {allMyEvents.map((event) => (
+                    <li key={event.id} className="thread-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
+                      <span>{event.title}</span>
+                      <button type="button" className="primary-cta primary-cta--small" onClick={() => void handleAddEvent(event.id)}>
+                        {t('eventSeries.addEvent')}
+                      </button>
+                    </li>
+                  ))}
+                  {allMyEvents.length === 0 && <p>{t('eventSeries.noEligibleEvents')}</p>}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Layout>
+  )
+}
