@@ -165,8 +165,8 @@ export function MarkdownEditor({
         onPaste={handlePaste}
         role="textbox"
         aria-multiline="true"
-        aria-label={ariaLabel || '留言編輯器'}
-        data-placeholder={placeholder ?? '輸入留言…'}
+        aria-label={ariaLabel || '編輯器'}
+        data-placeholder={placeholder ?? '輸入活動描述…'}
       />
     </div>
   )
