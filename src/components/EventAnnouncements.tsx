@@ -110,7 +110,16 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     setMessage('')
     const scheduledAt = publishMode === 'scheduled' ? localDateTimeToIso(publishAt) : null
     let error: { message: string } | null = null
-    if (editingId) {
+    if (editingId && publishMode === 'now') {
+      // Spec 007 forbids the two-call path here: edit + publish-now is one
+      // atomic RPC so a failure never downgrades a scheduled row to a draft.
+      const { error: atomicError } = await supabase.rpc('update_and_publish_announcement', {
+        p_announcement_id: editingId,
+        p_title: title.trim(),
+        p_body_markdown: body,
+      })
+      error = atomicError
+    } else if (editingId) {
       const { error: updateError } = await supabase.rpc('update_event_announcement', {
         p_announcement_id: editingId,
         p_title: title.trim(),
@@ -119,12 +128,6 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
         p_publish_at: scheduledAt,
       })
       error = updateError
-      if (!updateError && publishMode === 'now') {
-        const { error: publishError } = await supabase.rpc('publish_event_announcement', {
-          p_announcement_id: editingId,
-        })
-        error = publishError
-      }
     } else {
       const { error: createError } = await supabase.rpc('create_event_announcement', {
         p_event_id: eventId,
