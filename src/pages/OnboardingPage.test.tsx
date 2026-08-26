@@ -32,12 +32,12 @@ describe('OnboardingPage', () => {
   const origClose = HTMLDialogElement.prototype.close
 
   beforeEach(() => {
-    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
       this.setAttribute('open', '')
-    } as any
-    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    }
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
       this.removeAttribute('open')
-    } as any
+    }
 
     upsert.mockReset()
     upsert.mockResolvedValue({ error: null })

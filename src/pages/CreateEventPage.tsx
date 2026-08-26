@@ -240,7 +240,7 @@ export function CreateEventPage() {
   }
 
   const addType = (type: string) => {
-    if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
+    if (type && !eventType.includes(type) && EVENT_TYPES.some((supported) => supported === type)) {
       setEventType([...eventType, type])
     }
   }
@@ -751,7 +751,7 @@ export function CreateEventPage() {
             <option value="" disabled>{t('createEvent.locationRegionPlaceholder')}</option>
             {TAIWAN_REGIONS.map((region) => (
               <option key={region} value={region}>
-                {t(`events.region${region}` as any)}
+                {t(`events.region${region}`)}
               </option>
             ))}
           </select>
@@ -893,7 +893,7 @@ export function CreateEventPage() {
           </div>
           {!showFormPreview && formFields.map((field, idx) => {
             const isExpanded = expandedFieldId === field.id
-            const typeLabel = t(`createEvent.formBuilder${field.type.charAt(0).toUpperCase() + field.type.slice(1)}` as any)
+            const typeLabel = t(`createEvent.formBuilder${field.type.charAt(0).toUpperCase() + field.type.slice(1)}`)
             return (
               <div
                 key={field.id}
@@ -928,7 +928,7 @@ export function CreateEventPage() {
                         const type = event.target.value as RegistrationFormField['type']
                         updateFormField(field.id, { type, options: OPTION_FIELD_TYPES.includes(type) ? (field.options?.length ? field.options : ['']) : undefined })
                       }}>
-                        {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}` as any)}</option>)}
+                        {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}
                       </select>
                     </label>
                     <label className="form-builder-toggle">
@@ -961,7 +961,7 @@ export function CreateEventPage() {
             <div className="form-builder-add-row">
               <select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addFormField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={formFields.length >= MAX_FORM_FIELDS}>
                 <option value="">+ {t('createEvent.formBuilderAddField')}</option>
-                {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}` as any)}</option>)}
+                {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}
               </select>
               {formFields.length >= MAX_FORM_FIELDS ? <span className="form-builder-limit">{t('createEvent.formBuilderLimit')}</span> : null}
             </div>

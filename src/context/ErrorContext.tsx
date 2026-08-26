@@ -1,18 +1,19 @@
+// oxlint-disable react/only-export-components -- React context module intentionally co-locates Provider and hook; fast-refresh limitation accepted and documented (issue #99).
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 export interface AppError {
   title?: string
   message: string
-  response?: any
-  debugInfo?: any
+  response?: unknown
+  debugInfo?: unknown
 }
 
 interface ErrorContextType {
   error: AppError | null
   showError: (
     err: AppError | Error | string,
-    response?: any,
-    debugInfo?: any
+    response?: unknown,
+    debugInfo?: unknown
   ) => void
   clearError: () => void
 }
@@ -35,11 +36,12 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
         debugInfo,
       })
     } else if (err instanceof Error) {
+      const extended = err as Error & { response?: unknown }
       setErrorState({
         title: err.name,
         message: err.message,
-        response: response || (err as any).response || undefined,
-        debugInfo: debugInfo || (err as any).stack || undefined,
+        response: response || extended.response || undefined,
+        debugInfo: debugInfo || err.stack || undefined,
       })
     } else {
       setErrorState({

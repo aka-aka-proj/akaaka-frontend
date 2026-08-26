@@ -257,7 +257,7 @@ export function EventsPage() {
               className={`chip${selectedRegion === region ? ' chip-active' : ''}`}
               onClick={() => setSelectedRegion(selectedRegion === region ? null : region)}
             >
-              {t(`events.region${region}` as any)}
+              {t(`events.region${region}`)}
             </button>
           ))}
               </div>
@@ -349,7 +349,7 @@ export function EventsPage() {
                 <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-edit" size={16} /> <span>{t('events.attendanceFeeLabel')}: {getAttendanceFeeLabel(event.attendance_fee_type ?? 'free', event.attendance_fee_amount, locale)}</span></p>
                 <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> <span>{new Date(event.start_time).toLocaleString()}</span></p>
                 {event.location_region ? (
-                  <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}` as any)}{event.location_detail ? <> — <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_detail)}`} target="_blank" rel="noopener noreferrer">{event.location_detail}</a></> : ''}</span></p>
+                  <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}`)}{event.location_detail ? <> — <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_detail)}`} target="_blank" rel="noopener noreferrer">{event.location_detail}</a></> : ''}</span></p>
                 ) : null}
                 </article>
               </li>

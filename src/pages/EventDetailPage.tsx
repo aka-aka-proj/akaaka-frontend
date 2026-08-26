@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
@@ -535,7 +536,7 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      const errorMessage = (error as any).context?.message || error.message
+      const errorMessage = error.message
       showError(errorMessage, error)
       return
     }
@@ -956,7 +957,7 @@ export function EventDetailPage() {
             {eventItem.location_region ? (
               <div className="event-summary-item">
                 <Icon href="/form-icons.svg" name="form-location" size={18} />
-                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
+                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}`)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
               </div>
             ) : null}
             {eventItem.location_detail ? (
@@ -1219,7 +1220,7 @@ export function EventDetailPage() {
                   })
                   setSubmitting(false)
                   if (error) {
-                    const response = (error as any).context as Response | undefined
+                    const response = error instanceof FunctionsHttpError ? error.context : undefined
                     let responseBody: { error?: string; message?: string } | null = null
                     if (response?.status === 400) {
                       responseBody = await response.clone().json().catch(() => null)
@@ -1227,7 +1228,7 @@ export function EventDetailPage() {
                     if (response?.status === 400 && responseBody?.error === 'form_validation_error') {
                       setFormValidationError(t('eventDetail.formValidationError'))
                     } else {
-                      showError(responseBody?.message || (error as any).context?.message || error.message, error)
+                      showError(responseBody?.message || error.message, error)
                     }
                     return
                   }

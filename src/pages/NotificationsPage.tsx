@@ -179,7 +179,7 @@ export function NotificationsPage() {
       body: { event_id: notification.event_id },
     })
     if (error) {
-      setMessage((error as any).context?.message || error.message)
+      setMessage(error.message)
       setProcessingInvitationId(null)
       return
     }
