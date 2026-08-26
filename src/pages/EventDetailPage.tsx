@@ -1016,24 +1016,40 @@ export function EventDetailPage() {
           {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? (
             <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
               {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
-              <details className="calendar-menu">
-                <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
-                <div className="calendar-menu-items">
-                  <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
-                    {t('events.downloadIcs')}
-                  </button>
-                  <a href={getGoogleCalendarUrl(eventItem)} target="_blank" rel="noopener noreferrer" className="calendar-btn">
-                    {t('events.googleCalendar')}
-                  </a>
-                </div>
-              </details>
-              {!(isHost && eventItem.visibility_settings?.type === 'private') ? (
-                <ShareButton
-                  title={eventItem.title}
-                  text={eventItem.description ?? ''}
-                  url={sharedEventUrl}
-                />
-              ) : null}
+               <details className="calendar-menu">
+                 <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
+                 <div className="calendar-menu-items">
+                   <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
+                     {t('events.downloadIcs')}
+                   </button>
+                   <a href={getGoogleCalendarUrl(eventItem)} target="_blank" rel="noopener noreferrer" className="calendar-btn">
+                     {t('events.googleCalendar')}
+                   </a>
+                 </div>
+               </details>
+               <button
+                 type="button"
+                 className="secondary-action"
+                 onClick={async () => {
+                   try {
+                     await navigator.clipboard.writeText(window.location.href)
+                     alert(t('eventDetail.urlCopied'))
+                   } catch (err) {
+                     console.error('Failed to copy URL:', err)
+                     alert(t('events.shareFailed'))
+                   }
+                 }}
+                 style={{ minWidth: 'auto', padding: '0.4rem 0.75rem' }}
+               >
+                 {t('eventDetail.copyUrlLabel')}
+               </button>
+               {!(isHost && eventItem.visibility_settings?.type === 'private') ? (
+                 <ShareButton
+                   title={eventItem.title}
+                   text={eventItem.description ?? ''}
+                   url={sharedEventUrl}
+                 />
+               ) : null}
               {isHost ? (
                 <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
                   {t('shareModal.broadcastToX')}

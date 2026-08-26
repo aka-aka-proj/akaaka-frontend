@@ -667,6 +667,8 @@ const zhTW = {
     invitations: '待回覆邀請',
     unnamedMember: '未命名會員',
     noInvitations: '尚無待回覆的邀請。',
+    copyUrlLabel: '複製網址',
+    urlCopied: '已複製網址',
     invitedBy: '{name} 邀請了你',
     invitationAccepted: '你已加入此活動。',
     invitationDeclined: '已拒絕邀請。',
