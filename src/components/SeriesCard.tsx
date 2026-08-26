@@ -2,20 +2,17 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useT } from '../hooks/useT'
-import { useEventSeries, type EventSeriesMember } from '../hooks/useEventSeries'
+import type { EventSeriesMember, EventSeriesWithMembers } from '../hooks/useEventSeries'
 import type { EventItem } from '../types'
 
-const EMPTY_MEMBERS: EventSeriesMember[] = []
-
 interface SeriesCardProps {
-  seriesId: string
+  series: EventSeriesWithMembers
   memberEvents: EventItem[]
 }
 
-export function SeriesCard({ seriesId, memberEvents }: SeriesCardProps) {
+export function SeriesCard({ series, memberEvents }: SeriesCardProps) {
   const { t } = useT()
-  const series = useEventSeries(seriesId)
-  const members = series?.members ?? EMPTY_MEMBERS
+  const members: EventSeriesMember[] = series.members
 
   const sortedMemberEvents = useMemo(() => {
     return [...memberEvents].sort((a, b) => {
@@ -25,7 +22,7 @@ export function SeriesCard({ seriesId, memberEvents }: SeriesCardProps) {
     })
   }, [memberEvents, members])
 
-  if (!series || sortedMemberEvents.length === 0) return null
+  if (sortedMemberEvents.length === 0) return null
 
   const previewEvents = sortedMemberEvents.slice(0, 3)
   const remainingCount = sortedMemberEvents.length - 3
