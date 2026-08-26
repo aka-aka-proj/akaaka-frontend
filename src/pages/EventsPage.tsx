@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
+import { SeriesCard } from '../components/SeriesCard'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -32,6 +33,7 @@ export function EventsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
+  const [seriesGroups, setSeriesGroups] = useState<Array<{ seriesId: string; memberEvents: EventItem[] }>>([])
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -74,6 +76,45 @@ export function EventsPage() {
 
     void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
+
+  useEffect(() => {
+    let cancelled = false
+    if (events.length === 0) {
+      setSeriesGroups([])
+      return
+    }
+
+    const loadSeriesGroups = async () => {
+      try {
+        const { data } = await supabase
+          .from('event_series_membership')
+          .select('series_id, event_id')
+          .in('event_id', events.map((event) => event.id))
+
+        if (cancelled) return
+        const grouped = new Map<string, Set<string>>()
+        for (const membership of (data as { series_id: string; event_id: string }[] | null) ?? []) {
+          const eventIds = grouped.get(membership.series_id) ?? new Set<string>()
+          eventIds.add(membership.event_id)
+          grouped.set(membership.series_id, eventIds)
+        }
+
+        setSeriesGroups(
+          Array.from(grouped, ([seriesId, eventIds]) => ({
+            seriesId,
+            memberEvents: events.filter((event) => eventIds.has(event.id)),
+          })),
+        )
+      } catch {
+        if (!cancelled) setSeriesGroups([])
+      }
+    }
+
+    void loadSeriesGroups()
+    return () => {
+      cancelled = true
+    }
+  }, [events])
 
   const loadMoreEvents = async () => {
     if (eventsLoading || !hasMoreEvents) return
@@ -317,6 +358,14 @@ export function EventsPage() {
         ) : filtered.length === 0 ? (
           <p className="empty-state">{t('events.noResults')}</p>
         ) : (
+          <>
+          {seriesGroups.length > 0 ? (
+            <div className="series-card-grid" aria-label={t('eventSeries.listLabel')}>
+              {seriesGroups.map((group) => (
+                <SeriesCard key={group.seriesId} seriesId={group.seriesId} memberEvents={group.memberEvents} />
+              ))}
+            </div>
+          ) : null}
           <ul className="event-grid">
             {filtered.map((event) => {
               const eventTypes = parseEventTypes(event.event_type)
@@ -356,6 +405,7 @@ export function EventsPage() {
               )
             })}
           </ul>
+          </>
         )}
         {hasMoreEvents ? (
           <button type="button" onClick={() => void loadMoreEvents()} disabled={eventsLoading}>

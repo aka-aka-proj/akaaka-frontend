@@ -8,6 +8,7 @@ const zhTW = {
     remove: '移除',
     language: '語言',
     back: '返回上一頁',
+    more: '更多',
   },
   errorPopup: {
     title: '系統發生錯誤',
@@ -152,6 +153,15 @@ const zhTW = {
     noBookmarks: '你還沒有收藏任何活動。',
     bookmarkError: '收藏狀態更新失敗，請再試一次。',
     loadMore: '載入更多活動',
+  },
+  eventSeries: {
+    listLabel: '系列課程',
+    navigationLabel: '系列課程',
+    requiredBadge: '必須完整參加',
+    sessionNumber: '第 {number} 場',
+    viewDetails: '查看系列活動',
+    prevEvent: '上一場',
+    nextEvent: '下一場',
   },
   notifications: {
     title: '通知',

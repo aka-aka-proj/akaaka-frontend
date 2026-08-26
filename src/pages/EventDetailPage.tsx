@@ -134,7 +134,7 @@ export function EventDetailPage() {
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
   const [hostConsoleView, setHostConsoleView] = useState<'participants' | 'management'>('participants')
 
-  const { loading: loadingSeries } = useIsEventInSeries(id)
+  const { loading: loadingSeries, seriesId } = useIsEventInSeries(id)
   const [seriesMembersEvents, setSeriesMembersEvents] = useState<EventItem[]>([])
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
@@ -523,29 +523,35 @@ export function EventDetailPage() {
       setAttendees([])
     }
 
-    // Load series member events if current event belongs to a series
-    const eventDataParsed = eventData as EventItem | null
-    if (eventDataParsed?.series_id) {
-      const seriesMembershipQuery = await supabase
+  }, [id, user, t, showError])
+
+  useEffect(() => {
+    let cancelled = false
+    setSeriesMembersEvents([])
+    if (!seriesId) return
+
+    const loadSeriesMembers = async () => {
+      const { data: memberships } = await supabase
         .from('event_series_membership')
-        .select('event_id, position')
-        .eq('series_id', eventDataParsed.series_id)
-        .order('position', { ascending: true })
+        .select('event_id')
+        .eq('series_id', seriesId)
 
-      const memberships = (seriesMembershipQuery.data as { event_id: string; position: number }[] | null) ?? []
-      if (memberships.length > 0) {
-        const memberIds = memberships.map((m) => m.event_id)
-        const { data: memberEventsData } = await supabase
-          .from('events')
-          .select('*')
-          .in('id', memberIds)
-          .eq('lifecycle_status', 'published')
+      const memberIds = ((memberships as { event_id: string }[] | null) ?? []).map((member) => member.event_id)
+      if (memberIds.length === 0 || cancelled) return
 
-        setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
-      }
+      const { data: memberEventsData } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', memberIds)
+
+      if (!cancelled) setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
     }
 
-  }, [id, user, t, showError])
+    void loadSeriesMembers()
+    return () => {
+      cancelled = true
+    }
+  }, [seriesId])
 
   useEffect(() => {
     void load()
@@ -1130,9 +1136,9 @@ export function EventDetailPage() {
         />
       ) : null}
 
-      {eventItem && eventItem.series_id ? (
+      {eventItem && seriesId ? (
         <SeriesNavigation
-          seriesId={eventItem.series_id}
+          seriesId={seriesId}
           currentEventId={id}
           memberEvents={seriesMembersEvents}
           loading={loadingSeries}

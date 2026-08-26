@@ -2,8 +2,10 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useT } from '../hooks/useT'
-import { useSeriesMembersEvents, useCurrentSeriesEventPosition } from '../hooks/useEventSeries'
+import { useEventSeries, type EventSeriesMember } from '../hooks/useEventSeries'
 import type { EventItem } from '../types'
+
+const EMPTY_MEMBERS: EventSeriesMember[] = []
 
 interface SeriesNavigationProps {
   seriesId: string | null
@@ -20,8 +22,8 @@ export function SeriesNavigation({
 }: SeriesNavigationProps) {
   const { t } = useT()
   const navigate = useNavigate()
-  const members = useSeriesMembersEvents(seriesId)
-  const currentIndex = useCurrentSeriesEventPosition(seriesId, currentEventId)
+  const series = useEventSeries(seriesId)
+  const members = series?.members ?? EMPTY_MEMBERS
 
   const sortedMemberEvents = useMemo(() => {
     return [...memberEvents].sort((a, b) => {
@@ -31,12 +33,18 @@ export function SeriesNavigation({
     })
   }, [memberEvents, members])
 
-  if (loading) return null
-  if (!seriesId || members.length === 0) return null
+  const visibleEventIds = useMemo(() => new Set(sortedMemberEvents.map((event) => event.id)), [sortedMemberEvents])
+  const visibleMembers = useMemo(
+    () => members.filter((member) => visibleEventIds.has(member.event_id)),
+    [members, visibleEventIds],
+  )
+  const currentIndex = visibleMembers.findIndex((member) => member.event_id === currentEventId)
+
+  if (loading || !series || visibleMembers.length === 0) return null
   if (currentIndex === -1) return null
 
   const hasPrev = currentIndex > 0
-  const hasNext = currentIndex < members.length - 1
+  const hasNext = currentIndex < visibleMembers.length - 1
 
   return (
     <section className="card event-detail-series-nav" aria-label={t('eventSeries.navigationLabel')}>
@@ -68,13 +76,13 @@ export function SeriesNavigation({
         })}
       </div>
 
-      {members.length > 1 && (
+      {visibleMembers.length > 1 && (
         <div className="series-nav-arrows">
           {hasPrev && (
             <button
               type="button"
               className="nav-arrow-btn nav-arrow-prev"
-              onClick={() => navigate(`/events/${sortedMemberEvents[currentIndex - 1].id}`)}
+              onClick={() => navigate(`/events/${visibleMembers[currentIndex - 1].event_id}`)}
             >
               <Icon href="/action-icons.svg" name="action-chevron-left" size={14} />
               {t('eventSeries.prevEvent')}
@@ -84,7 +92,7 @@ export function SeriesNavigation({
             <button
               type="button"
               className="nav-arrow-btn nav-arrow-next"
-              onClick={() => navigate(`/events/${sortedMemberEvents[currentIndex + 1].id}`)}
+              onClick={() => navigate(`/events/${visibleMembers[currentIndex + 1].event_id}`)}
             >
               {t('eventSeries.nextEvent')}
               <Icon href="/action-icons.svg" name="action-chevron-right" size={14} />

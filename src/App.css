@@ -2632,6 +2632,94 @@ dd {
   margin-top: 0.1rem;
 }
 
+.series-card-grid {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.series-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.series-card-header,
+.series-card-actions,
+.series-nav-header,
+.series-nav-arrows {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.series-card-title,
+.series-card-description,
+.series-events-preview {
+  margin: 0;
+}
+
+.series-events-preview,
+.series-event-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.series-event-chip {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.event-time,
+.series-event-time {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.event-detail-series-nav {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.series-event-item {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.series-event-item:hover,
+.series-event-item.active {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border-color: var(--color-primary);
+}
+
+.series-event-index {
+  color: var(--color-primary);
+  font-weight: 700;
+  min-width: 1.5rem;
+}
+
+.series-event-info {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.series-nav-arrows {
+  flex-wrap: wrap;
+}
+
 /* ── Quick Facts Sidebar Card ── */
 
 .event-quickfacts-card {

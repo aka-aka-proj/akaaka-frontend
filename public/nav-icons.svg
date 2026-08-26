@@ -66,4 +66,8 @@
     <rect x="8.333" y="5" width="3.333" height="11.667" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <rect x="14.167" y="7.5" width="3.333" height="9.167" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
   </symbol>
+  <symbol id="nav-schedule" viewBox="0 0 20 20">
+    <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M6 1.8v3M14 1.8v3M3 7h14M6.5 10h2M11.5 10h2M6.5 13h2M11.5 13h2" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
+  </symbol>
 </svg>
