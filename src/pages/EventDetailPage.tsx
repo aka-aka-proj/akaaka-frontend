@@ -134,7 +134,7 @@ export function EventDetailPage() {
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
   const [hostConsoleView, setHostConsoleView] = useState<'participants' | 'management'>('participants')
 
-  const { loading: loadingSeries, seriesId } = useIsEventInSeries(id)
+  const { loading: loadingSeries } = useIsEventInSeries(id)
   const [seriesMembersEvents, setSeriesMembersEvents] = useState<EventItem[]>([])
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
