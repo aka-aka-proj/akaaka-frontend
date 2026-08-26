@@ -955,9 +955,14 @@ export function EventDetailPage() {
           <h3>{t('eventDetail.quickFactsTitle')}</h3>
           <div className="event-summary-grid">
             {eventItem.location_detail ? (
+              <div className="event-summary-item event-summary-item--full">
+                <Icon href="/form-icons.svg" name="form-location" size={18} />
+                <span><strong>{t('eventDetail.locationLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{eventItem.location_detail}</a></span>
+              </div>
+            ) : eventItem.location_region ? (
               <div className="event-summary-item">
                 <Icon href="/form-icons.svg" name="form-location" size={18} />
-                <span><strong>{t('eventDetail.locationLabel')}</strong>{eventItem.location_detail}</span>
+                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}`)}</span>
               </div>
             ) : null}
             <div className="event-summary-item">
@@ -1582,6 +1587,7 @@ export function EventDetailPage() {
           className="discussion-composer"
           aria-label={t('eventDetail.discussion')}
           allowLinks={true}
+          placeholder={t('eventDetail.postComment')}
         />
         <div className="discussion-form-actions">
           <button
