@@ -72,7 +72,7 @@ describe('EventAnnouncements', () => {
     }))
   })
 
-  it('publishes an existing announcement after saving with the publish-now mode while editing', async () => {
+  it('applies edit + publish-now through the single atomic RPC while editing', async () => {
     const user = userEvent.setup()
     from.mockReturnValue(draftQueryResult())
     render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
@@ -81,13 +81,47 @@ describe('EventAnnouncements', () => {
     await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
     await user.click(screen.getByRole('button', { name: '儲存變更' }))
 
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('update_and_publish_announcement', {
+      p_announcement_id: 'announcement-1',
+      p_title: '場地變更',
+      p_body_markdown: '請從後門入場。',
+    }))
+    expect(rpc).not.toHaveBeenCalledWith('update_event_announcement', expect.anything())
+    expect(rpc).not.toHaveBeenCalledWith('publish_event_announcement', expect.anything())
+  })
+
+  it('keeps the scheduled row untouched and surfaces the error when the atomic RPC fails', async () => {
+    const user = userEvent.setup()
+    rpc.mockImplementation((name: string) =>
+      name === 'update_and_publish_announcement'
+        ? Promise.resolve({ data: null, error: { message: 'rate_limited' } })
+        : Promise.resolve({ data: publishedAnnouncement, error: null }),
+    )
+    from.mockReturnValue(draftQueryResult())
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+
+    await user.click(await screen.findByRole('button', { name: '編輯' }))
+    await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
+    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+
+    expect(await screen.findByText('rate_limited')).toBeTruthy()
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(rpc).toHaveBeenCalledWith('update_and_publish_announcement', expect.anything())
+  })
+
+  it('saves an edited announcement back to draft through update_event_announcement', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(draftQueryResult())
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+
+    await user.click(await screen.findByRole('button', { name: '編輯' }))
+    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('update_event_announcement', expect.objectContaining({
       p_announcement_id: 'announcement-1',
       p_status: 'draft',
     })))
-    await waitFor(() => expect(rpc).toHaveBeenCalledWith('publish_event_announcement', {
-      p_announcement_id: 'announcement-1',
-    }))
+    expect(rpc).not.toHaveBeenCalledWith('update_and_publish_announcement', expect.anything())
   })
 
   it('clears the edit state when starting a new announcement during editing', async () => {
