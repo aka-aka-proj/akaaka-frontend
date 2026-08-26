@@ -11,6 +11,7 @@ import { canSeeEvent } from '../lib/event-visibility'
 import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEffectiveCategory, getEventTypeI18nKey } from '../lib/event-types'
 import type { EventItem, EventCategory, TaiwanRegion } from '../types'
+import type { EventSeriesMember, EventSeriesWithMembers } from '../hooks/useEventSeries'
 import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
@@ -33,7 +34,7 @@ export function EventsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
-  const [seriesGroups, setSeriesGroups] = useState<Array<{ seriesId: string; memberEvents: EventItem[] }>>([])
+  const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -79,31 +80,48 @@ export function EventsPage() {
 
   useEffect(() => {
     let cancelled = false
+    setSeriesGroups([])
     if (events.length === 0) {
-      setSeriesGroups([])
       return
     }
 
     const loadSeriesGroups = async () => {
       try {
-        const { data } = await supabase
+        const { data: eventMemberships } = await supabase
           .from('event_series_membership')
           .select('series_id, event_id')
           .in('event_id', events.map((event) => event.id))
 
         if (cancelled) return
-        const grouped = new Map<string, Set<string>>()
-        for (const membership of (data as { series_id: string; event_id: string }[] | null) ?? []) {
-          const eventIds = grouped.get(membership.series_id) ?? new Set<string>()
+        const selectedMemberships = (eventMemberships as { series_id: string; event_id: string }[] | null) ?? []
+        const seriesIds = [...new Set(selectedMemberships.map((membership) => membership.series_id))]
+        if (seriesIds.length === 0) return
+
+        const [{ data: seriesData }, { data: allMemberships }] = await Promise.all([
+          supabase.from('event_series').select('*').in('id', seriesIds),
+          supabase.from('event_series_membership').select('series_id, event_id, position').in('series_id', seriesIds),
+        ])
+        if (cancelled) return
+
+        const membersBySeries = new Map<string, EventSeriesMember[]>()
+        for (const membership of (allMemberships as (EventSeriesMember & { series_id: string })[] | null) ?? []) {
+          const members = membersBySeries.get(membership.series_id) ?? []
+          members.push({ event_id: membership.event_id, position: membership.position })
+          membersBySeries.set(membership.series_id, members)
+        }
+
+        const eventIdsBySeries = new Map<string, Set<string>>()
+        for (const membership of selectedMemberships) {
+          const eventIds = eventIdsBySeries.get(membership.series_id) ?? new Set<string>()
           eventIds.add(membership.event_id)
-          grouped.set(membership.series_id, eventIds)
+          eventIdsBySeries.set(membership.series_id, eventIds)
         }
 
         setSeriesGroups(
-          Array.from(grouped, ([seriesId, eventIds]) => ({
-            seriesId,
-            memberEvents: events.filter((event) => eventIds.has(event.id)),
-          })),
+          ((seriesData as EventSeriesWithMembers[] | null) ?? []).map((series) => ({
+            series: { ...series, members: membersBySeries.get(series.id) ?? [] },
+            memberEvents: events.filter((event) => eventIdsBySeries.get(series.id)?.has(event.id)),
+          })).filter((group) => group.memberEvents.length > 0),
         )
       } catch {
         if (!cancelled) setSeriesGroups([])
@@ -194,6 +212,11 @@ export function EventsPage() {
       return true
     })
   }, [events, selectedType, selectedRegion, timeFilter, myEventsOnly, user, categoryFilter])
+
+  const filteredEventIds = new Set(filtered.map((event) => event.id))
+  const visibleSeriesGroups = seriesGroups
+    .map((group) => ({ ...group, memberEvents: group.memberEvents.filter((event) => filteredEventIds.has(event.id)) }))
+    .filter((group) => group.memberEvents.length > 0)
 
   return (
     <Layout>
@@ -359,10 +382,10 @@ export function EventsPage() {
           <p className="empty-state">{t('events.noResults')}</p>
         ) : (
           <>
-          {seriesGroups.length > 0 ? (
+          {visibleSeriesGroups.length > 0 ? (
             <div className="series-card-grid" aria-label={t('eventSeries.listLabel')}>
-              {seriesGroups.map((group) => (
-                <SeriesCard key={group.seriesId} seriesId={group.seriesId} memberEvents={group.memberEvents} />
+              {visibleSeriesGroups.map((group) => (
+                <SeriesCard key={group.series.id} series={group.series} memberEvents={group.memberEvents} />
               ))}
             </div>
           ) : null}
