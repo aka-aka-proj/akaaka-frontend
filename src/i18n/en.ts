@@ -673,6 +673,8 @@ const en = {
     acceptInvite: 'Accept',
     declineInvite: 'Decline',
     declineInviteConfirm: 'Are you sure you want to decline this invitation?',
+    copyUrlLabel: 'Copy URL',
+    urlCopied: 'URL copied',
   },
   eventAnnouncements: {
     eyebrow: 'Event information',
