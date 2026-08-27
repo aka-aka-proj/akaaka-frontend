@@ -9,6 +9,7 @@ interface EventAnnouncementsProps {
   eventId: string
   isHost: boolean
   nativeRegistration: boolean
+  isAuthenticated: boolean
 }
 
 type PublishMode = 'draft' | 'scheduled' | 'now'
@@ -28,7 +29,7 @@ function isoToLocalDateTime(value: string | null): string {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
 }
 
-export function EventAnnouncements({ eventId, isHost, nativeRegistration }: EventAnnouncementsProps) {
+export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuthenticated }: EventAnnouncementsProps) {
   const { t } = useT()
   const [announcements, setAnnouncements] = useState<EventAnnouncement[]>([])
   const [title, setTitle] = useState('')
@@ -57,8 +58,8 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
   }, [eventId])
 
   useEffect(() => {
-    if (nativeRegistration) void load()
-  }, [load, nativeRegistration])
+    if (nativeRegistration && isAuthenticated) void load()
+  }, [load, nativeRegistration, isAuthenticated])
 
   const resetForm = () => {
     setTitle('')
@@ -160,7 +161,10 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     await load()
   }
 
-  if (!nativeRegistration) return null
+  // RLS limits `event_announcements` reads to authenticated users, so a logged-out
+  // visitor can never read them; hide the block instead of showing a misleading
+  // "load failed" error for a permission-based condition.
+  if (!nativeRegistration || !isAuthenticated) return null
 
   return (
     <section className="card event-announcements-section" aria-labelledby="event-announcements-title">
@@ -177,7 +181,14 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
       </div>
       {isHost ? <p className="form-hint">{t('eventAnnouncements.limits')}</p> : null}
       {message ? <p className="error-message" role="alert">{message}</p> : null}
-      {loadError ? <p className="error-message" role="alert">{t('eventAnnouncements.loadError')}</p> : null}
+      {loadError ? (
+        <p className="error-message" role="alert">
+          {t('eventAnnouncements.loadError')}{' '}
+          <button type="button" className="secondary-action" onClick={() => void load()}>
+            {t('eventAnnouncements.retry')}
+          </button>
+        </p>
+      ) : null}
       {isHost && openForm ? (
         <div className="event-announcement-editor card">
           <label className="form-field">

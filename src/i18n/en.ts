@@ -751,6 +751,7 @@ availableSlots: 'Available',
     markdownError: 'Announcements cannot contain HTML, images, links, or URLs.',
     scheduleRequired: 'Choose a valid scheduled publish time.',
     loadError: 'Failed to load announcements. Please try again later.',
+    retry: 'Retry',
     status: { draft: 'Draft', scheduled: 'Scheduled', published: 'Published' },
   },
   profile: {

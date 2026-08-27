@@ -42,7 +42,7 @@ describe('EventAnnouncements', () => {
   })
 
   it('shows published history to an attendee without host controls', async () => {
-    render(<EventAnnouncements eventId="event-1" isHost={false} nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost={false} nativeRegistration isAuthenticated />)
 
     expect(await screen.findByRole('heading', { name: '場地變更' })).toBeTruthy()
     expect(screen.getByText('請從後門入場。')).toBeTruthy()
@@ -63,7 +63,7 @@ describe('EventAnnouncements', () => {
         }),
       }),
     })
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '立即發布' }))
 
@@ -75,7 +75,7 @@ describe('EventAnnouncements', () => {
   it('applies edit + publish-now through the single atomic RPC while editing', async () => {
     const user = userEvent.setup()
     from.mockReturnValue(draftQueryResult())
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
     await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
@@ -98,7 +98,7 @@ describe('EventAnnouncements', () => {
         : Promise.resolve({ data: publishedAnnouncement, error: null }),
     )
     from.mockReturnValue(draftQueryResult())
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
     await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
@@ -112,7 +112,7 @@ describe('EventAnnouncements', () => {
   it('saves an edited announcement back to draft through update_event_announcement', async () => {
     const user = userEvent.setup()
     from.mockReturnValue(draftQueryResult())
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
     await user.click(screen.getByRole('button', { name: '儲存變更' }))
@@ -127,7 +127,7 @@ describe('EventAnnouncements', () => {
   it('clears the edit state when starting a new announcement during editing', async () => {
     const user = userEvent.setup()
     from.mockReturnValue(draftQueryResult())
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
     const titleInput = screen.getByLabelText(/公告標題/) as HTMLInputElement
@@ -149,11 +149,46 @@ describe('EventAnnouncements', () => {
 
   it('shows a load error instead of an empty history when the query fails', async () => {
     from.mockReturnValue(failedQueryResult())
-    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration />)
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     expect(await screen.findByText('公告載入失敗，請稍後再試。')).toBeTruthy()
     expect(screen.queryByText('目前沒有公告。')).toBeNull()
     expect(screen.queryByRole('button', { name: '新增公告' })).toBeNull()
+  })
+
+  it('hides the whole section for a logged-out visitor and does not attempt to load', async () => {
+    const { container } = render(
+      <EventAnnouncements eventId="event-1" isHost={false} nativeRegistration isAuthenticated={false} />,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.queryByRole('heading', { name: '活動公告' })).toBeNull()
+    expect(screen.queryByText('公告載入失敗，請稍後再試。')).toBeNull()
+    expect(container.firstChild).toBeNull()
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('offers a retry action on load failure and reloads successfully', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(failedQueryResult())
+    render(<EventAnnouncements eventId="event-1" isHost={false} nativeRegistration isAuthenticated />)
+
+    expect(await screen.findByText('公告載入失敗，請稍後再試。')).toBeTruthy()
+    const retry = screen.getByRole('button', { name: '重試' })
+
+    from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [publishedAnnouncement], error: null }),
+          }),
+        }),
+      }),
+    })
+    await user.click(retry)
+
+    expect(await screen.findByRole('heading', { name: '場地變更' })).toBeTruthy()
+    expect(screen.queryByText('公告載入失敗，請稍後再試。')).toBeNull()
   })
 })
 
