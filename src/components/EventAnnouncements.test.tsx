@@ -190,6 +190,26 @@ describe('EventAnnouncements', () => {
     expect(await screen.findByRole('heading', { name: '場地變更' })).toBeTruthy()
     expect(screen.queryByText('公告載入失敗，請稍後再試。')).toBeNull()
   })
+
+  it('disables the retry button while a reload is in flight', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(failedQueryResult())
+    render(<EventAnnouncements eventId="event-1" isHost={false} nativeRegistration isAuthenticated />)
+    expect(await screen.findByText('公告載入失敗，請稍後再試。')).toBeTruthy()
+
+    const pending = new Promise<never>(() => {})
+    from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue(pending),
+          }),
+        }),
+      }),
+    })
+    await user.click(screen.getByRole('button', { name: '重試' }))
+    expect((screen.getByRole('button', { name: '載入中...' }) as HTMLButtonElement).disabled).toBe(true)
+  })
 })
 
 function draftQueryResult() {
