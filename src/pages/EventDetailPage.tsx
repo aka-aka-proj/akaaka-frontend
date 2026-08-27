@@ -1166,6 +1166,7 @@ export function EventDetailPage() {
           eventId={eventItem.id}
           isHost={Boolean(isHost)}
           nativeRegistration={!eventItem.external_registration_url}
+          isAuthenticated={Boolean(user)}
         />
       ) : null}
 

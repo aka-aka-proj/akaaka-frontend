@@ -749,6 +749,7 @@ const zhTW = {
     markdownError: '公告內容不可包含 HTML、圖片、連結或網址。',
     scheduleRequired: '請設定有效的預約發布時間。',
     loadError: '公告載入失敗，請稍後再試。',
+    retry: '重試',
     status: { draft: '草稿', scheduled: '已排程', published: '已發布' },
   },
   profile: {
