@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FunctionsHttpError } from '@supabase/supabase-js'
@@ -202,6 +202,11 @@ export function EventDetailPage() {
     : false
   const [shareLinkPending, setShareLinkPending] = useState(false)
   const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false)
+
+  const registrationSectionRef = useRef<HTMLElement | null>(null)
+  const scrollToRegistration = useCallback(() => {
+    registrationSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   const isPrivateShareable = Boolean(
     eventItem
@@ -590,7 +595,7 @@ export function EventDetailPage() {
     void load()
   }, [load])
 
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!id || !user) {
       return
     }
@@ -609,7 +614,65 @@ export function EventDetailPage() {
     }
 
     await load()
-  }
+  }, [id, user, showError, load])
+
+  const quickFactsCta = useMemo(() => {
+    if (!eventItem
+      || eventItem.lifecycle_status === 'draft'
+      || eventItem.publication_status === 'closed'
+      || isHost) {
+      return null
+    }
+    const ctaClass = 'primary-cta quickfacts-cta'
+    if (myRegistration) {
+      return (
+        <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+          {t('eventDetail.quickFactsRegisteredCta')}
+        </button>
+      )
+    }
+    if (eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url)) {
+      return (
+        <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+          {t('eventDetail.externalRegistrationUnavailable')}
+        </button>
+      )
+    }
+    if (registrationEntryBlocked) {
+      return (
+        <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+          {t('eventDetail.registrationClosedCta')}
+        </button>
+      )
+    }
+    const registerLabel = isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')
+    if (!user) {
+      return (
+        <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className={ctaClass}>
+          {t('eventDetail.register')}
+        </Link>
+      )
+    }
+    if (eventItem.external_registration_url) {
+      return (
+        <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className={ctaClass}>
+          {t('eventDetail.externalRegistrationCta')}
+        </a>
+      )
+    }
+    if (seriesBlocksSingleRegistration || eventItem.registration_form_config) {
+      return (
+        <button type="button" className={ctaClass} onClick={scrollToRegistration}>
+          {registerLabel}
+        </button>
+      )
+    }
+    return (
+      <button type="button" className={ctaClass} disabled={submitting} onClick={() => void handleRegister()}>
+        {registerLabel}
+      </button>
+    )
+  }, [eventItem, myRegistration, isHost, user, registrationEntryBlocked, seriesBlocksSingleRegistration, isAtCapacity, submitting, scrollToRegistration, handleRegister, t])
 
   const handleCancelRegistration = async () => {
     if (!id || !user) {
@@ -1019,6 +1082,11 @@ export function EventDetailPage() {
       {eventItem ? (
         <aside className="card event-quickfacts-card" aria-label={t('eventDetail.summaryLabel')}>
           <h3>{t('eventDetail.quickFactsTitle')}</h3>
+          {quickFactsCta ? (
+            <div className="event-quickfacts-cta">
+              {quickFactsCta}
+            </div>
+          ) : null}
           <div className="event-summary-grid">
             {eventItem.location_detail ? (
               <div className="event-summary-item event-summary-item--full">
@@ -1180,7 +1248,7 @@ export function EventDetailPage() {
 
       {/* Registration Section */}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationNotice')}</p>
           {registrationEntryBlocked ? (
@@ -1195,13 +1263,13 @@ export function EventDetailPage() {
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section" role="status">
+        <section ref={registrationSectionRef} className="card event-registration-section" role="status">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationUnavailable')}</p>
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {registrationEntryBlocked ? (
             <>
@@ -1221,7 +1289,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {!myRegistration && eventSeriesId && eventSeries && (
             <SeriesRegistrationFlow
@@ -1697,6 +1765,13 @@ export function EventDetailPage() {
       </section>
       ) : null}
       </div>
+
+      {eventItem && !isHost && quickFactsCta ? (
+        <div className="event-mobile-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+          {quickFactsCta}
+          {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+        </div>
+      ) : null}
 
       {id && user ? (
         <section className="event-report-section" aria-label={t('report.title')}>

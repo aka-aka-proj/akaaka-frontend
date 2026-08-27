@@ -682,6 +682,7 @@ const zhTW = {
     statusBadgeRegClosed: '報名已截止',
     capacityProgressLabel: '名額使用進度',
     quickFactsTitle: '活動速覽',
+    quickFactsRegisteredCta: '已報名',
     registrationClosed: '報名已截止',
     registrationClosedCta: '報名已截止',
     waitlistRegister: '候補報名',
