@@ -625,9 +625,18 @@ export function EventDetailPage() {
     }
     const ctaClass = 'primary-cta quickfacts-cta'
     if (myRegistration) {
+      const statusKeyMap: Record<string, string> = {
+        approved: 'eventDetail.quickFactsRegisteredCta',
+        cancellation_rejected: 'eventDetail.regCancellationRejected',
+        pending: 'eventDetail.regPending',
+        waitlisted: 'eventDetail.regWaitlisted',
+        rejected: 'eventDetail.regRejected',
+        cancellation_pending: 'eventDetail.regCancellationPending',
+      }
+      const statusKey = statusKeyMap[myRegistration.status] ?? 'eventDetail.quickFactsRegisteredCta'
       return (
         <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
-          {t('eventDetail.quickFactsRegisteredCta')}
+          {t(statusKey)}
         </button>
       )
     }
@@ -645,14 +654,6 @@ export function EventDetailPage() {
         </button>
       )
     }
-    const registerLabel = isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')
-    if (!user) {
-      return (
-        <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className={ctaClass}>
-          {t('eventDetail.register')}
-        </Link>
-      )
-    }
     if (eventItem.external_registration_url) {
       return (
         <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className={ctaClass}>
@@ -660,6 +661,14 @@ export function EventDetailPage() {
         </a>
       )
     }
+    if (!user) {
+      return (
+        <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className={ctaClass}>
+          {t('eventDetail.register')}
+        </Link>
+      )
+    }
+    const registerLabel = isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')
     if (seriesBlocksSingleRegistration || eventItem.registration_form_config) {
       return (
         <button type="button" className={ctaClass} onClick={scrollToRegistration}>
