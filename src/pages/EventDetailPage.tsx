@@ -13,7 +13,8 @@ import { MarkdownRenderer } from '../components/MarkdownRenderer'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventAnnouncements } from '../components/EventAnnouncements'
 import { SeriesNavigation } from '../components/SeriesNavigation'
-import { useIsEventInSeries } from '../hooks/useEventSeries'
+import { SeriesRegistrationFlow } from '../components/SeriesRegistrationFlow'
+import { useEventSeries, useIsEventInSeries } from '../hooks/useEventSeries'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -134,10 +135,48 @@ export function EventDetailPage() {
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
   const [hostConsoleView, setHostConsoleView] = useState<'participants' | 'management'>('participants')
 
-  const { loading: loadingSeries, seriesId } = useIsEventInSeries(id)
+  const { loading: loadingSeries, seriesId: eventSeriesId } = useIsEventInSeries(id)
+  const eventSeries = useEventSeries(eventSeriesId)
   const [seriesMembersEvents, setSeriesMembersEvents] = useState<EventItem[]>([])
 
+  useEffect(() => {
+    if (!eventSeriesId) return
+    let cancelled = false
+
+    const loadEventSeriesMembers = async () => {
+      const { data: memberships } = await supabase
+        .from('event_series_membership')
+        .select('event_id, position')
+        .eq('series_id', eventSeriesId)
+        .order('position', { ascending: true })
+
+      const rows = (memberships as { event_id: string; position: number }[] | null) ?? []
+      if (rows.length === 0) {
+        if (!cancelled) setSeriesMembersEvents([])
+        return
+      }
+
+      const { data: memberEvents } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', rows.map((row) => row.event_id))
+
+      if (cancelled) return
+      const byId = new Map(((memberEvents as EventItem[] | null) ?? []).map((event) => [event.id, event]))
+      setSeriesMembersEvents(rows.flatMap((row) => {
+        const event = byId.get(row.event_id)
+        return event ? [event] : []
+      }))
+    }
+
+    void loadEventSeriesMembers()
+    return () => { cancelled = true }
+  }, [eventSeriesId])
+
   const isHost = user && eventItem && user.id === eventItem.creator_id
+  const seriesBlocksSingleRegistration = Boolean(
+    eventSeriesId && (loadingSeries || eventSeries?.is_whole_series_required),
+  )
   const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
   const [, setEditLockClock] = useState(0)
 
@@ -523,35 +562,29 @@ export function EventDetailPage() {
       setAttendees([])
     }
 
-  }, [id, user, t, showError])
-
-  useEffect(() => {
-    let cancelled = false
-    setSeriesMembersEvents([])
-    if (!seriesId) return
-
-    const loadSeriesMembers = async () => {
-      const { data: memberships } = await supabase
+    // Load series member events if current event belongs to a series
+    const eventDataParsed = eventData as EventItem | null
+    if (eventDataParsed?.series_id) {
+      const seriesMembershipQuery = await supabase
         .from('event_series_membership')
-        .select('event_id')
-        .eq('series_id', seriesId)
+        .select('event_id, position')
+        .eq('series_id', eventDataParsed.series_id)
+        .order('position', { ascending: true })
 
-      const memberIds = ((memberships as { event_id: string }[] | null) ?? []).map((member) => member.event_id)
-      if (memberIds.length === 0 || cancelled) return
+      const memberships = (seriesMembershipQuery.data as { event_id: string; position: number }[] | null) ?? []
+      if (memberships.length > 0) {
+        const memberIds = memberships.map((m) => m.event_id)
+        const { data: memberEventsData } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', memberIds)
+          .eq('lifecycle_status', 'published')
 
-      const { data: memberEventsData } = await supabase
-        .from('events')
-        .select('*')
-        .in('id', memberIds)
-
-      if (!cancelled) setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
+        setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
+      }
     }
 
-    void loadSeriesMembers()
-    return () => {
-      cancelled = true
-    }
-  }, [seriesId])
+  }, [id, user, t, showError])
 
   useEffect(() => {
     void load()
@@ -1136,9 +1169,9 @@ export function EventDetailPage() {
         />
       ) : null}
 
-      {eventItem && seriesId ? (
+      {eventItem && (eventSeriesId || eventItem.series_id) ? (
         <SeriesNavigation
-          seriesId={seriesId}
+          seriesId={eventSeriesId ?? eventItem.series_id}
           currentEventId={id}
           memberEvents={seriesMembersEvents}
           loading={loadingSeries}
@@ -1190,7 +1223,17 @@ export function EventDetailPage() {
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
         <section className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
-          {!myRegistration && isAtCapacity ? (
+          {!myRegistration && eventSeriesId && eventSeries && (
+            <SeriesRegistrationFlow
+              seriesId={eventSeriesId}
+              isWholeSeriesRequired={eventSeries.is_whole_series_required}
+              submitting={submitting}
+              setSubmitting={setSubmitting}
+              onRegistrationChanged={() => void load()}
+              showError={showError}
+            />
+          )}
+          {!myRegistration && !seriesBlocksSingleRegistration && isAtCapacity ? (
             <p className="registration-hint">{t('eventDetail.waitlistHint')}</p>
           ) : null}
           {myRegistration ? (
@@ -1215,7 +1258,7 @@ export function EventDetailPage() {
             ) : null}
 
             </div>
-          ) : registrationEntryBlocked ? (
+          ) : seriesBlocksSingleRegistration ? null : registrationEntryBlocked ? (
             <>
               <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
                 {t('eventDetail.registrationClosedCta')}

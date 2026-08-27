@@ -15,7 +15,7 @@ import type { EventSeriesMember, EventSeriesWithMembers } from '../hooks/useEven
 import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
-type CategoryFilter = 'all' | EventCategory
+type CategoryFilter = 'all' | EventCategory | 'series'
 const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
 const EVENT_PAGE_SIZE = 50
 
@@ -34,6 +34,8 @@ export function EventsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
+  const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
+  const [seriesError, setSeriesError] = useState('')
   const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const userId = user?.id
 
@@ -77,6 +79,71 @@ export function EventsPage() {
 
     void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
+
+  useEffect(() => {
+    const loadSeries = async () => {
+      if (categoryFilter !== 'series') return
+      setSeriesError('')
+      const { data: seriesData, error: seriesError } = await supabase
+        .from('event_series')
+        .select('*')
+        .eq('lifecycle_status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (seriesError) {
+        setSeriesError(seriesError.message)
+        setSeriesList([])
+        return
+      }
+
+      if (!seriesData || seriesData.length === 0) {
+        setSeriesList([])
+        return
+      }
+
+      const results: Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }> = []
+      for (const s of seriesData as EventSeriesWithMembers[]) {
+        const { data: members, error: membersError } = await supabase
+          .from('event_series_membership')
+          .select('event_id, position')
+          .eq('series_id', s.id)
+          .order('position', { ascending: true })
+
+        if (membersError) {
+          setSeriesError(membersError.message)
+          setSeriesList([])
+          return
+        }
+
+        const memberList = (members as EventSeriesMember[] | null) ?? []
+        if (memberList.length === 0) continue
+
+        const memberIds = memberList.map((m) => m.event_id)
+        const { data: events, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', memberIds)
+          .eq('lifecycle_status', 'published')
+
+        if (eventsError) {
+          setSeriesError(eventsError.message)
+          setSeriesList([])
+          return
+        }
+
+        if (events && events.length > 0) {
+          results.push({
+            series: { ...s, members: memberList },
+            memberEvents: (events as EventItem[]).filter((e) => canSeeEvent(e, user?.id)),
+          })
+        }
+      }
+      setSeriesList(results)
+    }
+
+    void loadSeries()
+  }, [categoryFilter, user])
 
   useEffect(() => {
     let cancelled = false
@@ -257,6 +324,13 @@ export function EventsPage() {
           >
             {t('events.categoryPractice')}
           </button>
+          <button
+            type="button"
+            className={`category-tab${categoryFilter === 'series' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('series')}
+          >
+            {t('eventSeries.navigationLabel')}
+          </button>
         </div>
 
         <label className="search-field" htmlFor="search-activities">
@@ -363,6 +437,11 @@ export function EventsPage() {
             >
               {t('events.myEvents')}
             </button>
+                {user && (
+                  <Link to="/events/series/new" className="chip chip-neutral" style={{ marginLeft: '0.5rem' }}>
+                    {t('eventSeries.createSeriesTitle')}
+                  </Link>
+                )}
               </div>
             )}
             {activeFilterCount > 0 ? <button type="button" className="clear-filters" onClick={clearFilters}>{t('events.clearFilters')}</button> : null}
@@ -371,7 +450,21 @@ export function EventsPage() {
 
         {message ? <p className="message">{message}</p> : null}
 
-        {eventsLoading && events.length === 0 ? (
+        {categoryFilter === 'series' ? (
+          seriesError ? (
+            <p className="empty-state" role="alert">{seriesError}</p>
+          ) : seriesList.length === 0 ? (
+            <p className="empty-state">{t('eventSeries.noEligibleEvents')}</p>
+          ) : (
+            <ul className="series-grid">
+              {seriesList.map((s) => (
+                <li key={s.series.id}>
+                  <SeriesCard series={s.series} memberEvents={s.memberEvents} />
+                </li>
+              ))}
+            </ul>
+          )
+        ) : eventsLoading && events.length === 0 ? (
           <p className="empty-state" role="status">{t('common.loading')}</p>
         ) : events.length === 0 ? (
           <div className="empty-state">
