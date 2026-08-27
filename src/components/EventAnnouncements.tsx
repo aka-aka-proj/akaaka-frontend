@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MarkdownEditor } from './MarkdownEditor'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { supabase } from '../supabaseClient'
@@ -41,14 +41,23 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [loadError, setLoadError] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const loadSeq = useRef(0)
 
   const load = useCallback(async () => {
+    // Guard against overlapping retries: a stale request failing after a newer
+    // one succeeded must not clobber the good result, so only the latest
+    // invocation updates state.
+    const seq = ++loadSeq.current
+    setRetrying(true)
     const { data, error } = await supabase
       .from('event_announcements')
       .select('id, event_id, title, body_markdown, status, publish_at, published_at, created_at, updated_at')
       .eq('event_id', eventId)
       .order('published_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
+    if (seq !== loadSeq.current) return
+    setRetrying(false)
     if (error) {
       setLoadError(true)
       return
@@ -184,8 +193,8 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
       {loadError ? (
         <p className="error-message" role="alert">
           {t('eventAnnouncements.loadError')}{' '}
-          <button type="button" className="secondary-action" onClick={() => void load()}>
-            {t('eventAnnouncements.retry')}
+          <button type="button" className="secondary-action" disabled={retrying} onClick={() => void load()}>
+            {retrying ? t('common.loading') : t('eventAnnouncements.retry')}
           </button>
         </p>
       ) : null}
