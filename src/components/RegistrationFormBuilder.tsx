@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useT } from '../hooks/useT'
 import type { RegistrationFormField } from '../types'
+import styles from './RegistrationFormBuilder.module.css'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -86,44 +87,44 @@ export function RegistrationFormBuilder({ fields, setFields }: RegistrationFormB
   const fieldTypeLabel = (type: RegistrationFormField['type']) => t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}`)
 
   return (
-    <fieldset className="card form-builder">
-      <div className="form-builder-heading">
+    <fieldset className={`card ${styles.formBuilder}`}>
+      <div className={styles.formBuilderHeading}>
         <div>
           <legend>{t('createEvent.formBuilderLabel')} ({fields.length}/{MAX_FORM_FIELDS})</legend>
           <p>{t('createEvent.formBuilderHint')}</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => setShowPreview((visible) => !visible)}>
+        <button type="button" className={`secondary-button ${styles.secondaryButton}`} onClick={() => setShowPreview((visible) => !visible)}>
           {showPreview ? t('createEvent.formBuilderEdit') : `◉ ${t('createEvent.formBuilderPreview')}`}
         </button>
       </div>
       {!showPreview && fields.map((field, index) => {
         const expanded = expandedFieldId === field.id
         return (
-          <div key={field.id} className={`form-builder-field${draggedFieldId === field.id ? ' is-dragging' : ''}`} draggable onDragStart={() => setDraggedFieldId(field.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropField(field.id)} onDragEnd={() => setDraggedFieldId(null)}>
-            <div className="form-builder-field-header">
-              <button type="button" className="drag-handle" aria-label={t('createEvent.formBuilderDrag')} title={t('createEvent.formBuilderDrag')}>⋮⋮</button>
-              <button type="button" className="form-builder-expand" onClick={() => setExpandedFieldId(expanded ? null : field.id)} aria-expanded={expanded}>
+          <div key={field.id} className={`${styles.formBuilderField}${draggedFieldId === field.id ? ` ${styles.isDragging}` : ''}`} draggable onDragStart={() => setDraggedFieldId(field.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropField(field.id)} onDragEnd={() => setDraggedFieldId(null)}>
+            <div className={styles.formBuilderFieldHeader}>
+              <button type="button" className={styles.dragHandle} aria-label={t('createEvent.formBuilderDrag')} title={t('createEvent.formBuilderDrag')}>⋮⋮</button>
+              <button type="button" className={styles.formBuilderExpand} onClick={() => setExpandedFieldId(expanded ? null : field.id)} aria-expanded={expanded}>
                 <strong>{field.label || t('createEvent.formBuilderUntitled')}</strong>
                 <span>{fieldTypeLabel(field.type)}{field.required ? ` · ${t('createEvent.formBuilderFieldRequired')}` : ''}</span>
               </button>
-              <div className="form-builder-actions">
+              <div className={styles.formBuilderActions}>
                 <button type="button" onClick={() => moveField(field.id, -1)} disabled={index === 0} aria-label={t('createEvent.formBuilderMoveUp')}>↑</button>
                 <button type="button" onClick={() => moveField(field.id, 1)} disabled={index === fields.length - 1} aria-label={t('createEvent.formBuilderMoveDown')}>↓</button>
-                <button type="button" className="danger-icon-button" onClick={() => removeField(field.id)} aria-label={t('createEvent.formBuilderDelete')} title={t('createEvent.formBuilderDelete')}>🗑</button>
+                <button type="button" className={styles.dangerIconButton} onClick={() => removeField(field.id)} aria-label={t('createEvent.formBuilderDelete')} title={t('createEvent.formBuilderDelete')}>🗑</button>
               </div>
             </div>
-            {expanded && <div className="form-builder-field-editor">
+            {expanded && <div className={styles.formBuilderFieldEditor}>
               <label><span>{t('createEvent.formBuilderFieldLabel')}</span><input autoFocus={!field.label} aria-label={t('createEvent.formBuilderFieldLabel')} placeholder={t('createEvent.formBuilderFieldLabelPlaceholder')} value={field.label} onChange={(event) => updateField(field.id, { label: event.target.value })} /></label>
               <label><span>{t('createEvent.formBuilderFieldType')}</span><select aria-label={t('createEvent.formBuilderFieldType')} value={field.type} onChange={(event) => { const type = event.target.value as RegistrationFormField['type']; updateField(field.id, { type, options: OPTION_FIELD_TYPES.includes(type) ? (field.options?.length ? field.options : ['']) : undefined }) }}>{FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{fieldTypeLabel(type)}</option>)}</select></label>
-              <label className="form-builder-toggle"><input type="checkbox" checked={field.required} onChange={(event) => updateField(field.id, { required: event.target.checked })} /><span>{t('createEvent.formBuilderFieldRequired')}</span></label>
-              {field.options && <div className="form-builder-options"><span className="form-label">{t('createEvent.formBuilderFieldOptions')}</span>{field.options.map((option, optionIndex) => <div className="form-builder-option" key={`${field.id}-${optionIndex}`}><input aria-label={`${t('createEvent.formBuilderOption')} ${optionIndex + 1}`} value={option} placeholder={`${t('createEvent.formBuilderOption')} ${optionIndex + 1}`} onChange={(event) => updateField(field.id, { options: field.options?.map((item, itemIndex) => itemIndex === optionIndex ? event.target.value : item) })} /><button type="button" onClick={() => updateField(field.id, { options: field.options?.filter((_, itemIndex) => itemIndex !== optionIndex) })} disabled={(field.options?.length ?? 0) <= 1} aria-label={t('createEvent.formBuilderDeleteOption')}>×</button></div>)}<button type="button" className="text-button" onClick={() => updateField(field.id, { options: [...(field.options ?? []), ''] })}>+ {t('createEvent.formBuilderAddOption')}</button></div>}
+              <label className={styles.formBuilderToggle}><input type="checkbox" checked={field.required} onChange={(event) => updateField(field.id, { required: event.target.checked })} /><span>{t('createEvent.formBuilderFieldRequired')}</span></label>
+              {field.options && <div className={styles.formBuilderOptions}><span className="form-label">{t('createEvent.formBuilderFieldOptions')}</span>{field.options.map((option, optionIndex) => <div className={styles.formBuilderOption} key={`${field.id}-${optionIndex}`}><input aria-label={`${t('createEvent.formBuilderOption')} ${optionIndex + 1}`} value={option} placeholder={`${t('createEvent.formBuilderOption')} ${optionIndex + 1}`} onChange={(event) => updateField(field.id, { options: field.options?.map((item, itemIndex) => itemIndex === optionIndex ? event.target.value : item) })} /><button type="button" onClick={() => updateField(field.id, { options: field.options?.filter((_, itemIndex) => itemIndex !== optionIndex) })} disabled={(field.options?.length ?? 0) <= 1} aria-label={t('createEvent.formBuilderDeleteOption')}>×</button></div>)}<button type="button" className={`text-button ${styles.textButton}`} onClick={() => updateField(field.id, { options: [...(field.options ?? []), ''] })}>+ {t('createEvent.formBuilderAddOption')}</button></div>}
             </div>}
           </div>
         )
       })}
-      {showPreview && <div className="form-builder-preview" aria-label={t('createEvent.formBuilderPreview')}>{fields.length === 0 ? <p>{t('createEvent.formBuilderEmpty')}</p> : fields.map((field) => <label key={field.id}><span>{field.label || t('createEvent.formBuilderUntitled')}{field.required ? ' *' : ''}</span>{field.type === 'textarea' ? <textarea disabled /> : field.type === 'select' ? <select disabled><option>{t('createEvent.formBuilderSelectPlaceholder')}</option></select> : field.type === 'radio' || field.type === 'checkbox' ? <span className="form-builder-preview-options">{field.options?.map((option, index) => <label key={index}><input type={field.type === 'radio' ? 'radio' : 'checkbox'} disabled /> {option || `${t('createEvent.formBuilderOption')} ${index + 1}`}</label>)}</span> : <input disabled />}</label>)}</div>}
-      {!showPreview && <div className="form-builder-add-row"><select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={fields.length >= MAX_FORM_FIELDS}><option value="">+ {t('createEvent.formBuilderAddField')}</option>{FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}</select>{fields.length >= MAX_FORM_FIELDS ? <span className="form-builder-limit">{t('createEvent.formBuilderLimit')}</span> : null}</div>}
-      {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
+      {showPreview && <div className={styles.formBuilderPreview} aria-label={t('createEvent.formBuilderPreview')}>{fields.length === 0 ? <p>{t('createEvent.formBuilderEmpty')}</p> : fields.map((field) => <label key={field.id}><span>{field.label || t('createEvent.formBuilderUntitled')}{field.required ? ' *' : ''}</span>{field.type === 'textarea' ? <textarea disabled /> : field.type === 'select' ? <select disabled><option>{t('createEvent.formBuilderSelectPlaceholder')}</option></select> : field.type === 'radio' || field.type === 'checkbox' ? <span className={styles.formBuilderPreviewOptions}>{field.options?.map((option, index) => <label key={index}><input type={field.type === 'radio' ? 'radio' : 'checkbox'} disabled /> {option || `${t('createEvent.formBuilderOption')} ${index + 1}`}</label>)}</span> : <input disabled />}</label>)}</div>}
+      {!showPreview && <div className={styles.formBuilderAddRow}><select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={fields.length >= MAX_FORM_FIELDS}><option value="">+ {t('createEvent.formBuilderAddField')}</option>{FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}</select>{fields.length >= MAX_FORM_FIELDS ? <span className={styles.formBuilderLimit}>{t('createEvent.formBuilderLimit')}</span> : null}</div>}
+      {deletedField ? <div className={styles.formBuilderToast} role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
     </fieldset>
   )
 }
