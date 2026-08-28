@@ -66,6 +66,27 @@ describe('EventAnnouncements', () => {
     expect(screen.queryByLabelText(/公告標題/)).toBeNull()
   })
 
+  it('keeps an unsaved editor open when adding another announcement is no longer allowed', async () => {
+    const user = userEvent.setup()
+    const fiveAnnouncements = Array.from({ length: 5 }, (_, index) => ({
+      ...publishedAnnouncement,
+      id: `announcement-${index + 1}`,
+      ...(index === 0 ? { status: 'draft', published_at: null } : {}),
+    }))
+    from.mockReturnValue(announcementQueryResult(fiveAnnouncements))
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
+
+    await user.click(await screen.findByRole('button', { name: '編輯' }))
+    const titleInput = screen.getByLabelText(/公告標題/) as HTMLInputElement
+    await user.clear(titleInput)
+    await user.type(titleInput, '尚未儲存的標題')
+
+    await user.click(screen.getByRole('button', { name: '新增公告' }))
+
+    expect((screen.getByRole('alert')).textContent).toContain('此活動已有 5 則公告，無法再新增。')
+    expect((screen.getByLabelText(/公告標題/) as HTMLInputElement).value).toBe('尚未儲存的標題')
+  })
+
   it('publishes a draft through the constrained RPC', async () => {
     const user = userEvent.setup()
     from.mockReturnValue({
