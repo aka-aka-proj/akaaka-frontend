@@ -156,6 +156,51 @@ Component decision hierarchy：
 - iOS standalone PWA 的 deep page MUST 提供至少 `44 × 44px` 且可辨識的 back control。
 - 不得把 browser mode 的 screenshot 結果描述成 standalone PWA 或 real-device Safari 證據。
 
+## Android and iOS phone UX contract
+
+同一功能 MUST 維持相同的 semantic task 與 accessibility semantics；OS 差異只影響 navigation、viewport、safe-area、keyboard、browser chrome 與 native control 的適配。不得因 OS 差異複製整份 DOM 或改變 permission／business behavior。
+
+### Navigation and back behavior
+
+- 所有從 list 或 parent view 進入的 deep page（詳情、建立／編輯、聊天、設定、支援與報告）MUST 提供可辨識且至少 `44 × 44px` 的 app-level back control；不可只依賴 OS gesture、browser toolbar 或硬體按鈕。
+- iOS standalone PWA 沒有可依賴的 browser back toolbar，因此 deep page 的 back control 是 MUST；直接開啟 deep link 時，MUST 回到產品定義的 parent page，而非造成空白或離開 app。
+- Android 的 system back button／back gesture 與 app-level back control MUST 導向同一個 history-aware 行為；不得造成 double-pop、跳過中間頁或離開 app。若沒有 app history，MUST 回到產品 parent page。
+- iOS browser swipe-back、Android system back gesture 與 browser back 都 MUST 經過同一 navigation contract；modal／drawer 開啟時，back SHOULD 先關閉最上層 transient UI，再離開 page。
+- Core list page 若沒有 parent page MAY 不顯示 back control，但 MUST 仍能透過瀏覽器／OS navigation 回到合理位置。
+
+### Viewport, system UI and safe-area
+
+- iOS 的 Dynamic Island、notch、home indicator 與 Safari address bar，以及 Android 的 display cutout、status bar、gesture navigation bar 與 Chrome address bar，都 MUST 不遮蓋品牌列、內容、focus control、bottom nav 或 bottom action bar。
+- MUST 使用 `env(safe-area-inset-top/right/bottom/left)` 與 dynamic viewport；MUST NOT 以 `100vh`、固定 device height 或 UA 判斷推導可視高度。
+- Fixed／sticky UI MUST 同時處理 safe-area 與其他 fixed shell 高度；內容底部 MUST 預留實際所需空間。
+- Portrait、landscape、窄版 `360px`、常見 `390px` 與 Android cutout viewport MUST 都不產生 horizontal overflow 或 clipped focus target。
+
+### Keyboard and input behavior
+
+- iOS Safari 與 Android Chrome 開啟 soft keyboard 時，focused input、label、錯誤訊息與 submit control MUST 仍可見、可捲動與可操作。
+- MUST 監測或採用 dynamic／visual viewport 的正確 layout strategy；不得只依賴初始 `innerHeight`。
+- 表單 input 的文字尺寸 SHOULD 避免在 iOS Safari 觸發非預期 auto-zoom；MUST NOT 以 `user-scalable=no` 或其他方式阻止使用者縮放。
+- Android resize／pan 與 iOS visual viewport 變化不得讓 fixed bottom action bar 蓋住 focused control；鍵盤收起後 layout MUST 恢復。
+
+### Touch, gestures and native controls
+
+- 主要操作 MUST 不依賴 hover、precision pointer 或 OS-specific gesture；所有 touch target 至少 `44 × 44px`。
+- Swipe、long-press、pull-to-refresh 等 gesture 若非產品明確功能，不得攔截 OS/browser navigation gesture。
+- `<select>`、date/time input、file picker、share sheet 與 permission prompt 的外觀 MAY 由 OS 決定；implementation MUST 保留原生 semantics、label、focus 與 keyboard／screen-reader 操作，不得以 screenshot pixel parity 作為唯一驗收。
+- Clipboard、Web Share、calendar link、外部 OAuth、通知 permission 與其他 capability 在 iOS／Android 不可用或被拒絕時 MUST 有清楚 fallback／錯誤狀態，不得阻塞主要流程。
+
+### OS-specific verification matrix
+
+| Area | iOS phone | Android phone |
+|---|---|---|
+| Back | visible app back；驗證 Safari swipe-back 與 standalone PWA | system button／gesture 與 app back history 一致，不 double-pop |
+| System UI | notch／Dynamic Island、home indicator、Safari address bar | cutout、status／gesture bar、Chrome address bar |
+| Keyboard | visual viewport、auto-zoom、safe-area bottom | resize／pan、IME resize、gesture bar bottom inset |
+| Native UI | Safari share／select／date controls、PWA permission boundaries | Chrome share／select／date controls、PWA permission boundaries |
+| Evidence | iPhone real-device 才能宣稱 real Safari；WebKit 是 automation | Android real-device 才能宣稱 real Chrome；Pixel emulation 是 automation |
+
+每個受影響的 phone UI change MUST 至少記錄 iOS 與 Android 的 viewport、browser／PWA mode、actor state、navigation result、keyboard／safe-area 結果與未驗證限制。若只有 Playwright WebKit／Chromium evidence，MUST 明確標記為 automated emulation，不得宣稱 real-device UX。
+
 ## Page and pattern references
 
 Global rules 不得被 Event Detail layout 綁定。活動詳情頁只是第一個導入目標；其 feature behavior、capacity wording、registration CTA、visibility 與 safety rules 仍以 [`akaaka-docs/docs/spec/features/events/`](https://github.com/aka-aka-proj/akaaka-docs/tree/main/docs/spec/features/events) 為準。
