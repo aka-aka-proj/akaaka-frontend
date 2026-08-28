@@ -82,7 +82,6 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   const startNew = () => {
     if (announcements.length >= 5) {
       setMessage(t('eventAnnouncements.maxReached'))
-      setOpenForm(false)
       return
     }
     setTitle('')
