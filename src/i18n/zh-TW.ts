@@ -629,7 +629,7 @@ const zhTW = {
     editEvent: '編輯活動',
     hostTools: '主辦人專用',
     managementConsole: '管理控制台',
-    hostTabParticipants: '參加者視圖',
+    hostTabParticipants: '一般瀏覽',
     hostTabManagement: '主辦人管理',
     statusPublished: '已公開',
     statusClosed: '已下架',
