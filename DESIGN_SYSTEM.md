@@ -94,6 +94,7 @@ shared component / page
 - MUST NOT 新增 arbitrary color、radius、shadow 或 breakpoint。
 - MUST NOT 以 inline style、SVG attribute 或 JSX style object 繞過 semantic token。
 - Surface SHOULD 優先使用背景對比、`1px` border 與 spacing；card、popover、modal 只能使用對應的 elevation token。
+- Selectable card／option 的選取外框 MUST 使用 008 登錄的 `--color-selection`，並與該狀態的 border／radio foreground 保持一致，不得使用固定品牌色。
 - Danger action MUST 使用 danger semantic token，並以文字或語意標記說明風險；不可因為重要就自動變成 Primary。
 - disabled、loading、error、empty、success 與 permission denied MUST 有文字或 accessibility semantics，不得只靠顏色。
 - Interactive text 與 active-state foreground/background pair MUST 通過 WCAG 2.2 AA 對比要求。

@@ -46,7 +46,9 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   const [retrying, setRetrying] = useState(false)
   const loadSeq = useRef(0)
   const confirmCancelRef = useRef<HTMLButtonElement>(null)
+  const confirmActionRef = useRef<HTMLButtonElement>(null)
   const submitButtonRef = useRef<HTMLButtonElement>(null)
+  const confirmationReturnRef = useRef<HTMLElement | null>(null)
 
   const load = useCallback(async () => {
     // Guard against overlapping retries: a stale request failing after a newer
@@ -73,6 +75,12 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   useEffect(() => {
     if (nativeRegistration && isAuthenticated) void load()
   }, [load, nativeRegistration, isAuthenticated])
+
+  useEffect(() => {
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
+    confirmationReturnRef.current = null
+  }, [eventId])
 
   const resetForm = () => {
     setTitle('')
@@ -140,9 +148,20 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   }, [publishConfirmationOpen])
 
   const cancelPublishConfirmation = () => {
+    if (busy) return
     setConfirmPublish(false)
     setPendingPublishAnnouncement(null)
-    setTimeout(() => submitButtonRef.current?.focus(), 0)
+    const returnTarget = confirmationReturnRef.current
+    confirmationReturnRef.current = null
+    setTimeout(() => {
+      if (returnTarget?.isConnected) returnTarget.focus()
+      submitButtonRef.current?.focus()
+    }, 0)
+  }
+
+  const openPublishConfirmation = () => {
+    confirmationReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setConfirmPublish(true)
   }
 
   const save = async (isConfirmed = false) => {
@@ -153,7 +172,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
       return
     }
     if (publishMode === 'now' && !isConfirmed) {
-      setConfirmPublish(true)
+      openPublishConfirmation()
       return
     }
     setBusy(true)
@@ -201,6 +220,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   const publish = async (announcement: EventAnnouncement, isConfirmed = false) => {
     if (!isHost || busy) return
     if (!isConfirmed) {
+      confirmationReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       setPendingPublishAnnouncement(announcement)
       return
     }
@@ -301,7 +321,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
           </div>
         </div>
       ) : null}
-      {isHost && (confirmPublish || pendingPublishAnnouncement) ? (
+      {isHost && publishConfirmationOpen ? (
         <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) cancelPublishConfirmation()
         }}>
@@ -312,7 +332,22 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
             aria-labelledby="publish-announcement-dialog-title"
             aria-describedby="publish-announcement-dialog-description"
             onKeyDown={(event) => {
-              if (event.key === 'Escape') cancelPublishConfirmation()
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                cancelPublishConfirmation()
+              }
+              if (event.key === 'Tab') {
+                const first = confirmCancelRef.current
+                const last = confirmActionRef.current
+                if (!first || !last) return
+                if (event.shiftKey && document.activeElement === first) {
+                  event.preventDefault()
+                  last.focus()
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault()
+                  first.focus()
+                }
+              }
             }}
           >
             <h3 id="publish-announcement-dialog-title">{t('eventAnnouncements.confirmPublishTitle')}</h3>
@@ -323,6 +358,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
               </button>
               <button
                 type="button"
+                ref={confirmActionRef}
                 className="danger-action"
                 disabled={busy}
                 onClick={() => pendingPublishAnnouncement
