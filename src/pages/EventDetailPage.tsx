@@ -1442,7 +1442,7 @@ export function EventDetailPage() {
       ) : null}
 
       {isHost && hostConsoleView === 'management' && eventItem ? (
-        <section className="card event-admin-section" aria-labelledby="event-management-title">
+        <section className="card event-admin-section event-management-console" aria-labelledby="event-management-title">
           <div className="section-heading-row">
             <div>
               <p className="eyebrow">{t('eventDetail.hostTools')}</p>
@@ -1451,6 +1451,11 @@ export function EventDetailPage() {
             <span className="chip chip-neutral">
               {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
             </span>
+          </div>
+          <div className="event-admin-summary" role="status">
+            <span>{t('eventDetail.allRegistrations')}: {registrations.length}</span>
+            {eventItem.max_capacity ? <span>{t('eventDetail.capacityLabel')}: {totalCapacityOccupied} / {eventItem.max_capacity}</span> : null}
+            {pendingInvitations.length > 0 ? <span>{t('eventDetail.invitations')}: {pendingInvitations.length}</span> : null}
           </div>
           <div className="event-admin-actions">
             {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (

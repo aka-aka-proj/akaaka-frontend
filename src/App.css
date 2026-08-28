@@ -47,6 +47,17 @@
   grid-column: 2;
 }
 
+/* Host management is a page-level mode: surface its controls before the
+   author-owned event content without changing the DOM or permission flow. */
+.host-view-tabs {
+  order: -2;
+}
+
+.event-management-console {
+  grid-column: 1 / -1;
+  order: -1;
+}
+
 .event-announcements-section {
   grid-column: 1 / -1;
   background: var(--color-surface-muted);
@@ -100,6 +111,23 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.event-admin-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.event-admin-summary span {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 .event-admin-danger-zone {
@@ -2854,7 +2882,7 @@ dd {
 }
 
 .host-view-tab {
-  min-height: 2rem;
+  min-height: var(--touch-target);
   padding: 0.4rem 0.85rem;
   border: none;
   border-radius: 0.25rem;
@@ -3318,6 +3346,31 @@ dd {
   .host-view-tabs {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .host-view-tabs {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 2;
+    padding: var(--space-2);
+  }
+
+  .host-view-tabs-label {
+    width: 100%;
+  }
+
+  .host-view-tab-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .host-view-tab {
+    width: 100%;
+  }
+
+  .event-management-console {
+    width: 100%;
   }
 
   .calendar-menu-items {
