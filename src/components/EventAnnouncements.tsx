@@ -80,6 +80,11 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   }
 
   const startNew = () => {
+    if (announcements.length >= 5) {
+      setMessage(t('eventAnnouncements.maxReached'))
+      setOpenForm(false)
+      return
+    }
     setTitle('')
     setBody('')
     setPublishMode('draft')
@@ -107,6 +112,18 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     if (invalidMarkdown.test(body)) return t('eventAnnouncements.markdownError')
     if (publishMode === 'scheduled' && !localDateTimeToIso(publishAt)) return t('eventAnnouncements.scheduleRequired')
     return null
+  }
+
+  const getAnnouncementErrorMessage = (error: { message: string } | null): string => {
+    if (!error) return ''
+    const normalizedMessage = error.message.toLowerCase()
+    if (normalizedMessage.includes('rate_limited') || normalizedMessage.includes('frequency limit exceeded')) {
+      return t('eventAnnouncements.rateLimited')
+    }
+    if (normalizedMessage.includes('announcement limit exceeded')) {
+      return t('eventAnnouncements.maxReached')
+    }
+    return error.message
   }
 
   const save = async () => {
@@ -150,7 +167,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     }
     setBusy(false)
     if (error) {
-      setMessage(error.message)
+      setMessage(getAnnouncementErrorMessage(error))
       return
     }
     resetForm()
@@ -164,7 +181,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     const { error } = await supabase.rpc('publish_event_announcement', { p_announcement_id: announcement.id })
     setBusy(false)
     if (error) {
-      setMessage(error.message)
+      setMessage(getAnnouncementErrorMessage(error))
       return
     }
     await load()
@@ -182,13 +199,12 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
           <p className="eyebrow">{t('eventAnnouncements.eyebrow')}</p>
           <h3 id="event-announcements-title">{t('eventAnnouncements.title')}</h3>
         </div>
-        {isHost && !loadError && announcements.length < 5 ? (
+        {isHost && !loadError ? (
           <button type="button" className="secondary-action" onClick={startNew}>
             {t('eventAnnouncements.newAnnouncement')}
           </button>
         ) : null}
       </div>
-      {isHost ? <p className="form-hint">{t('eventAnnouncements.limits')}</p> : null}
       {message ? <p className="error-message" role="alert">{message}</p> : null}
       {loadError ? (
         <p className="error-message" role="alert">

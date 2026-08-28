@@ -49,6 +49,23 @@ describe('EventAnnouncements', () => {
     expect(screen.queryByRole('button', { name: '新增公告' })).toBeNull()
   })
 
+  it('hides the announcement limits until the host attempts to add a sixth announcement', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(announcementQueryResult(Array.from({ length: 5 }, (_, index) => ({
+      ...publishedAnnouncement,
+      id: `announcement-${index + 1}`,
+    }))))
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
+
+    expect((await screen.findAllByRole('heading', { name: '場地變更' })).length).toBe(5)
+    expect(screen.queryByText('每個活動最多 5 則公告，已發布公告至少間隔 12 小時。已發布公告不可編輯或刪除。')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '新增公告' }))
+
+    expect((await screen.findByRole('alert')).textContent).toContain('此活動已有 5 則公告，無法再新增。')
+    expect(screen.queryByLabelText(/公告標題/)).toBeNull()
+  })
+
   it('publishes a draft through the constrained RPC', async () => {
     const user = userEvent.setup()
     from.mockReturnValue({
@@ -104,7 +121,7 @@ describe('EventAnnouncements', () => {
     await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
     await user.click(screen.getByRole('button', { name: '儲存變更' }))
 
-    expect(await screen.findByText('rate_limited')).toBeTruthy()
+    expect(await screen.findByText('距離上一則已發布公告未滿 12 小時，請稍後再試。')).toBeTruthy()
     expect(rpc).toHaveBeenCalledTimes(1)
     expect(rpc).toHaveBeenCalledWith('update_and_publish_announcement', expect.anything())
   })
@@ -213,14 +230,15 @@ describe('EventAnnouncements', () => {
 })
 
 function draftQueryResult() {
+  return announcementQueryResult([{ ...publishedAnnouncement, status: 'draft', published_at: null }])
+}
+
+function announcementQueryResult(data: unknown[]) {
   return {
     select: vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         order: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({
-            data: [{ ...publishedAnnouncement, status: 'draft', published_at: null }],
-            error: null,
-          }),
+          order: vi.fn().mockResolvedValue({ data, error: null }),
         }),
       }),
     }),
