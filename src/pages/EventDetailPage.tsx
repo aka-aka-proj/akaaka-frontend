@@ -993,6 +993,100 @@ export function EventDetailPage() {
   return (
     <Layout>
       <div className="event-detail-layout">
+      {isHost && eventItem ? (
+        <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
+          <span className="host-view-tabs-label">
+            <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.hostTools')}
+          </span>
+          <div className="host-view-tab-group">
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'participants'}
+              className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('participants')}
+            >
+              {t('eventDetail.hostTabParticipants')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'management'}
+              className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('management')}
+            >
+              {t('eventDetail.hostTabManagement')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isHost && hostConsoleView === 'management' && eventItem ? (
+        <section className="card event-admin-section event-management-console" aria-labelledby="event-management-title">
+          <div className="section-heading-row">
+            <div>
+              <p className="eyebrow">{t('eventDetail.hostTools')}</p>
+              <h3 id="event-management-title">{t('eventDetail.managementConsole')}</h3>
+            </div>
+            <span className="chip chip-neutral">
+              {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
+            </span>
+          </div>
+          <div className="event-admin-summary" role="status">
+            {!eventItem.external_registration_url ? <span>{t('eventDetail.allRegistrations')}: {registrations.length}</span> : null}
+            {eventItem.max_capacity ? <span>{t('eventDetail.capacityLabel')}: {totalCapacityOccupied} / {eventItem.max_capacity}</span> : null}
+            {pendingInvitations.length > 0 ? <span>{t('eventDetail.invitations')}: {pendingInvitations.length}</span> : null}
+          </div>
+          <div className="event-admin-actions">
+            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (
+              <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
+                {t('eventDetail.publishNow')}
+              </button>
+            ) : null}
+            {!isEditLocked ? (
+              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+              </Link>
+            ) : null}
+            <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
+              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
+            </button>
+            {eventItem.registration_form_config && !eventItem.external_registration_url ? (
+              <button type="button" className="secondary-action" onClick={async () => {
+                const { data } = await supabase
+                  .from('event_registration_responses')
+                  .select('*, registration:event_registrations!inner(profile_id)')
+                  .in('registration.event_id', [eventItem.id])
+                if (data) setFormResponses(data as FormResponseWithRegistrant[])
+              }}>
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
+              </button>
+            ) : null}
+            <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
+            </button>
+            <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
+            </button>
+            {isPrivateShareable ? (
+              <>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => void copyShareLink(false)}>
+                  <Icon href="/form-icons.svg" name="form-eye" size={14} /> {t('eventDetail.copyShareLink')}
+                </button>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => setRotateConfirmOpen(true)}>
+                  {t('eventDetail.rotateShareLink')}
+                </button>
+              </>
+            ) : null}
+          </div>
+          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+            <div className="event-admin-danger-zone">
+              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
+                {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="card event-detail-hero">
         {eventItem ? (
           <>
@@ -1212,32 +1306,6 @@ export function EventDetailPage() {
         </aside>
       ) : null}
 
-      {isHost && eventItem ? (
-        <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
-          <span className="host-view-tabs-label">
-            <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.hostTools')}
-          </span>
-          <div className="host-view-tab-group">
-            <button
-              type="button"
-              aria-pressed={hostConsoleView === 'participants'}
-              className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
-              onClick={() => setHostConsoleView('participants')}
-            >
-              {t('eventDetail.hostTabParticipants')}
-            </button>
-            <button
-              type="button"
-              aria-pressed={hostConsoleView === 'management'}
-              className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
-              onClick={() => setHostConsoleView('management')}
-            >
-              {t('eventDetail.hostTabManagement')}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {eventItem ? (
         <EventAnnouncements
           eventId={eventItem.id}
@@ -1438,74 +1506,6 @@ export function EventDetailPage() {
               {t('eventDetail.register')}
             </button>
           )}
-        </section>
-      ) : null}
-
-      {isHost && hostConsoleView === 'management' && eventItem ? (
-        <section className="card event-admin-section event-management-console" aria-labelledby="event-management-title">
-          <div className="section-heading-row">
-            <div>
-              <p className="eyebrow">{t('eventDetail.hostTools')}</p>
-              <h3 id="event-management-title">{t('eventDetail.managementConsole')}</h3>
-            </div>
-            <span className="chip chip-neutral">
-              {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
-            </span>
-          </div>
-          <div className="event-admin-summary" role="status">
-            <span>{t('eventDetail.allRegistrations')}: {registrations.length}</span>
-            {eventItem.max_capacity ? <span>{t('eventDetail.capacityLabel')}: {totalCapacityOccupied} / {eventItem.max_capacity}</span> : null}
-            {pendingInvitations.length > 0 ? <span>{t('eventDetail.invitations')}: {pendingInvitations.length}</span> : null}
-          </div>
-          <div className="event-admin-actions">
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (
-              <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
-                {t('eventDetail.publishNow')}
-              </button>
-            ) : null}
-            {!isEditLocked ? (
-              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
-                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
-              </Link>
-            ) : null}
-            <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
-              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
-            </button>
-            {eventItem.registration_form_config && !eventItem.external_registration_url ? (
-              <button type="button" className="secondary-action" onClick={async () => {
-                const { data } = await supabase
-                  .from('event_registration_responses')
-                  .select('*, registration:event_registrations!inner(profile_id)')
-                  .in('registration.event_id', [eventItem.id])
-                if (data) setFormResponses(data as FormResponseWithRegistrant[])
-              }}>
-                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
-              </button>
-            ) : null}
-            <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
-              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
-            </button>
-            <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
-              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
-            </button>
-            {isPrivateShareable ? (
-              <>
-                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => void copyShareLink(false)}>
-                  <Icon href="/form-icons.svg" name="form-eye" size={14} /> {t('eventDetail.copyShareLink')}
-                </button>
-                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => setRotateConfirmOpen(true)}>
-                  {t('eventDetail.rotateShareLink')}
-                </button>
-              </>
-            ) : null}
-          </div>
-          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
-            <div className="event-admin-danger-zone">
-              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
-                {t('eventDetail.unpublishNow')}
-              </button>
-            </div>
-          ) : null}
         </section>
       ) : null}
 
