@@ -40,9 +40,13 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
   const [openForm, setOpenForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [confirmPublish, setConfirmPublish] = useState(false)
+  const [pendingPublishAnnouncement, setPendingPublishAnnouncement] = useState<EventAnnouncement | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const loadSeq = useRef(0)
+  const confirmCancelRef = useRef<HTMLButtonElement>(null)
+  const submitButtonRef = useRef<HTMLButtonElement>(null)
 
   const load = useCallback(async () => {
     // Guard against overlapping retries: a stale request failing after a newer
@@ -77,6 +81,8 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     setPublishAt('')
     setEditingId(null)
     setOpenForm(false)
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
   }
 
   const startNew = () => {
@@ -125,11 +131,29 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     return error.message
   }
 
-  const save = async () => {
+  const publishConfirmationOpen = confirmPublish || Boolean(pendingPublishAnnouncement)
+
+  useEffect(() => {
+    if (publishConfirmationOpen) {
+      setTimeout(() => confirmCancelRef.current?.focus(), 0)
+    }
+  }, [publishConfirmationOpen])
+
+  const cancelPublishConfirmation = () => {
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
+    setTimeout(() => submitButtonRef.current?.focus(), 0)
+  }
+
+  const save = async (isConfirmed = false) => {
     if (!isHost || !nativeRegistration || busy) return
     const validationError = validate()
     if (validationError) {
       setMessage(validationError)
+      return
+    }
+    if (publishMode === 'now' && !isConfirmed) {
+      setConfirmPublish(true)
       return
     }
     setBusy(true)
@@ -165,6 +189,7 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
       error = createError
     }
     setBusy(false)
+    setConfirmPublish(false)
     if (error) {
       setMessage(getAnnouncementErrorMessage(error))
       return
@@ -173,12 +198,17 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     await load()
   }
 
-  const publish = async (announcement: EventAnnouncement) => {
+  const publish = async (announcement: EventAnnouncement, isConfirmed = false) => {
     if (!isHost || busy) return
+    if (!isConfirmed) {
+      setPendingPublishAnnouncement(announcement)
+      return
+    }
     setBusy(true)
     setMessage('')
     const { error } = await supabase.rpc('publish_event_announcement', { p_announcement_id: announcement.id })
     setBusy(false)
+    setPendingPublishAnnouncement(null)
     if (error) {
       setMessage(getAnnouncementErrorMessage(error))
       return
@@ -223,14 +253,30 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
             <span>{t('eventAnnouncements.body')} ({Array.from(body).length}/1000)</span>
             <MarkdownEditor key={editingId ?? 'new'} value={body} onChange={setBody} allowLinks={false} aria-label={t('eventAnnouncements.body')} />
           </div>
-          <label className="form-field">
-            <span>{t('eventAnnouncements.publishMode')}</span>
-            <select value={publishMode} onChange={(event) => setPublishMode(event.target.value as PublishMode)}>
-              <option value="draft">{t('eventAnnouncements.saveDraft')}</option>
-              <option value="scheduled">{t('eventAnnouncements.schedule')}</option>
-              <option value="now">{t('eventAnnouncements.publishNow')}</option>
-            </select>
-          </label>
+          <fieldset className="announcement-publish-options">
+            <legend>{t('eventAnnouncements.publishMode')}</legend>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="draft" checked={publishMode === 'draft'} onChange={() => setPublishMode('draft')} />
+              <span>
+                <strong>{t('eventAnnouncements.saveDraftOption')}</strong>
+                <small>{t('eventAnnouncements.saveDraftDescription')}</small>
+              </span>
+            </label>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="scheduled" checked={publishMode === 'scheduled'} onChange={() => setPublishMode('scheduled')} />
+              <span>
+                <strong>{t('eventAnnouncements.scheduleOption')}</strong>
+                <small>{t('eventAnnouncements.scheduleDescription')}</small>
+              </span>
+            </label>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="now" checked={publishMode === 'now'} onChange={() => setPublishMode('now')} />
+              <span>
+                <strong>{t('eventAnnouncements.publishNowOption')}</strong>
+                <small>{t('eventAnnouncements.publishNowDescription')}</small>
+              </span>
+            </label>
+          </fieldset>
           {publishMode === 'scheduled' ? (
             <label className="form-field">
               <span>{t('eventAnnouncements.publishAt')}</span>
@@ -239,9 +285,53 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
           ) : null}
           <div className="discussion-form-actions">
             <button type="button" className="secondary-action" onClick={resetForm}>{t('common.cancelReply')}</button>
-            <button type="button" className="primary-cta" disabled={busy} onClick={() => void save()}>
-              {busy ? t('common.loading') : editingId ? t('eventAnnouncements.saveChanges') : t('eventAnnouncements.save')}
+            <button
+              type="button"
+              ref={submitButtonRef}
+              className="primary-cta"
+              disabled={busy}
+              onClick={() => void save()}
+            >
+              {busy ? t('common.loading') : publishMode === 'now'
+                ? editingId ? t('eventAnnouncements.saveAndPublishNow') : t('eventAnnouncements.confirmPublishNow')
+                : publishMode === 'scheduled'
+                  ? editingId ? t('eventAnnouncements.updateSchedule') : t('eventAnnouncements.confirmSchedule')
+                  : t('eventAnnouncements.saveDraftAction')}
             </button>
+          </div>
+        </div>
+      ) : null}
+      {isHost && (confirmPublish || pendingPublishAnnouncement) ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) cancelPublishConfirmation()
+        }}>
+          <div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-announcement-dialog-title"
+            aria-describedby="publish-announcement-dialog-description"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') cancelPublishConfirmation()
+            }}
+          >
+            <h3 id="publish-announcement-dialog-title">{t('eventAnnouncements.confirmPublishTitle')}</h3>
+            <p id="publish-announcement-dialog-description">{t('eventAnnouncements.confirmPublishDescription')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" ref={confirmCancelRef} className="secondary-action" onClick={cancelPublishConfirmation}>
+                {t('eventAnnouncements.backToEdit')}
+              </button>
+              <button
+                type="button"
+                className="danger-action"
+                disabled={busy}
+                onClick={() => pendingPublishAnnouncement
+                  ? void publish(pendingPublishAnnouncement, true)
+                  : void save(true)}
+              >
+                {busy ? t('common.loading') : t('eventAnnouncements.confirmPublishNow')}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
