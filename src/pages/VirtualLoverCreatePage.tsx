@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import styles from './VirtualLoverCreatePage.module.css'
 
 const TEMPLATE_KEYS = [
   'gentleMentor',
@@ -77,11 +78,11 @@ export function VirtualLoverCreatePage() {
   return (
     <Layout>
       <section className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <button type="button" onClick={() => navigate('/virtual-lovers')} className="btn-back">
+        <div className={styles.heading}>
+          <button type="button" onClick={() => navigate('/virtual-lovers')} className={styles.backButton} aria-label={t('common.back')}>
             ←
           </button>
-          <h2 style={{ margin: 0 }}>{t('virtualLover.createNew')}</h2>
+          <h2 className={styles.title}>{t('virtualLover.createNew')}</h2>
         </div>
 
         {message ? <p className="message">{message}</p> : null}
