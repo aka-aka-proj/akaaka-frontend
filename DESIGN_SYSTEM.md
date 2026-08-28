@@ -80,6 +80,14 @@ shared component / page
 
 長標題、地點、錯誤文案與 `zh-TW`／`en` 文案 MUST 可換行；不得以截斷造成關鍵資訊遺失。
 
+## Scoped styling architecture
+
+新增 page-local 或 component-local style MUST 優先使用 CSS Modules（`*.module.css`）或 repo 已採用且具等效 scope 的方案。class name MUST 由 module 或明確 page/component root scope 產生；不得新增無 scope 的 element selector 或跨頁面 selector。
+
+`src/App.css` 目前仍承載 legacy/shared styles。既有樣式不要求在本次變更一次性遷移；每次觸碰 component 時 SHOULD 將該 component 的 page-local styles 移至 CSS Module，並移除原本的 App.css 區塊。Global reset、`:root` token、body baseline、focus baseline 與真正跨頁 shared shell styles MAY 留在 global stylesheet。
+
+第一批採用 CSS Module 的 component/page 是 `PageBackButton` 與 `VirtualLoverCreatePage`，其 style 分別位於 `src/components/PageBackButton.module.css` 與 `src/pages/VirtualLoverCreatePage.module.css`，並以 canonical typography、spacing、radius、color 與 touch tokens 組合。後續遷移 MUST 保持 DOM semantics、navigation behavior、i18n 與 accessibility contract 不變。
+
 ## Color, radius, elevation and surfaces
 
 - Color、radius、shadow 與 interaction token MUST 來自 008 的 canonical inventory。
