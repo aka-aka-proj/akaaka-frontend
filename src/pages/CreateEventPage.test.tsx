@@ -126,12 +126,15 @@ describe('CreateEventPage', () => {
     fireEvent.change(deadlineInput, { target: { value: '2026-07-16T12:00' } })
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
-    expect(insert).toHaveBeenCalledWith([
-      expect.objectContaining({
-        registration_deadline: '2026-07-16T04:00:00.000Z',
-        recurrence_rule: expect.not.objectContaining({ registration_deadline_offset_minutes: expect.anything() }),
-      }),
-    ])
+    const [payload] = insert.mock.calls[0][0] as [{
+      registration_deadline: string
+      recurrence_rule: Record<string, unknown>
+    }]
+
+    expect(new Date(payload.registration_deadline).toISOString()).toBe(
+      new Date('2026-07-16T12:00').toISOString(),
+    )
+    expect(payload.recurrence_rule).not.toHaveProperty('registration_deadline_offset_minutes')
   })
 
   it('creates venue-hosted event for venue approved user', async () => {
