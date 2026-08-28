@@ -24,7 +24,7 @@ import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../li
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
-import { getInitialHostConsoleView } from '../lib/event-detail-view'
+import { getInitialHostConsoleView, shouldShowPublishShortcut } from '../lib/event-detail-view'
 import type { HostConsoleView } from '../lib/event-detail-view'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
 
@@ -1044,9 +1044,9 @@ export function EventDetailPage() {
             {pendingInvitations.length > 0 ? <span>{t('eventDetail.invitations')}: {pendingInvitations.length}</span> : null}
           </div>
           <div className="event-admin-actions">
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (
+            {shouldShowPublishShortcut(eventItem.lifecycle_status, eventItem.publication_status) ? (
               <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
-                {t('eventDetail.publishNow')}
+                {eventItem.lifecycle_status === 'draft' ? t('eventDetail.publishEvent') : t('eventDetail.publishNow')}
               </button>
             ) : null}
             {!isEditLocked ? (
