@@ -180,7 +180,7 @@ export function EventDetailPage() {
   useEffect(() => {
     // The event loads asynchronously; select the host console once ownership is known.
     setHostConsoleView(getInitialHostConsoleView(Boolean(isHost)))
-  }, [isHost])
+  }, [id, isHost])
 
   const seriesBlocksSingleRegistration = Boolean(
     eventSeriesId && (loadingSeries || eventSeries?.is_whole_series_required),
