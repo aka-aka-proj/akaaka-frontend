@@ -111,6 +111,7 @@ export function EventDetailPage() {
   const [capacityQueryFailed, setCapacityQueryFailed] = useState(false)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
+  const [publicationPending, setPublicationPending] = useState(false)
   const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
@@ -734,19 +735,24 @@ export function EventDetailPage() {
   }
 
   const handlePublicationChange = async (status: 'published' | 'closed') => {
-    if (!eventItem || !user || !isHost) return
-    const { data, error } = await supabase.rpc('set_event_publication', {
-      p_event_id: eventItem.id,
-      p_publication_status: status,
-      p_publish_at: null,
-      p_unpublish_at: null,
-    })
-    if (error) {
-      showError(error.message, error)
-      return
+    if (!eventItem || !user || !isHost || publicationPending) return
+    setPublicationPending(true)
+    try {
+      const { data, error } = await supabase.rpc('set_event_publication', {
+        p_event_id: eventItem.id,
+        p_publication_status: status,
+        p_publish_at: null,
+        p_unpublish_at: null,
+      })
+      if (error) {
+        showError(error.message, error)
+        return
+      }
+      setEventItem(data as EventItem)
+      setPublicationConfirmOpen(false)
+    } finally {
+      setPublicationPending(false)
     }
-    setEventItem(data as EventItem)
-    setPublicationConfirmOpen(false)
   }
 
   const handleCheckIn = async (registrationId: string) => {
@@ -1045,8 +1051,8 @@ export function EventDetailPage() {
           </div>
           <div className="event-admin-actions">
             {shouldShowPublishShortcut(eventItem.lifecycle_status, eventItem.publication_status) ? (
-              <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
-                {eventItem.lifecycle_status === 'draft' ? t('eventDetail.publishEvent') : t('eventDetail.publishNow')}
+              <button type="button" className="secondary-action" disabled={publicationPending} onClick={() => void handlePublicationChange('published')}>
+                {publicationPending ? t('common.processing') : eventItem.lifecycle_status === 'draft' ? t('eventDetail.publishEvent') : t('eventDetail.publishNow')}
               </button>
             ) : null}
             {!isEditLocked ? (
@@ -1830,8 +1836,8 @@ export function EventDetailPage() {
               <button type="button" className="secondary-action" onClick={() => setPublicationConfirmOpen(false)}>
                 {t('common.cancelReply')}
               </button>
-              <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
-                {t('eventDetail.unpublishNow')}
+              <button type="button" className="danger-action" disabled={publicationPending} onClick={() => void handlePublicationChange('closed')}>
+                {publicationPending ? t('common.processing') : t('eventDetail.unpublishNow')}
               </button>
             </div>
           </div>
