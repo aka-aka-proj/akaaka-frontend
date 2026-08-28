@@ -47,15 +47,8 @@
   grid-column: 2;
 }
 
-/* Host management is a page-level mode: surface its controls before the
-   author-owned event content without changing the DOM or permission flow. */
-.host-view-tabs {
-  order: -2;
-}
-
 .event-management-console {
   grid-column: 1 / -1;
-  order: -1;
 }
 
 .event-announcements-section {
