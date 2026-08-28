@@ -81,6 +81,59 @@ describe('CreateEventPage', () => {
     ])
   })
 
+  it('shows series deadline modes only for recurring events', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('group', { name: '系列場次的報名截止方式' })).toBeNull()
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+
+    expect(screen.getByRole('group', { name: '系列場次的報名截止方式' })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: /每場開始前固定時間/ })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: /所有場次使用同一固定時間/ })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: '不設定報名截止' })).toBeTruthy()
+    expect(screen.queryByRole('radio', { name: /不變更/ })).toBeNull()
+  })
+
+  it('creates a recurring series with one fixed deadline for all occurrences', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Fixed Deadline Series')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: /所有場次使用同一固定時間/ }))
+    const deadlineInput = screen.getByRole('group', { name: '系列場次的報名截止方式' }).querySelector('input[type="datetime-local"]') as HTMLInputElement
+    fireEvent.change(deadlineInput, { target: { value: '2026-07-16T12:00' } })
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        registration_deadline: '2026-07-16T04:00:00.000Z',
+        recurrence_rule: expect.not.objectContaining({ registration_deadline_offset_minutes: expect.anything() }),
+      }),
+    ])
+  })
+
   it('creates venue-hosted event for venue approved user', async () => {
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1' },

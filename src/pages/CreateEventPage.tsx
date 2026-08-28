@@ -22,6 +22,7 @@ import styles from './CreateEventPage.module.css'
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
 const FORM_FIELD_TYPES: RegistrationFormField['type'][] = ['text', 'textarea', 'radio', 'checkbox', 'select']
+type SeriesDeadlineMode = 'relative' | 'absolute' | 'none'
 
 const VISIBILITY_HINT_KEYS: Record<Visibility, string> = {
   public: 'createEvent.visibilityPublicHint',
@@ -72,6 +73,8 @@ export function CreateEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [seriesDeadlineMode, setSeriesDeadlineMode] = useState<SeriesDeadlineMode>('relative')
+  const [seriesDeadlineOffsetMinutes, setSeriesDeadlineOffsetMinutes] = useState('')
   const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('native')
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -103,6 +106,25 @@ export function CreateEventPage() {
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
 
+  const derivedSeriesDeadlineOffsetMinutes = useMemo(() => {
+    if (!startTime || !registrationDeadline) return ''
+    const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
+    return offsetMinutes > 0 ? String(offsetMinutes) : ''
+  }, [startTime, registrationDeadline])
+
+  const effectiveSeriesDeadlineOffsetMinutes = seriesDeadlineOffsetMinutes || derivedSeriesDeadlineOffsetMinutes
+
+  const effectiveRegistrationDeadline = useMemo(() => {
+    if (registrationMode !== 'native') return null
+    if (!recurrenceEnabled) return registrationDeadline ? new Date(registrationDeadline).toISOString() : null
+    if (seriesDeadlineMode === 'none') return null
+    if (seriesDeadlineMode === 'absolute') return registrationDeadline ? new Date(registrationDeadline).toISOString() : null
+    if (!startTime || !effectiveSeriesDeadlineOffsetMinutes) return null
+    const offsetMinutes = Number(effectiveSeriesDeadlineOffsetMinutes)
+    if (!Number.isInteger(offsetMinutes) || offsetMinutes <= 0) return null
+    return new Date(new Date(startTime).getTime() - offsetMinutes * 60000).toISOString()
+  }, [registrationMode, recurrenceEnabled, seriesDeadlineMode, registrationDeadline, startTime, effectiveSeriesDeadlineOffsetMinutes])
+
   const recurrenceRule = useMemo<RecurrenceRule | null>(() => {
     if (!recurrenceEnabled) return null
     const selectedRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : [weekdayOf(startTime)]
@@ -123,14 +145,14 @@ export function CreateEventPage() {
       rule.until = new Date(`${recurrenceEndDate}T23:59:59`).toISOString()
     }
     rule.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    if (registrationMode === 'native' && registrationDeadline && startTime) {
-      const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
+    if (registrationMode === 'native' && seriesDeadlineMode === 'relative' && effectiveSeriesDeadlineOffsetMinutes) {
+      const offsetMinutes = Number(effectiveSeriesDeadlineOffsetMinutes)
       if (offsetMinutes > 0) {
         rule.registration_deadline_offset_minutes = offsetMinutes
       }
     }
     return rule
-  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime, registrationDeadline, registrationMode])
+  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime, registrationMode, seriesDeadlineMode, effectiveSeriesDeadlineOffsetMinutes])
 
   const effectiveRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : startTime ? [weekdayOf(startTime)] : []
 
@@ -151,9 +173,11 @@ export function CreateEventPage() {
       throw error
     }
     const offsetMinutes = recurrenceRule.registration_deadline_offset_minutes ?? null
-    const deadlines = offsetMinutes !== null ? dates.map((date) => new Date(date.getTime() - offsetMinutes * 60000)) : null
+    const deadlines = seriesDeadlineMode === 'absolute' && registrationDeadline
+      ? dates.map(() => new Date(registrationDeadline))
+      : offsetMinutes !== null ? dates.map((date) => new Date(date.getTime() - offsetMinutes * 60000)) : null
     return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1, deadlines }
-  }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate])
+  }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate, seriesDeadlineMode, registrationDeadline])
 
   const formatPreviewDate = (date: Date) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', {
@@ -340,9 +364,15 @@ export function CreateEventPage() {
       return
     }
 
-    if (recurrenceEnabled && registrationMode === 'native' && registrationDeadline && startTime
-      && new Date(startTime).getTime() - new Date(registrationDeadline).getTime() <= 0) {
+    if (recurrenceEnabled && registrationMode === 'native' && effectiveRegistrationDeadline && startTime
+      && new Date(startTime).getTime() - new Date(effectiveRegistrationDeadline).getTime() <= 0) {
       setMessage('報名截止晚於或等於活動開始時間，無法建立週期系列；請調整報名截止時間')
+      return
+    }
+
+    if (recurrenceEnabled && registrationMode === 'native' && seriesDeadlineMode === 'relative'
+      && seriesDeadlineOffsetMinutes && (!Number.isInteger(Number(seriesDeadlineOffsetMinutes)) || Number(seriesDeadlineOffsetMinutes) < 1 || Number(seriesDeadlineOffsetMinutes) > 525600)) {
+      setMessage(t('createEvent.seriesDeadlineOffsetInvalid'))
       return
     }
 
@@ -364,7 +394,7 @@ export function CreateEventPage() {
       is_venue_hosted: isVenueHosted,
       visibility_settings: { type: visibilityType },
       max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
-      registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+      registration_deadline: effectiveRegistrationDeadline,
       registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
       external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
       source_url: sourceUrl.trim() || null,
@@ -834,7 +864,7 @@ export function CreateEventPage() {
             onChange={(event) => setMaxCapacity(event.target.value)}
           />
         </label> : null}
-        {registrationMode === 'native' ? <label className="form-field">
+        {registrationMode === 'native' && !recurrenceEnabled ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.registrationDeadlineLabel')}
           </span>
@@ -844,16 +874,46 @@ export function CreateEventPage() {
             value={registrationDeadline}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
-          {(() => {
-            if (!recurrenceEnabled || !registrationDeadline || !startTime) return null
-            const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
-            if (offsetMinutes <= 0) {
-              return <small className={styles.mutedHint}>報名截止需早於活動開始時間，才能為週期系列套用「每場各自截止」</small>
-            }
-            const offsetText = offsetMinutes % 60 === 0 ? `${offsetMinutes / 60} 小時` : `${offsetMinutes} 分鐘`
-            return <small className={styles.mutedHint}>系列各場次將於各自開始前 {offsetText} 截止（依目前設定換算）</small>
-          })()}
         </label> : null}
+        {registrationMode === 'native' && recurrenceEnabled ? <fieldset className="form-field">
+          <legend>{t('createEvent.seriesDeadlineModeLabel')}</legend>
+          <small>{t('createEvent.seriesDeadlineModeHint')}</small>
+          <label className="checkbox">
+            <input type="radio" name="series-deadline-mode" value="relative" checked={seriesDeadlineMode === 'relative'} onChange={() => setSeriesDeadlineMode('relative')} />
+            {t('createEvent.seriesDeadlineRelativeLabel')}
+            <input
+              aria-label={t('createEvent.seriesDeadlineOffsetAria')}
+              type="number"
+              min="1"
+              max="525600"
+              step="1"
+              placeholder={t('createEvent.seriesDeadlineOffsetPlaceholder')}
+              value={effectiveSeriesDeadlineOffsetMinutes}
+              onChange={(event) => setSeriesDeadlineOffsetMinutes(event.target.value)}
+              style={{ width: '6rem', margin: '0 0.35rem' }}
+            />
+            {t('createEvent.seriesDeadlineMinutesSuffix')}
+          </label>
+          {seriesDeadlineMode === 'relative' && effectiveRegistrationDeadline ? <small style={{ color: 'var(--color-text-muted)' }}>
+            {t('createEvent.seriesDeadlineOriginalHint', { deadline: formatPreviewDate(new Date(effectiveRegistrationDeadline)) })}
+          </small> : null}
+          <label className="checkbox">
+            <input type="radio" name="series-deadline-mode" value="absolute" checked={seriesDeadlineMode === 'absolute'} onChange={() => setSeriesDeadlineMode('absolute')} />
+            {t('createEvent.seriesDeadlineAbsoluteLabel')}
+            <input
+              aria-label={t('createEvent.registrationDeadlineLabel')}
+              type="datetime-local"
+              value={registrationDeadline}
+              onChange={(event) => setRegistrationDeadline(event.target.value)}
+              style={{ margin: '0 0.35rem' }}
+            />
+          </label>
+          <label className="checkbox">
+            <input type="radio" name="series-deadline-mode" value="none" checked={seriesDeadlineMode === 'none'} onChange={() => setSeriesDeadlineMode('none')} />
+            {t('createEvent.seriesDeadlineNoneLabel')}
+          </label>
+          {seriesDeadlineMode === 'absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('createEvent.seriesDeadlineAbsoluteHint')}</small> : null}
+        </fieldset> : null}
         {profile?.role_status === 'venue_approved' && (
           <label className="checkbox">
             <input
