@@ -104,6 +104,7 @@ describe('EventAnnouncements', () => {
     render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '立即發布' }))
+    await user.click(screen.getByRole('dialog').querySelector('.danger-action') as HTMLElement)
 
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('publish_event_announcement', {
       p_announcement_id: 'announcement-1',
@@ -116,8 +117,12 @@ describe('EventAnnouncements', () => {
     render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
-    await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
-    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+    await user.click(screen.getByRole('radio', { name: /立即發布/ }))
+    await user.click(screen.getByRole('button', { name: '儲存並立即發布' }))
+
+    expect(screen.getByRole('dialog', { name: '確定要立即發布這則公告嗎？' })).toBeTruthy()
+    expect(rpc).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('dialog').querySelector('.danger-action') as HTMLElement)
 
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('update_and_publish_announcement', {
       p_announcement_id: 'announcement-1',
@@ -139,8 +144,9 @@ describe('EventAnnouncements', () => {
     render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
-    await user.selectOptions(screen.getByLabelText('發布方式'), 'now')
-    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+    await user.click(screen.getByRole('radio', { name: /立即發布/ }))
+    await user.click(screen.getByRole('button', { name: '儲存並立即發布' }))
+    await user.click(screen.getByRole('dialog').querySelector('.danger-action') as HTMLElement)
 
     expect(await screen.findByText('距離上一則已發布公告未滿 12 小時，請稍後再試。')).toBeTruthy()
     expect(rpc).toHaveBeenCalledTimes(1)
@@ -153,13 +159,46 @@ describe('EventAnnouncements', () => {
     render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
 
     await user.click(await screen.findByRole('button', { name: '編輯' }))
-    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('update_event_announcement', expect.objectContaining({
       p_announcement_id: 'announcement-1',
       p_status: 'draft',
     })))
     expect(rpc).not.toHaveBeenCalledWith('update_and_publish_announcement', expect.anything())
+  })
+
+  it('uses explicit actions for draft, scheduled, and immediate publishing', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(announcementQueryResult([]))
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
+
+    await user.click(await screen.findByRole('button', { name: '新增公告' }))
+    expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '儲存公告' })).toBeNull()
+
+    await user.click(screen.getByRole('radio', { name: /排程發布/ }))
+    expect(screen.getByLabelText('發布時間')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '確認排程發布' })).toBeTruthy()
+  })
+
+  it('lets the host return to editing from the immediate publish confirmation', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(announcementQueryResult([]))
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
+
+    await user.click(await screen.findByRole('button', { name: '新增公告' }))
+    await user.type(screen.getByLabelText(/公告標題/), '需要確認')
+    await user.type(screen.getByRole('textbox', { name: '公告內容（支援 Markdown）' }), '公告內容')
+    await user.click(screen.getByRole('radio', { name: /立即發布/ }))
+    await user.click(screen.getByRole('button', { name: '確認並立即發布' }))
+
+    expect(screen.getByRole('dialog', { name: '確定要立即發布這則公告嗎？' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: '返回編輯' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByLabelText(/公告標題/)).toBeTruthy()
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it('clears the edit state when starting a new announcement during editing', async () => {
@@ -176,7 +215,7 @@ describe('EventAnnouncements', () => {
 
     await user.type(screen.getByLabelText(/公告標題/), '新公告')
     await user.type(screen.getByRole('textbox', { name: '公告內容（支援 Markdown）' }), '全新內容')
-    await user.click(screen.getByRole('button', { name: '儲存公告' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('create_event_announcement', expect.objectContaining({
       p_title: '新公告',

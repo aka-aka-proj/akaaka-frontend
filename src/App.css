@@ -62,6 +62,52 @@
   background: var(--color-surface);
 }
 
+.announcement-publish-options {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.announcement-publish-options legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.announcement-publish-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.announcement-publish-option:has(input:checked) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(107 79 211 / 18%);
+}
+
+.announcement-publish-option input {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+  accent-color: var(--color-primary);
+}
+
+.announcement-publish-option span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.announcement-publish-option small {
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
 .event-announcement-card {
   margin-top: 1rem;
   padding-top: 1rem;
