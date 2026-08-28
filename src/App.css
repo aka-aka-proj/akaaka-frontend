@@ -89,7 +89,7 @@
 
 .announcement-publish-option:has(input:checked) {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(107 79 211 / 18%);
+  box-shadow: 0 0 0 3px var(--color-selection);
 }
 
 .announcement-publish-option input {
