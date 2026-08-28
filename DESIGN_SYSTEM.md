@@ -1,6 +1,6 @@
 ---
 category: implementation
-status: draft
+status: active
 owner: design_engineering
 ---
 
@@ -116,7 +116,7 @@ shared component / page
 除非 task 或 authoritative spec 明確要求，UI implementation MUST NOT：
 
 - 新增未登錄的 design token、arbitrary color、spacing、radius、shadow 或 breakpoint。
-- 新增 page-specific global CSS。
+- 新增未限定 scope 的 page-specific global CSS。現有 `src/App.css` 是目前 application 的 styling 入口；若必須在其中新增頁面樣式，MUST 使用明確的 page／component class scope，不得新增未限定的 element selector 或跨頁面副作用。
 - 修改 API contract、business logic、database schema、AuthZ 或 RLS。
 - 以視覺需求作為理由改變 permission behavior。
 - 隱藏 error、loading 或 permission state。
@@ -226,7 +226,7 @@ Agent MUST 驗證 responsive layout、horizontal overflow、long text wrapping�
 
 ### Required viewport evidence
 
-優先使用 repo 現有 browser baseline：desktop Chromium `1280×800`、Pixel 5 mobile、iPhone 12 Mobile Safari，以及 CI 的 `360`、`390`、`768`、`1280` viewport projects。若 feature 需要其他 viewport，必須在 report 中說明原因。
+優先使用 repo 現有 browser baseline：desktop Chromium `1280×800`、Pixel 5 mobile，以及 CI 的 `360`、`390`、`768`、`1280` viewport projects。iPhone 12 WebKit device profile 是 automated WebKit emulation，不得稱為 real Mobile Safari；real-device Safari evidence 必須另行標示。若 feature 需要其他 viewport，必須在 report 中說明原因。
 
 至少驗證適用的：
 
@@ -245,11 +245,11 @@ Mobile/PWA relevant page 另外 MUST 區分並標記 browser mode、standalone P
 依變更範圍使用 frontend 現有命令：
 
 ```bash
-npm run test              # unit tests
-npm run test:browser      # Storybook browser tests
-npm run test:e2e          # Playwright browser matrix
-npm run build             # typecheck + production build
-npm run build-storybook   # Storybook production build
+rtk npm run test              # unit tests
+rtk npm run test:browser      # Storybook browser tests
+rtk npm run test:e2e          # Playwright browser matrix
+rtk npm run build             # typecheck + production build
+rtk npm run build-storybook   # Storybook production build
 ```
 
 Visual evidence MUST 記錄 route、viewport、actor／permission state、browser／project、結果與 limitation。`build`、unit test 或 Storybook a11y panel 可作為補充證據，但不得取代實際 rendered evidence。
