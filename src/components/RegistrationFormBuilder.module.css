@@ -1,0 +1,72 @@
+.formBuilder {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+}
+.formBuilderHeading,
+.formBuilderFieldHeader,
+.formBuilderAddRow,
+.formBuilderOption { display: flex; align-items: center; gap: var(--space-2); }
+.formBuilderHeading { justify-content: space-between; align-items: flex-start; }
+.formBuilder :global(legend) {
+  padding: 0;
+  color: var(--color-text-strong);
+  font: var(--type-label-weight) var(--type-label-size) / var(--type-label-line-height) var(--font-family-sans);
+}
+.formBuilderHeading p,
+.formBuilderLimit { margin: var(--space-1) 0 0; color: var(--color-text-muted); font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans); }
+.formBuilderField {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+.formBuilderField:hover,
+.formBuilderField:focus-within { border-color: var(--color-focus); }
+.isDragging { opacity: 0.55; border-style: dashed; }
+.dragHandle,
+.formBuilderActions button,
+.dangerIconButton,
+.textButton {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+}
+.dragHandle { cursor: grab; color: var(--color-text-muted); letter-spacing: -0.15rem; }
+.formBuilderExpand { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--color-text); text-align: start; }
+.formBuilderExpand strong,
+.formBuilderExpand span { display: block; overflow-wrap: anywhere; }
+.formBuilderExpand span { margin-top: var(--space-1); color: var(--color-text-muted); font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans); }
+.formBuilderActions { display: flex; gap: var(--space-1); }
+.formBuilderActions button:disabled { cursor: not-allowed; opacity: 0.45; }
+.dangerIconButton { border-color: var(--color-danger-border); color: var(--color-danger); }
+.formBuilderFieldEditor { display: grid; gap: var(--space-3); margin: var(--space-3) 0 0 2rem; padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.formBuilderFieldEditor :global(label) { gap: var(--space-1); }
+.formBuilderToggle { flex-direction: row; align-items: center; gap: var(--space-2); }
+.formBuilderOptions { display: grid; gap: var(--space-2); }
+.formBuilderOption input { flex: 1; min-width: 0; }
+.formBuilderOption button { border: 0; background: transparent; color: var(--color-danger); }
+.formBuilderAddRow { flex-wrap: wrap; }
+.formBuilderAddRow select { width: 100%; min-height: var(--touch-target); border: 1px dashed var(--color-primary); border-radius: var(--radius-sm); background: transparent; color: var(--color-primary); font-weight: var(--font-weight-semibold); }
+.formBuilderPreview { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px dashed var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.formBuilderPreviewOptions { display: grid; gap: var(--space-1); }
+.formBuilderPreview :global(input),
+.formBuilderPreview :global(select),
+.formBuilderPreview :global(textarea) { min-height: var(--touch-target); }
+.formBuilderToast { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-info-border); border-radius: var(--radius-sm); background: var(--color-info-surface); color: var(--color-text); }
+.formBuilderToast button { min-height: var(--touch-target); border: 0; background: transparent; color: var(--color-info); font-weight: var(--font-weight-semibold); }
+.secondaryButton { min-height: var(--touch-target); }
+
+@media (max-width: 639px) {
+  .formBuilderHeading { flex-direction: column; }
+  .formBuilderHeading > :global(button) { width: 100%; }
+  .formBuilderFieldEditor { margin-inline-start: 0; }
+  .formBuilderFieldHeader { align-items: flex-start; }
+  .formBuilderActions { flex-wrap: wrap; }
+}

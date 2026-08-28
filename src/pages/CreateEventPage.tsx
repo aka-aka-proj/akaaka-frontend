@@ -17,6 +17,7 @@ import type { EventSourcePreview } from '../lib/event-source'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RecurrenceRule, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
+import styles from './CreateEventPage.module.css'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -512,18 +513,18 @@ export function CreateEventPage() {
 
   return (
     <Layout>
-      <form className="card create-event-form" onSubmit={submit}>
-        <div className="create-event-header">
+      <form className={`card ${styles.createEventForm}`} onSubmit={submit}>
+        <div className={styles.createEventHeader}>
           <div>
             <h1>{t('createEvent.title')}</h1>
             <p>{t('createEvent.formIntro')}</p>
           </div>
-          <button type="button" className="secondary-button assist-toggle" aria-expanded={showAssistTools} onClick={() => setShowAssistTools((visible) => !visible)}>
+          <button type="button" className={`secondary-button ${styles.assistToggle}`} aria-expanded={showAssistTools} onClick={() => setShowAssistTools((visible) => !visible)}>
             {showAssistTools ? t('createEvent.hideAssistTools') : t('createEvent.showAssistTools')}
           </button>
         </div>
-        {showAssistTools ? <div className="assist-tools">
-          <section className="assist-card" aria-labelledby="ai-organizer-title">
+        {showAssistTools ? <div className={styles.assistTools}>
+          <section className={styles.assistCard} aria-labelledby="ai-organizer-title">
             <h2 id="ai-organizer-title">{t('createEvent.aiOrganizerTitle')}</h2>
             <p>{t('createEvent.aiOrganizerDescription')}</p>
             <textarea
@@ -538,7 +539,7 @@ export function CreateEventPage() {
             </button>
             {aiMessage ? <p className="message">{aiMessage}</p> : null}
           </section>
-          <section className="assist-card assist-card--info" aria-labelledby="event-source-import-title">
+          <section className={`${styles.assistCard} ${styles.assistCardInfo}`} aria-labelledby="event-source-import-title">
             <h2 id="event-source-import-title">{t('createEvent.sourceImportTitle')}</h2>
             <p>{t('createEvent.sourceImportDescription')}</p>
             <input
@@ -555,10 +556,10 @@ export function CreateEventPage() {
           </section>
         </div> : null}
         {fromEventId && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{t('createEvent.copyFrom')}</p>
+          <p className={styles.copyFrom}>{t('createEvent.copyFrom')}</p>
         )}
-        <section className="form-section" aria-labelledby="basic-info-title">
-          <div className="form-section-heading"><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
+        <section className={styles.formSection} aria-labelledby="basic-info-title">
+          <div className={styles.formSectionHeading}><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
@@ -585,7 +586,7 @@ export function CreateEventPage() {
           </select>
         </label>
         {category === 'Practice' && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', background: 'var(--color-warning-surface)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+          <p className={styles.safetyNotice}>
             {t('eventDetail.safetyProtocolDesc')}
           </p>
         )}
@@ -596,7 +597,7 @@ export function CreateEventPage() {
           <select 
             onChange={(e) => addType(e.target.value)}
             defaultValue=""
-            style={{ marginBottom: '8px', width: '100%' }}
+            className={styles.eventTypeSelect}
           >
             <option value="" disabled>{t('createEvent.selectEventType')}</option>
             <optgroup label={t('createEvent.categorySocial')}>
@@ -610,14 +611,14 @@ export function CreateEventPage() {
               ))}
             </optgroup>
           </select>
-          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
+          <div className={styles.tagsInputContainer}>
             {eventType.map(type => (
-              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
+              <span key={type} className={styles.tag}>
                 {t(getEventTypeI18nKey(type))}
                 <button 
                   type="button" 
                   onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
+                  className={styles.tagRemove}
                   aria-label={t('createEvent.removeType')}
                 >
                   &times;
@@ -627,8 +628,8 @@ export function CreateEventPage() {
           </div>
         </label>
         </section>
-        <section className="form-section" aria-labelledby="time-location-title">
-          <div className="form-section-heading"><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
+        <section className={styles.formSection} aria-labelledby="time-location-title">
+          <div className={styles.formSectionHeading}><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
@@ -645,11 +646,11 @@ export function CreateEventPage() {
           {t('createEvent.recurrenceLabel')}
         </label>
         {recurrenceEnabled && (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className={styles.recurrencePanel}>
             <label>
               {t('createEvent.recurrenceEvery')}
-              <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />
-              <select value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')} style={{ marginLeft: '0.5rem' }}>
+              <input className={styles.inlineNumber} type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} />
+              <select className={styles.inlineSelect} value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')}>
                 <option value="weekly">{t('createEvent.recurrenceWeeks')}</option>
                 <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
               </select>
@@ -657,7 +658,7 @@ export function CreateEventPage() {
             {recurrenceFreq === 'monthly' && (
               <label>
                 {t('createEvent.recurrenceMonthlyBy')}:
-                <select value={recurrenceMonthlyBy} onChange={(e) => setRecurrenceMonthlyBy(e.target.value as 'date' | 'weekday')} style={{ marginLeft: '0.5rem' }}>
+                <select className={styles.inlineSelect} value={recurrenceMonthlyBy} onChange={(e) => setRecurrenceMonthlyBy(e.target.value as 'date' | 'weekday')}>
                   <option value="date">{t('createEvent.recurrenceByDate')}</option>
                   <option value="weekday">{t('createEvent.recurrenceByWeekday')}</option>
                 </select>
@@ -677,7 +678,7 @@ export function CreateEventPage() {
             {recurrenceFreq === 'monthly' && recurrenceMonthlyBy === 'weekday' && (
               <label>
                 {t('createEvent.recurrenceOrdinal')}:
-                <select value={recurrenceWeekOrdinal} onChange={(e) => setRecurrenceWeekOrdinal(parseInt(e.target.value))} style={{ marginLeft: '0.5rem' }}>
+                <select className={styles.inlineSelect} value={recurrenceWeekOrdinal} onChange={(e) => setRecurrenceWeekOrdinal(parseInt(e.target.value))}>
                   {[1, 2, 3, 4].map((ordinal) => <option key={ordinal} value={ordinal}>{t(`createEvent.recurrenceOrdinal${ordinal}`)}</option>)}
                   <option value={5}>{t('createEvent.recurrenceOrdinalLast')}</option>
                 </select>
@@ -693,7 +694,7 @@ export function CreateEventPage() {
             </div>
             {recurrenceLimitMode === 'count' ? (
               <label>
-                {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+                {t('createEvent.recurrenceCount')}: <input className={styles.inlineNumber} type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} />
               </label>
             ) : (
               <label>
@@ -702,7 +703,7 @@ export function CreateEventPage() {
             )}
             <div aria-live="polite">
               {recurrencePreview && (
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
+                <div className={styles.recurrencePreview}>
                   <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
                   {recurrencePreview.invalid ? (
                     recurrencePreview.tooLong
@@ -712,7 +713,7 @@ export function CreateEventPage() {
                     <p>{t('createEvent.recurrencePreviewNone')}</p>
                   ) : (
                     <>
-                      <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
+                        <ul className={styles.recurrenceDates}>
                         {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date, index) => {
                           const deadline = recurrencePreview.deadlines?.[index]
                           const closed = deadline ? deadline.getTime() <= Date.now() : false
@@ -720,7 +721,7 @@ export function CreateEventPage() {
                             <li key={date.toISOString()}>
                               {formatPreviewDate(date)}
                               {deadline ? (
-                                <small style={{ display: 'block', color: closed ? 'var(--color-text-muted)' : undefined }}>
+                                  <small className={closed ? styles.closedDeadline : styles.deadline}>
                                   報名截止：{formatPreviewDate(deadline)}{closed ? '（報名已關閉）' : ''}
                                 </small>
                               ) : null}
@@ -779,8 +780,8 @@ export function CreateEventPage() {
           </p>
         ) : null}
         </section>
-        <section className="form-section" aria-labelledby="registration-section-title">
-          <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
+        <section className={styles.formSection} aria-labelledby="registration-section-title">
+          <div className={styles.formSectionHeading}><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
           <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
@@ -847,10 +848,10 @@ export function CreateEventPage() {
             if (!recurrenceEnabled || !registrationDeadline || !startTime) return null
             const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
             if (offsetMinutes <= 0) {
-              return <small style={{ color: 'var(--color-text-muted)' }}>報名截止需早於活動開始時間，才能為週期系列套用「每場各自截止」</small>
+              return <small className={styles.mutedHint}>報名截止需早於活動開始時間，才能為週期系列套用「每場各自截止」</small>
             }
             const offsetText = offsetMinutes % 60 === 0 ? `${offsetMinutes / 60} 小時` : `${offsetMinutes} 分鐘`
-            return <small style={{ color: 'var(--color-text-muted)' }}>系列各場次將於各自開始前 {offsetText} 截止（依目前設定換算）</small>
+            return <small className={styles.mutedHint}>系列各場次將於各自開始前 {offsetText} 截止（依目前設定換算）</small>
           })()}
         </label> : null}
         {profile?.role_status === 'venue_approved' && (
@@ -969,9 +970,9 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-        <div className="sticky-action-bar">
+        <div className={styles.stickyActionBar}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
-          <div className="sticky-action-buttons">
+          <div className={styles.stickyActionButtons}>
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {t('createEvent.saveDraft')}
             </button>
