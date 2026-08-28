@@ -635,6 +635,7 @@ const zhTW = {
     statusPublished: '已公開',
     statusClosed: '已下架',
     draftNotice: '未發布草稿：只有你看得到，尚未開放報名或分享。',
+    publishEvent: '上架活動',
     closedNotice: '此活動目前已下架，只有主辦人可以管理。',
     publishNow: '立即公開',
     unpublishNow: '立即下架',
