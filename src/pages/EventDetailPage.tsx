@@ -24,6 +24,8 @@ import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../li
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
+import { getInitialHostConsoleView } from '../lib/event-detail-view'
+import type { HostConsoleView } from '../lib/event-detail-view'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
 
 interface Attendee {
@@ -133,7 +135,7 @@ export function EventDetailPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
-  const [hostConsoleView, setHostConsoleView] = useState<'participants' | 'management'>('participants')
+  const [hostConsoleView, setHostConsoleView] = useState<HostConsoleView>('participants')
 
   const { loading: loadingSeries, seriesId: eventSeriesId } = useIsEventInSeries(id)
   const eventSeries = useEventSeries(eventSeriesId)
@@ -174,6 +176,12 @@ export function EventDetailPage() {
   }, [eventSeriesId])
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+
+  useEffect(() => {
+    // The event loads asynchronously; select the host console once ownership is known.
+    setHostConsoleView(getInitialHostConsoleView(Boolean(isHost)))
+  }, [isHost])
+
   const seriesBlocksSingleRegistration = Boolean(
     eventSeriesId && (loadingSeries || eventSeries?.is_whole_series_required),
   )
