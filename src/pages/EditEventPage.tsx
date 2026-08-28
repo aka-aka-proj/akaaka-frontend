@@ -455,37 +455,40 @@ export function EditEventPage() {
     <Layout>
       <form className="card" onSubmit={submit}>
         {isSeriesMember ? (
-          <fieldset className="form-field">
-            <legend>{t('editEvent.seriesScopeLabel')}</legend>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> {t('editEvent.seriesScopeSingle')}</label>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> {t('editEvent.seriesScopeRest')}</label>
-            <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> {t('editEvent.seriesScopeEntire')}</label>
-            {editScope !== 'single' ? (
-              <>
+          <>
+            <fieldset className="form-field">
+              <legend>{t('editEvent.seriesScopeLabel')}</legend>
+              <small style={{ color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>{t('editEvent.seriesScopeHint')}</small>
+              <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> {t('editEvent.seriesScopeSingle')}</label>
+              <label className="checkbox"><input type="radio" name="edit-scope" value="rest_of_series" checked={editScope === 'rest_of_series'} onChange={() => setEditScope('rest_of_series')} /> {t('editEvent.seriesScopeRest')}</label>
+              <label className="checkbox"><input type="radio" name="edit-scope" value="entire_series" checked={editScope === 'entire_series'} onChange={() => setEditScope('entire_series')} /> {t('editEvent.seriesScopeEntire')}</label>
+              {editScope !== 'single' ? (
                 <small style={{ color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
                   {t('editEvent.batchAffectedCount', { count: scopedMembers.length - lockedCount })}
                   {lockedCount > 0 ? t('editEvent.batchSkippedLockedSuffix', { count: lockedCount }) : ''}
                   {'　'}
                   {t('editEvent.batchScheduleLockedHint')}
                 </small>
-                <fieldset className="form-field" style={{ marginTop: '0.5rem' }}>
-                  <legend>{t('editEvent.batchDeadlineLabel')}</legend>
-                  <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> {t('editEvent.batchDeadlineKeep')}</label>
-                  <label className="checkbox">
-                    <input type="radio" name="deadline-action" value="reapply_offset" checked={deadlineAction === 'reapply_offset'} onChange={() => setDeadlineAction('reapply_offset')} />
-                    {t('editEvent.batchDeadlineReapplyLabel')}
-                    <input aria-label={t('editEvent.batchOffsetMinutesAria')} type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} />
-                  </label>
-                  <label className="checkbox">
-                    <input type="radio" name="deadline-action" value="set_absolute" checked={deadlineAction === 'set_absolute'} onChange={() => setDeadlineAction('set_absolute')} />
-                    {t('editEvent.batchDeadlineAbsoluteLabel')}
-                    <input aria-label={t('editEvent.batchAbsoluteDeadlineAria')} type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
-                  </label>
-                  {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.batchDeadlineAbsoluteWarning')}</small> : null}
-                </fieldset>
-              </>
+              ) : null}
+            </fieldset>
+            {editScope !== 'single' ? (
+              <fieldset className="form-field">
+                <legend>{t('editEvent.batchDeadlineLabel')}</legend>
+                <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> {t('editEvent.batchDeadlineKeep')}</label>
+                <label className="checkbox">
+                  <input type="radio" name="deadline-action" value="reapply_offset" checked={deadlineAction === 'reapply_offset'} onChange={() => setDeadlineAction('reapply_offset')} />
+                  {t('editEvent.batchDeadlineReapplyLabel')}
+                  <input aria-label={t('editEvent.batchOffsetMinutesAria')} type="number" min="1" step="1" style={{ width: '6rem', margin: '0 0.35rem' }} value={batchOffsetMinutes} onChange={(event) => setBatchOffsetMinutes(event.target.value)} />
+                </label>
+                <label className="checkbox">
+                  <input type="radio" name="deadline-action" value="set_absolute" checked={deadlineAction === 'set_absolute'} onChange={() => setDeadlineAction('set_absolute')} />
+                  {t('editEvent.batchDeadlineAbsoluteLabel')}
+                  <input aria-label={t('editEvent.batchAbsoluteDeadlineAria')} type="datetime-local" style={{ margin: '0 0.35rem' }} value={batchAbsoluteDeadline} onChange={(event) => setBatchAbsoluteDeadline(event.target.value)} />
+                </label>
+                {deadlineAction === 'set_absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.batchDeadlineAbsoluteWarning')}</small> : null}
+              </fieldset>
             ) : null}
-          </fieldset>
+          </>
         ) : null}
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
