@@ -8,7 +8,7 @@ owner: design_engineering
 
 ## 目的與適用範圍
 
-本文件是 AkaAka frontend 各頁面共同遵循的視覺、版面、互動與可及性指南，先以活動詳情頁作為 reference implementation，再逐步套用到 Events、Profile、Create/Edit Event、Messaging 與其他頁面。
+本文件是 AkaAka frontend 各頁面共同遵循的視覺、版面、互動與可及性指南，先以活動詳情頁作為第一個導入目標，再逐步套用到 Events、Profile、Create/Edit Event、Messaging 與其他頁面。活動詳情頁目前仍可能有尚未完成 token migration 的實作，不應直接視為完全合規範本。
 
 本文件描述頁面與元件如何組合，不取代產品、API、database、security 或 feature 規格。實際 CSS token、元件狀態與工程驗證以 [`akaaka-docs/docs/spec/platform/008-design-tokens-spec.md`](https://github.com/aka-aka-proj/akaaka-docs/blob/main/docs/spec/platform/008-design-tokens-spec.md) 為準；功能行為以 akaaka-docs skill 指向的 canonical specs 為準。
 
@@ -30,25 +30,17 @@ owner: design_engineering
 
 頁面容器預設最大寬度為 `960px`，左右 padding 必須處理 safe-area。活動詳情頁使用主內容欄加側欄的雙欄結構；手機轉為單欄，標題區後緊接活動速覽卡。
 
-優先使用 canonical spacing token：`4 / 8 / 12 / 16 / 20px`（`--space-1` 至 `--space-5`）。避免為單一畫面新增任意 margin、padding、breakpoint 或絕對定位。
+優先使用 [`008-design-tokens-spec.md`](https://github.com/aka-aka-proj/akaaka-docs/blob/main/docs/spec/platform/008-design-tokens-spec.md) 登錄的 spacing token。不要在本文件重複維護 token 數值；避免為單一畫面新增任意 margin、padding、breakpoint 或絕對定位。
 
 ## Typography
 
-字體使用 Inter，fallback 至 system UI。長標題、地點、錯誤文案與雙語文案必須能換行，不得以截斷造成關鍵資訊遺失。
-
-| 語意 | Size / line-height / weight |
-|---|---|
-| Page title | `24 / 32 / 600` |
-| Section title | `18 / 24 / 600` |
-| Body | `15 / 22 / 400` |
-| Metadata | `13 / 18 / 400` |
-| Button / label | `15 / 20 / 600` |
+字體使用 Inter，fallback 至 system UI；type scale 與字重以 008 token／工程規格登錄內容為準。長標題、地點、錯誤文案與雙語文案必須能換行，不得以截斷造成關鍵資訊遺失。
 
 ## Color、radius 與 surfaces
 
 - 顏色只能使用 `008-design-tokens-spec.md` 登錄的 semantic token；不得在頁面或元件新增未登錄的硬編碼顏色。
 - Primary 只用於主要任務；分享、收藏、行事曆等使用 Secondary；刪除、撤銷與重新產生連結使用 Danger 並附文字說明。
-- Small radius 為 `8px`，Medium 為 `12px`；Large `20px` 僅在對應 token 登錄後使用。
+- radius 只使用 008 登錄的 canonical token；Large radius 若尚未登錄，不得在 production component 使用。
 - 優先使用背景對比、`1px` border 與 spacing；Card 使用 `--shadow-card`，popover／modal 使用對應 elevation token，避免過度陰影。
 - disabled、loading、error、empty 與 permission denied 必須有文字或語意標記，不得只靠顏色。
 
