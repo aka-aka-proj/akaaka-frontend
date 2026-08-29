@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -18,6 +18,7 @@ import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RecurrenceRule, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
 import styles from './CreateEventPage.module.css'
+import { useScrollVisibility } from '../hooks/useScrollVisibility'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -106,6 +107,11 @@ export function CreateEventPage() {
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
+  const preserveActionBar = useCallback(
+    () => Boolean(document.activeElement?.matches('input, textarea, select, button, [contenteditable="true"]')),
+    [],
+  )
+  const actionBarVisible = useScrollVisibility({ preserveWhen: preserveActionBar })
 
   const derivedSeriesDeadlineOffsetMinutes = useMemo(() => {
     if (!startTime || !registrationDeadline) return ''
@@ -1093,7 +1099,7 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-        <div className={styles.stickyActionBar}>
+        <div className={`${styles.stickyActionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className={styles.stickyActionButtons}>
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>

@@ -10,6 +10,7 @@ import { MoreMenuDrawer } from './MoreMenuDrawer'
 import { PrivacyNotice } from './PrivacyNotice'
 import { useUnreadNotificationCount } from '../hooks/useUnreadNotificationCount'
 import { PageBackButton } from './PageBackButton'
+import { useScrollVisibility } from '../hooks/useScrollVisibility'
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
@@ -51,6 +52,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
   const desktopMoreRef = useRef<HTMLDivElement>(null)
   const desktopMoreButtonRef = useRef<HTMLButtonElement>(null)
   const desktopMoreMenuRef = useRef<HTMLDivElement>(null)
+  const mobileShellVisible = useScrollVisibility()
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -186,7 +188,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
       {showPageBack ? <PageBackButton /> : null}
       {user ? <PrivacyNotice /> : null}
       {children}
-      <nav className="bottom-nav" aria-label="Mobile navigation">
+      <nav className={`bottom-nav${mobileShellVisible ? '' : ' is-scroll-hidden'}`} aria-label="Mobile navigation">
         {BOTTOM_NAV_ITEMS.map((item) => {
           if (item.isMore) {
             return (

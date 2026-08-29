@@ -161,6 +161,7 @@
   border-top: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
   backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 .stickyActionBar > span { color: var(--color-text-muted); font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans); }
 .stickyActionButtons { display: flex; flex-wrap: wrap; gap: var(--space-3); }
@@ -239,10 +240,15 @@
   .formSection { grid-template-columns: 1fr; }
   .createEventHeader { align-items: flex-start; flex-direction: column; }
   .assistToggle { width: 100%; }
-  .stickyActionBar { align-items: stretch; flex-direction: column; }
+  .stickyActionBar { bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); align-items: stretch; flex-direction: column; }
+  .stickyActionBarHidden { transform: translateY(calc(100% + var(--space-4))); opacity: 0; pointer-events: none; }
   .stickyActionButtons { width: 100%; }
   .stickyActionButtons > :global(button) { flex: 1 1 10rem; }
   .createEventForm :global(.form-builder-heading) { flex-direction: column; }
   .createEventForm :global(.form-builder-heading > button) { width: 100%; }
   .createEventForm :global(.form-builder-field-editor) { margin-inline-start: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stickyActionBar { transition: none; }
 }
