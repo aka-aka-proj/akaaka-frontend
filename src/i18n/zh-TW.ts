@@ -814,6 +814,7 @@ const zhTW = {
     follow: '追蹤',
     unfollow: '取消追蹤',
     sendMessage: '傳送訊息',
+    xProfileLink: '開啟 X.com 個人頁',
     userFollowed: '已追蹤此使用者。',
     userUnfollowed: '已取消追蹤此使用者。',
     block: '封鎖用戶',

@@ -183,25 +183,34 @@ export function ProfilePage() {
     if (!joinedErr) setJoinedEventsCount(joinedCount ?? 0)
 
     if (user && targetProfileId) {
-      const { data: blockData, error: blockError } = await supabase
-        .from('blocks')
-        .select('blocked_id')
-        .eq('blocker_id', user.id)
-        .eq('blocked_id', targetProfileId)
-        .maybeSingle()
+      const [{ data: blockData, error: blockError }, { data: blockedByTarget, error: blockedByTargetError }] = await Promise.all([
+        supabase
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', user.id)
+          .eq('blocked_id', targetProfileId)
+          .maybeSingle(),
+        supabase
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', targetProfileId)
+          .eq('blocked_id', user.id)
+          .maybeSingle(),
+      ])
 
       if (blockError) {
         setMessage(blockError.message)
       } else {
         setIsBlocked(Boolean(blockData))
       }
+      if (blockedByTargetError) setMessage(blockedByTargetError.message)
 
       if (!isOwner) {
         const [{ data: outgoingConnection }, { data: incomingConnection }] = await Promise.all([
           supabase.from('user_follows').select('followed_id').eq('follower_id', user.id).eq('followed_id', targetProfileId).maybeSingle(),
           supabase.from('user_follows').select('follower_id').eq('follower_id', targetProfileId).eq('followed_id', user.id).maybeSingle(),
         ])
-        setCanMessage(Boolean(outgoingConnection && incomingConnection))
+        setCanMessage(Boolean(outgoingConnection && incomingConnection && !blockData && !blockedByTarget))
 
         const { data: followData, error: followError } = await supabase
           .from('user_follows')
@@ -627,8 +636,9 @@ export function ProfilePage() {
                   ))}
                 {xProfileUrl && (
                   <li className="social-link-item">
-                    <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label="X">
+                    <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label={t('profile.xProfileLink')}>
                       <Icon href="/social-icons.svg" name="social-x" size={32} />
+                      <span className="social-link-label">X.com</span>
                     </a>
                   </li>
                 )}

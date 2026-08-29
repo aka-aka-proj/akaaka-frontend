@@ -301,6 +301,39 @@ describe('ProfilePage', () => {
     })
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
     expect(document.querySelectorAll('.social-link-item')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'Open X.com profile' }).getAttribute('href')).toBe('https://x.com/target')
+  })
+
+  it('opens a direct message flow from a mutually followed profile', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user', role_status: 'general', display_name: 'Target User', bio: 'Public bio',
+        external_social_links: [], metadata: { visibility: { bio: 'public' } }, reputation_score: 3,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+    const followsQuery = queryBuilder({ data: { followed_id: 'target-user' }, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      if (table === 'user_follows') return followsQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/messages/new" element={<div>New message flow</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: 'Send message' }))
+    expect(screen.getByText('New message flow')).toBeTruthy()
   })
 
   it('follows another user from their profile', async () => {
