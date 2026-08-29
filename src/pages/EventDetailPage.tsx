@@ -1195,7 +1195,7 @@ export function EventDetailPage() {
           {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? (
             <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
               {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
-               <details className="calendar-menu event-action-button">
+               <details className="calendar-menu">
                  <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
                  <div className="calendar-menu-items">
                    <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
