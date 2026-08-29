@@ -477,7 +477,7 @@ const zhTW = {
     createSeriesIntro: '先建立活動系列，再在系列中新增草稿場次。完成後可以一次發布整個系列。',
     seriesSessionNotice: '這是活動系列場次，儲存後會保持草稿並回到系列管理頁。',
     draftVisibility: '目前是草稿，只有你看得到。至少建立兩個場次並完成內容後，才能發布整個系列。',
-    publishedVisibility: '活動系列已發布；新增場次與修改發布狀態需從個別活動管理。',
+    publishedVisibility: '活動系列已發布；目前無法再新增或移除場次。',
     createSession: '新增場次',
     addDraftEvent: '加入既有草稿',
     publishSeries: '發布整個系列',

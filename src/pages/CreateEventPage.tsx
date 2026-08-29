@@ -496,7 +496,7 @@ export function CreateEventPage() {
           return
         }
         if (existingMembership) {
-          return navigate(`/events/series/${seriesId}/manage`)
+          return navigate(-1)
         }
         const { count, error: countError } = await supabase
           .from('event_series_membership')
@@ -537,7 +537,11 @@ export function CreateEventPage() {
       }
 
       createdEventRef.current = null
-      navigate(seriesId ? `/events/series/${seriesId}/manage` : `/events/${currentEventId}`, { replace: true })
+      if (seriesId) {
+        navigate(-1)
+      } else {
+        navigate(`/events/${currentEventId}`, { replace: true })
+      }
     } finally {
       setSubmitting(false)
     }

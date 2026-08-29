@@ -54,6 +54,14 @@ export function ManageEventSeriesPage() {
   const [message, setMessage] = useState('')
   const [showAddPicker, setShowAddPicker] = useState(false)
 
+  const filterUnassignedDraftEvents = async (events: EventItem[]) => {
+    const { data: memberships } = await supabase
+      .from('event_series_membership')
+      .select('event_id')
+    const assignedIds = new Set((memberships ?? []).map((membership) => membership.event_id))
+    return events.filter((event) => !assignedIds.has(event.id))
+  }
+
   useEffect(() => {
     if (!user || !id) return
     let cancelled = false
@@ -108,7 +116,7 @@ export function ManageEventSeriesPage() {
       const { data: myEventsData } = await myEventsQuery
 
       if (cancelled) return
-      setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+      setAllMyEvents(await filterUnassignedDraftEvents((myEventsData as EventItem[] | null) ?? []))
       setLoading(false)
     }
 
@@ -118,8 +126,8 @@ export function ManageEventSeriesPage() {
 
   const canAdd = useMemo(() => series?.lifecycle_status === 'draft' && allMyEvents.length > 0, [series, allMyEvents])
 
-  const handleSave = async () => {
-    if (!user || !id) return
+  const handleSave = async (): Promise<boolean> => {
+    if (!user || !id) return false
     setSaving(true)
     setMessage('')
 
@@ -135,9 +143,10 @@ export function ManageEventSeriesPage() {
     setSaving(false)
     if (error) {
       setMessage(error.message)
-      return
+      return false
     }
     setMessage(t('eventSeries.manageSaved'))
+    return true
   }
 
   const handleAddEvent = async (eventId: string) => {
@@ -174,16 +183,12 @@ export function ManageEventSeriesPage() {
       myEventsQuery = myEventsQuery.not('id', 'in', `(${normalizedMembers.map((m) => m.event_id).join(',')})`)
     }
     const { data: myEventsData } = await myEventsQuery
-    setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+    setAllMyEvents(await filterUnassignedDraftEvents((myEventsData as EventItem[] | null) ?? []))
     setShowAddPicker(false)
   }
 
   const handleRemoveEvent = async (membershipId: string) => {
     if (!id) return
-    if (members.length <= 2) {
-      setMessage(t('eventSeries.minimumMembers'))
-      return
-    }
     setSaving(true)
 
     const { error } = await supabase.from('event_series_membership').delete().eq('id', membershipId)
@@ -224,7 +229,7 @@ export function ManageEventSeriesPage() {
       myEventsQuery = myEventsQuery.not('id', 'in', `(${normalized.map((m) => m.event_id).join(',')})`)
     }
     const { data: myEventsData } = await myEventsQuery
-    setAllMyEvents((myEventsData as EventItem[] | null) ?? [])
+    setAllMyEvents(await filterUnassignedDraftEvents((myEventsData as EventItem[] | null) ?? []))
   }
 
   const handleMove = async (index: number, direction: -1 | 1) => {
@@ -250,6 +255,11 @@ export function ManageEventSeriesPage() {
     if (!id || !series || series.lifecycle_status !== 'draft' || members.length < 2) return
     setSaving(true)
     setMessage('')
+    const saved = await handleSave()
+    if (!saved) {
+      setSaving(false)
+      return
+    }
     const { data, error } = await supabase.functions.invoke('publish-event-series', {
       body: { series_id: id },
     })
