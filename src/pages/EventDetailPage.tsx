@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FunctionsHttpError } from '@supabase/supabase-js'
@@ -211,6 +211,11 @@ export function EventDetailPage() {
     : false
   const [shareLinkPending, setShareLinkPending] = useState(false)
   const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false)
+
+  const registrationSectionRef = useRef<HTMLElement | null>(null)
+  const scrollToRegistration = useCallback(() => {
+    registrationSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   const isPrivateShareable = Boolean(
     eventItem
@@ -619,6 +624,31 @@ export function EventDetailPage() {
 
     await load()
   }, [id, user, showError, load])
+
+  const mobileRegistrationShortcut = useMemo(() => {
+    if (!eventItem
+      || eventItem.lifecycle_status === 'draft'
+      || eventItem.publication_status === 'closed'
+      || isHost) {
+      return null
+    }
+
+    if (registrationEntryBlocked) {
+      return (
+        <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+          {t('eventDetail.registrationClosedCta')}
+        </button>
+      )
+    }
+
+    return (
+      <button type="button" className="primary-cta" onClick={scrollToRegistration}>
+        {isAtCapacity && !eventItem.external_registration_url
+          ? t('eventDetail.waitlistRegister')
+          : t('eventDetail.registration')}
+      </button>
+    )
+  }, [eventItem, isHost, registrationEntryBlocked, isAtCapacity, scrollToRegistration, t])
 
   const handleCancelRegistration = async () => {
     if (!id || !user) {
@@ -1262,7 +1292,7 @@ export function EventDetailPage() {
 
       {/* Registration Section */}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationNotice')}</p>
           {registrationEntryBlocked ? (
@@ -1277,13 +1307,13 @@ export function EventDetailPage() {
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section" role="status">
+        <section ref={registrationSectionRef} className="card event-registration-section" role="status">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationUnavailable')}</p>
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {registrationEntryBlocked ? (
             <>
@@ -1303,7 +1333,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           {!myRegistration && eventSeriesId && eventSeries && (
             <SeriesRegistrationFlow
@@ -1716,6 +1746,13 @@ export function EventDetailPage() {
       </section>
       ) : null}
       </div>
+
+      {eventItem && !isHost && mobileRegistrationShortcut ? (
+        <div className="event-mobile-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+          {mobileRegistrationShortcut}
+          {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+        </div>
+      ) : null}
 
       {id && user ? (
         <section className="event-report-section" aria-label={t('report.title')}>

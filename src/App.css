@@ -48,6 +48,7 @@
 }
 
 .event-registration-section {
+  grid-column: 1;
   grid-row: 2;
 }
 
@@ -59,6 +60,10 @@
   padding: 0.5rem 1rem;
   text-align: center;
   text-decoration: none;
+}
+
+.event-mobile-action-bar {
+  display: none;
 }
 
 .event-management-console {
@@ -3432,6 +3437,49 @@ dd {
 
   .event-action-bar > .event-bookmark-control > button {
     min-height: var(--touch-target);
+  }
+
+  .event-mobile-action-bar {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+    position: fixed;
+    right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    z-index: 90;
+    padding: var(--space-2) var(--space-3);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .event-mobile-action-bar .primary-cta {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target);
+    padding: var(--space-2) var(--space-3);
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .event-mobile-action-bar .event-bookmark-control {
+    flex: 0 0 auto;
+  }
+
+  .event-mobile-action-bar .event-bookmark-control > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target);
+    padding: 0 var(--space-3);
+  }
+
+  .page:has(.event-mobile-action-bar) {
+    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .desktop-nav {
