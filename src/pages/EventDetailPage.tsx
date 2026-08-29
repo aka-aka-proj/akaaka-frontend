@@ -1195,7 +1195,7 @@ export function EventDetailPage() {
           {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? (
             <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
               {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
-               <details className="calendar-menu">
+               <details className="calendar-menu event-action-button">
                  <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
                  <div className="calendar-menu-items">
                    <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
@@ -1208,7 +1208,7 @@ export function EventDetailPage() {
                </details>
                <button
                  type="button"
-                 className="secondary-action"
+                 className="secondary-action event-action-button"
                  onClick={async () => {
                    try {
                      await navigator.clipboard.writeText(window.location.href)
@@ -1218,7 +1218,6 @@ export function EventDetailPage() {
                      alert(t('events.shareFailed'))
                    }
                  }}
-                 style={{ minWidth: 'auto', padding: '0.4rem 0.75rem' }}
                >
                  {t('eventDetail.copyUrlLabel')}
                </button>
@@ -1230,7 +1229,7 @@ export function EventDetailPage() {
                  />
                ) : null}
               {isHost ? (
-                <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
+                <button type="button" className="calendar-btn event-action-button event-action-button--wide" onClick={() => setShareOpen(true)}>
                   {t('shareModal.broadcastToX')}
                 </button>
               ) : null}

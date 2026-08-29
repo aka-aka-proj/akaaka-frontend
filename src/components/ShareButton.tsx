@@ -37,7 +37,7 @@ export function ShareButton({ title, text, url }: { title: string; text: string;
   }
 
   return (
-    <button type="button" onClick={(e) => void handleShare(e)} className="share-button">
+    <button type="button" onClick={(e) => void handleShare(e)} className="calendar-btn share-button event-action-button">
       {t('events.share')}
     </button>
   )
