@@ -2956,10 +2956,9 @@ dd {
 }
 
 .event-action-bar > .event-bookmark-control,
+.event-action-bar > .calendar-menu,
 .event-action-bar > .event-action-button,
-.event-action-bar > .event-action-button > summary,
-.event-action-bar > .event-action-button > button,
-.event-action-bar > .event-action-button > a {
+.event-action-bar > .calendar-menu > summary {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -2967,9 +2966,7 @@ dd {
 
 .event-action-bar > .event-bookmark-control > button,
 .event-action-bar > .event-action-button,
-.event-action-bar > .event-action-button > summary,
-.event-action-bar > .event-action-button > button,
-.event-action-bar > .event-action-button > a {
+.event-action-bar > .calendar-menu > summary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2986,9 +2983,7 @@ dd {
 
 .event-action-bar > .event-bookmark-control > button:hover,
 .event-action-bar > .event-action-button:hover,
-.event-action-bar > .event-action-button > summary:hover,
-.event-action-bar > .event-action-button > button:hover,
-.event-action-bar > .event-action-button > a:hover {
+.event-action-bar > .calendar-menu > summary:hover {
   background: var(--color-surface-muted);
 }
 
