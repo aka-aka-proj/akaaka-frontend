@@ -100,7 +100,7 @@ export function ManageEventSeriesPage() {
         .from('events')
         .select('*')
         .eq('creator_id', user.id)
-        .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+        .eq('lifecycle_status', 'draft')
         .order('start_time', { ascending: false })
       if (existingIds.length > 0) {
         myEventsQuery = myEventsQuery.not('id', 'in', `(${existingIds.join(',')})`)
@@ -116,7 +116,7 @@ export function ManageEventSeriesPage() {
     return () => { cancelled = true }
   }, [user, id])
 
-  const canAdd = useMemo(() => members.length > 0 && allMyEvents.length > 0, [members, allMyEvents])
+  const canAdd = useMemo(() => series?.lifecycle_status === 'draft' && allMyEvents.length > 0, [series, allMyEvents])
 
   const handleSave = async () => {
     if (!user || !id) return
@@ -168,7 +168,7 @@ export function ManageEventSeriesPage() {
       .from('events')
       .select('*')
       .eq('creator_id', user!.id)
-      .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+      .eq('lifecycle_status', 'draft')
       .order('start_time', { ascending: false })
     if (normalizedMembers.length > 0) {
       myEventsQuery = myEventsQuery.not('id', 'in', `(${normalizedMembers.map((m) => m.event_id).join(',')})`)
@@ -218,7 +218,7 @@ export function ManageEventSeriesPage() {
       .from('events')
       .select('*')
       .eq('creator_id', user!.id)
-      .in('lifecycle_status', ['published', 'registration_open', 'completed'])
+      .eq('lifecycle_status', 'draft')
       .order('start_time', { ascending: false })
     if (normalized.length > 0) {
       myEventsQuery = myEventsQuery.not('id', 'in', `(${normalized.map((m) => m.event_id).join(',')})`)
@@ -244,6 +244,22 @@ export function ManageEventSeriesPage() {
     // Persist the swap
     await supabase.from('event_series_membership').update({ position: aPos }).eq('id', b.id)
     await supabase.from('event_series_membership').update({ position: bPos }).eq('id', a.id)
+  }
+
+  const handlePublish = async () => {
+    if (!id || !series || series.lifecycle_status !== 'draft' || members.length < 2) return
+    setSaving(true)
+    setMessage('')
+    const { data, error } = await supabase.functions.invoke('publish-event-series', {
+      body: { series_id: id },
+    })
+    setSaving(false)
+    if (error || !data?.success) {
+      setMessage(error?.message ?? t('eventSeries.publishFailed'))
+      return
+    }
+    setSeries((current) => current ? { ...current, lifecycle_status: 'published' } : current)
+    setMessage(t('eventSeries.publishSucceeded'))
   }
 
   if (loading) {
@@ -275,6 +291,10 @@ export function ManageEventSeriesPage() {
 
         {message && <p className="message">{message}</p>}
 
+        <p className="form-field-hint">
+          {series.lifecycle_status === 'draft' ? t('eventSeries.draftVisibility') : t('eventSeries.publishedVisibility')}
+        </p>
+
         <div className="form-section" aria-labelledby="manage-basic-title">
           <h2 id="manage-basic-title">{t('eventSeries.basicInfo')}</h2>
 
@@ -304,16 +324,34 @@ export function ManageEventSeriesPage() {
             <button type="button" className="primary-cta primary-cta--small" disabled={saving} onClick={() => void handleSave()}>
               {saving ? t('common.processing') : t('eventSeries.saveSeries')}
             </button>
+            {series.lifecycle_status === 'draft' && (
+              <button
+                type="button"
+                className="primary-cta primary-cta--small"
+                style={{ marginLeft: '0.5rem' }}
+                disabled={saving || members.length < 2}
+                onClick={() => void handlePublish()}
+              >
+                {t('eventSeries.publishSeries')}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="form-section" aria-labelledby="manage-members-title">
           <div className="form-section-heading">
             <h2 id="manage-members-title">{t('eventSeries.memberEvents', { count: members.length })}</h2>
-            {canAdd && (
-              <button type="button" className="secondary-action" onClick={() => setShowAddPicker(true)}>
-                {t('eventSeries.addEvent')}
-              </button>
+            {series.lifecycle_status === 'draft' && (
+              <div>
+                <Link to={`/events/new?series_id=${id}`} className="secondary-action">
+                  {t('eventSeries.createSession')}
+                </Link>
+                {canAdd && (
+                  <button type="button" className="secondary-action" style={{ marginLeft: '0.5rem' }} onClick={() => setShowAddPicker(true)}>
+                    {t('eventSeries.addDraftEvent')}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -327,34 +365,36 @@ export function ManageEventSeriesPage() {
                     {member.event ? new Date(member.event.start_time).toLocaleString() : ''}
                   </span>
                 </div>
-                <div className="series-manage-actions">
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => void handleMove(index, -1)}
-                    disabled={index === 0}
-                    aria-label={t('eventSeries.moveUp')}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => void handleMove(index, 1)}
-                    disabled={index === members.length - 1}
-                    aria-label={t('eventSeries.moveDown')}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className="danger-action"
-                    onClick={() => void handleRemoveEvent(member.id)}
-                    disabled={saving}
-                  >
-                    {t('eventSeries.removeEvent')}
-                  </button>
-                </div>
+                {series.lifecycle_status === 'draft' && (
+                  <div className="series-manage-actions">
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => void handleMove(index, -1)}
+                      disabled={index === 0 || saving}
+                      aria-label={t('eventSeries.moveUp')}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => void handleMove(index, 1)}
+                      disabled={index === members.length - 1 || saving}
+                      aria-label={t('eventSeries.moveDown')}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-action"
+                      onClick={() => void handleRemoveEvent(member.id)}
+                      disabled={saving}
+                    >
+                      {t('eventSeries.removeEvent')}
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ol>
@@ -369,7 +409,7 @@ export function ManageEventSeriesPage() {
           }}>
             <div className="report-modal" role="dialog" aria-modal="true" aria-labelledby="add-event-title">
               <div className="report-modal-header">
-                <h3 id="add-event-title">{t('eventSeries.addEvent')}</h3>
+                <h3 id="add-event-title">{t('eventSeries.addDraftEvent')}</h3>
                 <button type="button" className="modal-close" onClick={() => setShowAddPicker(false)} aria-label={t('common.close')}>×</button>
               </div>
               <div className="modal-body" style={{ padding: '1rem' }}>
@@ -378,7 +418,7 @@ export function ManageEventSeriesPage() {
                     <li key={event.id} className="thread-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0' }}>
                       <span>{event.title}</span>
                       <button type="button" className="primary-cta primary-cta--small" onClick={() => void handleAddEvent(event.id)}>
-                        {t('eventSeries.addEvent')}
+                        {t('eventSeries.addDraftEvent')}
                       </button>
                     </li>
                   ))}
