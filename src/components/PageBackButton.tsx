@@ -6,6 +6,7 @@ import styles from './PageBackButton.module.css'
 const FALLBACK_PARENT_ROUTES: Array<[RegExp, string | ((pathname: string) => string)]> = [
   [/^\/events\/[^/]+\/edit$/, (pathname) => pathname.replace(/\/edit$/, '')],
   [/^\/events\/(new|bookmarks)$/, '/events'],
+  [/^\/events\/series\/new$/, '/events'],
   [/^\/events\/[^/]+$/, '/events'],
   [/^\/profile\/me\/edit$/, '/profile/me'],
   [/^\/profile\/[^/]+\/(feedback|reports)$/, (pathname) => pathname.replace(/\/(feedback|reports)$/, '')],

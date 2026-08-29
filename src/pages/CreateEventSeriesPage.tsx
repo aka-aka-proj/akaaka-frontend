@@ -45,9 +45,6 @@ export function CreateEventSeriesPage() {
     <Layout>
       <div className="card">
         <div className="create-event-header">
-          <button type="button" className="secondary-action" onClick={() => navigate(-1)}>
-            ← {t('common.back')}
-          </button>
           <div>
             <h1>{t('eventSeries.createSeriesTitle')}</h1>
             <p>{t('eventSeries.createSeriesIntro')}</p>
