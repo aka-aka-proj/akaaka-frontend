@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -38,6 +38,8 @@ export function EventsPage() {
   const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const [seriesError, setSeriesError] = useState('')
   const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
+  const fabButtonRef = useRef<HTMLButtonElement>(null)
+  const firstCreateOptionRef = useRef<HTMLAnchorElement>(null)
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -48,6 +50,20 @@ export function EventsPage() {
     setTimeFilter(DEFAULT_TIME_FILTER)
     setMyEventsOnly(false)
   }
+
+  useEffect(() => {
+    if (!createMenuOpen) return
+
+    firstCreateOptionRef.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCreateMenuOpen(false)
+        fabButtonRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [createMenuOpen])
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -292,7 +308,7 @@ export function EventsPage() {
         <>
           {createMenuOpen && (
             <div id="mobile-create-menu" className="fab-menu" role="menu" aria-label={t('events.createEvent')}>
-              <Link to="/events/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
+              <Link ref={firstCreateOptionRef} to="/events/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
                 {t('events.createEvent')}
               </Link>
               <Link to="/events/series/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
@@ -303,6 +319,7 @@ export function EventsPage() {
           <button
             type="button"
             className="fab"
+            ref={fabButtonRef}
             aria-label={t('events.createEvent')}
             aria-expanded={createMenuOpen}
             aria-controls="mobile-create-menu"
@@ -321,7 +338,7 @@ export function EventsPage() {
           </div>
           <div className="desktop-create-actions desktop-only">
             <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
-            <Link to="/events/series/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('eventSeries.createSeriesTitle')}</Link>
+            <Link to="/events/series/new" className="secondary-action"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('eventSeries.createSeriesTitle')}</Link>
           </div>
         </div>
 
