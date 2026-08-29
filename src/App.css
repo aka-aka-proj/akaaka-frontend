@@ -2953,6 +2953,7 @@ dd {
 .event-action-bar > .event-bookmark-control,
 .event-action-bar > .calendar-menu,
 .event-action-bar > .event-action-button,
+.event-action-bar > .event-bookmark-control > button,
 .event-action-bar > .calendar-menu > summary {
   width: 100%;
   min-width: 0;
