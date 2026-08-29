@@ -79,4 +79,20 @@ describe('EventsPage server-side search contract', () => {
     })))
     expect(screen.getByRole('link', { name: '一般活動標題' })).toBeTruthy()
   })
+
+  it('uses one accessible create menu for event and series creation', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><EventsPage /></MemoryRouter>)
+
+    const trigger = screen.getByRole('button', { name: '建立活動' })
+    await user.click(trigger)
+
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: '建立活動' }).getAttribute('href')).toBe('/events/new')
+    expect(screen.getByRole('menuitem', { name: '建立活動系列' }).getAttribute('href')).toBe('/events/series/new')
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
 })
