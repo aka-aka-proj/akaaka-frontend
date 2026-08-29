@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
@@ -13,6 +13,7 @@ interface IssueComment {
   content: string
   created_at: string
   profile_id: string
+  profile?: { display_name: string | null } | null
 }
 
 interface IssueDetail {
@@ -61,9 +62,16 @@ export function IssueDetailPage() {
       .eq('issue_id', id)
       .order('created_at', { ascending: true })
 
+    const comments = (commentsData as IssueComment[]) ?? []
+    const commentProfileIds = [...new Set(comments.map((comment) => comment.profile_id))]
+    const { data: profilesData } = commentProfileIds.length > 0
+      ? await supabase.from('public_profiles').select('id, display_name').in('id', commentProfileIds)
+      : { data: [] }
+    const profileNames = new Map((profilesData ?? []).map((profile) => [profile.id, profile.display_name]))
+
     setIssue({
       ...(issueData as Omit<IssueDetail, 'comments'>),
-      comments: (commentsData as IssueComment[]) ?? [],
+      comments: comments.map((comment) => ({ ...comment, profile: { display_name: profileNames.get(comment.profile_id) ?? null } })),
     })
   }, [id, t])
 
@@ -126,7 +134,7 @@ export function IssueDetailPage() {
                     <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                     <div>
                       <p>{c.content}</p>
-                      <small>{c.profile_id} — {new Date(c.created_at).toLocaleString()}</small>
+                      <small><Link to={`/profile/${c.profile_id}`}>{c.profile?.display_name || t('issues.unnamedMember')}</Link> — {new Date(c.created_at).toLocaleString()}</small>
                     </div>
                   </div>
                 </li>

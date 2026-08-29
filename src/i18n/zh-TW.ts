@@ -1053,6 +1053,7 @@ const zhTW = {
     commentLabel: '留言',
     commentPlaceholder: '輸入留言...',
     postComment: '發表留言',
+    unnamedMember: '未命名會員',
     viewLogs: '查看日誌',
     reportThisIssue: '回報此問題',
   },
