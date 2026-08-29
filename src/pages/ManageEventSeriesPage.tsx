@@ -126,7 +126,7 @@ export function ManageEventSeriesPage() {
 
   const canAdd = useMemo(() => series?.lifecycle_status === 'draft' && allMyEvents.length > 0, [series, allMyEvents])
 
-  const handleSave = async (): Promise<boolean> => {
+  const handleSave = async (keepSaving = false): Promise<boolean> => {
     if (!user || !id) return false
     setSaving(true)
     setMessage('')
@@ -140,11 +140,12 @@ export function ManageEventSeriesPage() {
       })
       .eq('id', id)
 
-    setSaving(false)
     if (error) {
+      setSaving(false)
       setMessage(error.message)
       return false
     }
+    if (!keepSaving) setSaving(false)
     setMessage(t('eventSeries.manageSaved'))
     return true
   }
@@ -255,7 +256,7 @@ export function ManageEventSeriesPage() {
     if (!id || !series || series.lifecycle_status !== 'draft' || members.length < 2) return
     setSaving(true)
     setMessage('')
-    const saved = await handleSave()
+    const saved = await handleSave(true)
     if (!saved) {
       setSaving(false)
       return
