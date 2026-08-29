@@ -33,14 +33,14 @@ describe('CreateEventPage', () => {
     functionsInvoke.mockResolvedValue({ data: null, error: null })
     rpc.mockResolvedValue({ data: null, error: null })
     single.mockResolvedValue({ data: { id: 'event-1' }, error: null })
-    select.mockReturnValue({ single })
+    select.mockReturnValue({ single, in: inFn })
     insert.mockReturnValue({ select })
     eq.mockResolvedValue({ error: null })
     inFn.mockResolvedValue({ error: null })
     update.mockReturnValue({ eq, in: inFn })
     from.mockImplementation((table: string) => {
       if (table === 'events') {
-        return { insert, update }
+        return { insert, update, select }
       }
       if (table === 'notifications') {
         const query = {
@@ -386,6 +386,13 @@ describe('CreateEventPage', () => {
       if (args.p_event_id === 'inst-3') return { data: null, error: { message: 'publication denied' } }
       return { data: null, error: null }
     })
+    inFn.mockResolvedValueOnce({
+      data: [
+        { id: 'inst-2', start_time: '2026-07-24T12:00:00.000Z' },
+        { id: 'inst-3', start_time: '2026-07-31T12:00:00.000Z' },
+      ],
+      error: null,
+    })
     const user = userEvent.setup()
 
     render(
@@ -400,6 +407,7 @@ describe('CreateEventPage', () => {
     await user.click(screen.getByRole('radio', { name: '固定金額' }))
     await user.type(screen.getByLabelText('金額（新台幣）'), '500')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -411,10 +419,11 @@ describe('CreateEventPage', () => {
     await user.type(feeAmountInput, '300')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
-    await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(3))
     expect(functionsInvoke).toHaveBeenCalledTimes(1)
     expect(eq).toHaveBeenCalledWith('id', 'event-1')
-    expect(inFn).toHaveBeenCalledWith('id', ['inst-2', 'inst-3'])
+    expect(eq).toHaveBeenCalledWith('id', 'inst-2')
+    expect(eq).toHaveBeenCalledWith('id', 'inst-3')
     const [parentPayload] = update.mock.calls[0]
     expect(parentPayload).toEqual(expect.objectContaining({
       title: 'Edited Title',
@@ -428,6 +437,9 @@ describe('CreateEventPage', () => {
       title: 'Edited Title',
       attendance_fee_type: 'fixed',
       attendance_fee_amount: 300,
+    }))
+    expect(update.mock.calls[2][0]).toEqual(expect.objectContaining({
+      registration_deadline: null,
     }))
     expect(Object.keys(childPayload)).not.toContain('start_time')
     expect(Object.keys(childPayload)).not.toContain('recurrence_rule')
@@ -458,6 +470,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -494,6 +507,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -526,6 +540,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
 
     await waitFor(() =>
@@ -565,6 +580,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
 
     await waitFor(() =>
@@ -602,6 +618,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
     await waitFor(() =>
