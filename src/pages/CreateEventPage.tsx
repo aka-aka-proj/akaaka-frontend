@@ -61,6 +61,7 @@ export function CreateEventPage() {
   const { t, locale } = useT()
   const [searchParams] = useSearchParams()
   const fromEventId = searchParams.get('from_event_id')
+  const seriesId = searchParams.get('series_id')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [attendanceFeeType, setAttendanceFeeType] = useState<AttendanceFeeType>('free')
@@ -307,7 +308,7 @@ export function CreateEventPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const shouldPublish = publishIntentRef.current && !importing && sourcePreview === null
+    const shouldPublish = !seriesId && publishIntentRef.current && !importing && sourcePreview === null
     publishIntentRef.current = false
     if (!user) {
       setMessage(t('createEvent.signInFirst'))
@@ -483,6 +484,24 @@ export function CreateEventPage() {
         return
       }
 
+      if (seriesId && !existing) {
+        const { count, error: countError } = await supabase
+          .from('event_series_membership')
+          .select('id', { count: 'exact', head: true })
+          .eq('series_id', seriesId)
+        if (countError) {
+          setMessage(countError.message)
+          return
+        }
+        const { error: membershipError } = await supabase
+          .from('event_series_membership')
+          .insert({ series_id: seriesId, event_id: currentEventId, position: (count ?? 0) + 1 })
+        if (membershipError) {
+          setMessage(membershipError.message)
+          return
+        }
+      }
+
       if (shouldPublish) {
         const targetIds = publishInstanceIds.length > 0 ? publishInstanceIds : [currentEventId]
         const publicationResults = await Promise.allSettled(
@@ -505,7 +524,7 @@ export function CreateEventPage() {
       }
 
       createdEventRef.current = null
-      navigate(`/events/${currentEventId}`, { replace: true })
+      navigate(seriesId ? `/events/series/${seriesId}/manage` : `/events/${currentEventId}`, { replace: true })
     } finally {
       setSubmitting(false)
     }
@@ -555,6 +574,7 @@ export function CreateEventPage() {
             {sourcePreview ? <p className="message" role="status">{t('createEvent.sourcePreviewNotice', { provider: sourcePreview.provider })}</p> : null}
           </section>
         </div> : null}
+        {seriesId ? <p className={styles.copyFrom}>{t('createEvent.seriesSessionNotice')}</p> : null}
         {fromEventId && (
           <p className={styles.copyFrom}>{t('createEvent.copyFrom')}</p>
         )}
@@ -641,11 +661,11 @@ export function CreateEventPage() {
             onChange={(event) => setStartTime(event.target.value)}
           />
         </label>
-        <label className="checkbox">
+        {!seriesId && <label className="checkbox">
           <input type="checkbox" checked={recurrenceEnabled} onChange={(e) => setRecurrenceEnabled(e.target.checked)} />
           {t('createEvent.recurrenceLabel')}
-        </label>
-        {recurrenceEnabled && (
+        </label>}
+        {!seriesId && recurrenceEnabled && (
             <div className={styles.recurrencePanel}>
             <label>
               {t('createEvent.recurrenceEvery')}
@@ -974,11 +994,11 @@ export function CreateEventPage() {
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className={styles.stickyActionButtons}>
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
-              {t('createEvent.saveDraft')}
+              {seriesId ? t('createEvent.saveSession') : t('createEvent.saveDraft')}
             </button>
-            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
+            {!seriesId && <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
-            </button>
+            </button>}
           </div>
         </div>
         {message ? <p className="message">{message}</p> : null}
