@@ -201,6 +201,19 @@ describe('EventAnnouncements', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
+  it('restores focus to the announcement card trigger when the editor is also open', async () => {
+    const user = userEvent.setup()
+    from.mockReturnValue(draftQueryResult())
+    render(<EventAnnouncements eventId="event-1" isHost nativeRegistration isAuthenticated />)
+
+    await user.click(await screen.findByRole('button', { name: '編輯' }))
+    const publishButton = screen.getByRole('button', { name: '立即發布' })
+    await user.click(publishButton)
+    await user.click(screen.getByRole('button', { name: '返回編輯' }))
+
+    expect(document.activeElement).toBe(publishButton)
+  })
+
   it('clears the edit state when starting a new announcement during editing', async () => {
     const user = userEvent.setup()
     from.mockReturnValue(draftQueryResult())

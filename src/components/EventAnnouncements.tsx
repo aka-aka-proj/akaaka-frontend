@@ -154,8 +154,11 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuth
     const returnTarget = confirmationReturnRef.current
     confirmationReturnRef.current = null
     setTimeout(() => {
-      if (returnTarget?.isConnected) returnTarget.focus()
-      submitButtonRef.current?.focus()
+      if (returnTarget?.isConnected) {
+        returnTarget.focus()
+      } else {
+        submitButtonRef.current?.focus()
+      }
     }, 0)
   }
 
