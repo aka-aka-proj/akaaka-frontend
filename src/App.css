@@ -2056,6 +2056,13 @@ dd {
   margin-bottom: 0.25rem;
 }
 
+.social-link-item a {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  min-height: var(--touch-target);
+}
+
 .thread-item {
   display: flex;
   flex-direction: column;
