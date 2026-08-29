@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { SeriesCard } from '../components/SeriesCard'
+import { CreateEventMenu } from '../components/CreateEventMenu'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -33,13 +34,10 @@ export function EventsPage() {
   const [myEventsOnly, setMyEventsOnly] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
   const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const [seriesError, setSeriesError] = useState('')
   const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
-  const fabButtonRef = useRef<HTMLButtonElement>(null)
-  const firstCreateOptionRef = useRef<HTMLAnchorElement>(null)
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -50,20 +48,6 @@ export function EventsPage() {
     setTimeFilter(DEFAULT_TIME_FILTER)
     setMyEventsOnly(false)
   }
-
-  useEffect(() => {
-    if (!createMenuOpen) return
-
-    firstCreateOptionRef.current?.focus()
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setCreateMenuOpen(false)
-        fabButtonRef.current?.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [createMenuOpen])
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -304,41 +288,14 @@ export function EventsPage() {
 
   return (
     <Layout>
-      {user ? (
-        <>
-          {createMenuOpen && (
-            <div id="mobile-create-menu" className="fab-menu" role="menu" aria-label={t('events.createEvent')}>
-              <Link ref={firstCreateOptionRef} to="/events/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
-                {t('events.createEvent')}
-              </Link>
-              <Link to="/events/series/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
-                {t('eventSeries.createSeriesTitle')}
-              </Link>
-            </div>
-          )}
-          <button
-            type="button"
-            className="fab"
-            ref={fabButtonRef}
-            aria-label={t('events.createEvent')}
-            aria-expanded={createMenuOpen}
-            aria-controls="mobile-create-menu"
-            onClick={() => setCreateMenuOpen((open) => !open)}
-          >
-            <Icon href="/nav-icons.svg" name="nav-create" size={24} />
-          </button>
-        </>
-      ) : null}
-
       <section className="card">
         <div className="events-toolbar">
           <div>
             <p className="eyebrow">{t('events.title')}</p>
             <h1>{t('events.exploreTitle')}</h1>
           </div>
-          <div className="desktop-create-actions desktop-only">
-            <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
-            <Link to="/events/series/new" className="secondary-action"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('eventSeries.createSeriesTitle')}</Link>
+          <div>
+            {user ? <CreateEventMenu /> : null}
           </div>
         </div>
 

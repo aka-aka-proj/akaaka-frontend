@@ -2156,24 +2156,6 @@ dd {
   color: #475569;
 }
 
-.create-event-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-weight: 500;
-  padding: 0.55rem 0.85rem;
-  border-radius: 0.5rem;
-  background: #0d6efd;
-  color: #fff;
-  text-decoration: none;
-  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.2);
-}
-
-.create-event-link:hover {
-  background: #0b5ed7;
-  color: #fff;
-}
-
 .events-toolbar {
   display: flex;
   align-items: center;
@@ -3259,21 +3241,6 @@ dd {
   display: none;
 }
 
-/* ── FAB (Floating Action Button) ── */
-
-.fab {
-  display: none;
-}
-
-.fab-menu {
-  display: none;
-}
-
-.desktop-create-actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
 /* ── More Drawer ── */
 
 .more-drawer-overlay {
@@ -3531,62 +3498,47 @@ dd {
     max-width: 100%;
   }
 
-  /* ── FAB ── */
-
-  .fab {
-    display: inline-flex;
+  .event-mobile-action-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 0.6rem;
     position: fixed;
-    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-    right: max(1rem, env(safe-area-inset-right, 0px));
-    z-index: 99;
+    left: 0;
+    right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 90;
+    padding: 0.6rem 0.75rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .event-mobile-action-bar .primary-cta {
+    flex: 1 1 auto;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #0d6efd;
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s;
+    padding: 0.5rem 1rem;
+    text-align: center;
     text-decoration: none;
   }
 
-  .fab-menu {
-    display: flex;
-    position: fixed;
-    right: max(1rem, env(safe-area-inset-right, 0px));
-    bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
-    z-index: 99;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: stretch;
-    min-width: 10rem;
-    padding: 0.5rem;
-    border: 1px solid var(--color-border);
-    border-radius: 0.75rem;
-    background: var(--color-surface);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  .event-mobile-action-bar .event-bookmark-control {
+    flex: 0 0 auto;
   }
 
-  .fab-menu a {
-    display: block;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    color: var(--color-text-primary);
-    text-decoration: none;
-    white-space: nowrap;
+  .event-mobile-action-bar .event-bookmark-control > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 3rem;
+    padding: 0 0.9rem;
   }
 
-  .fab-menu a:hover,
-  .fab-menu a:focus-visible {
-    background: var(--color-surface-muted);
-  }
-
-  .fab:hover {
-    background: #0b5ed7;
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.5);
+  .page:has(.event-mobile-action-bar) {
+    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── More Drawer ── */
