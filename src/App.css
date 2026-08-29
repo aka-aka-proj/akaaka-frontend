@@ -47,6 +47,20 @@
   grid-column: 2;
 }
 
+.event-registration-section {
+  grid-row: 2;
+}
+
+.event-registration-section .primary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: 0.5rem 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
 .event-management-console {
   grid-column: 1 / -1;
 }
@@ -3367,6 +3381,16 @@ dd {
     width: 100%;
   }
 
+  .event-registration-section {
+    order: 1;
+  }
+
+  .event-announcements-section,
+  .event-detail-series-nav,
+  .event-discussion-section {
+    order: 2;
+  }
+
   .event-quickfacts-card,
   .host-view-tabs {
     width: 100%;
@@ -3406,6 +3430,10 @@ dd {
   .event-creator-stats {
     flex-wrap: wrap;
     gap: 0.65rem 1rem;
+  }
+
+  .event-action-bar > .event-bookmark-control > button {
+    min-height: var(--touch-target);
   }
 
   .desktop-nav {
