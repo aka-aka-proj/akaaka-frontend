@@ -143,6 +143,14 @@
 .closedDeadline { display: block; }
 .closedDeadline { color: var(--color-text-muted); }
 .mutedHint { color: var(--color-text-muted); }
+.seriesDeadlineOption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.seriesDeadlineOffset { width: 6rem; }
+.seriesDeadlineAbsolute { max-width: 100%; }
 
 .stickyActionBar {
   position: sticky;

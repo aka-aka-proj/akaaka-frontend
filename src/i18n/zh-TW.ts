@@ -318,6 +318,8 @@ const zhTW = {
     seriesDeadlineAbsoluteHint: '所有場次會共用相同的報名截止時間。',
     seriesDeadlineNoneLabel: '不設定報名截止',
     seriesDeadlineOffsetInvalid: '請輸入有效的相對截止分鐘數（1–525600）。',
+    seriesDeadlineAbsoluteRequired: '請選擇系列共用的報名截止時間。',
+    seriesDeadlineBeforeStartInvalid: '報名截止晚於或等於活動開始時間，無法建立週期系列；請調整報名截止時間。',
     externalRegistrationUrlLabel: '外部報名網址（選填）',
     externalRegistrationUrlPlaceholder: 'https://docs.google.com/forms/…',
     externalRegistrationUrlHint: '僅接受 Google Forms 或 Google Docs HTTPS 連結；外部網站會自行處理資料。',

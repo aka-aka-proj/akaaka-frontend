@@ -320,6 +320,8 @@ const en = {
     seriesDeadlineAbsoluteHint: 'All occurrences will share the same registration deadline.',
     seriesDeadlineNoneLabel: 'Do not set a registration deadline',
     seriesDeadlineOffsetInvalid: 'Enter a valid relative-deadline value (1–525600 minutes).',
+    seriesDeadlineAbsoluteRequired: 'Choose the shared registration deadline for the series.',
+    seriesDeadlineBeforeStartInvalid: 'The registration deadline must be before the event starts; adjust the deadline to create the series.',
     externalRegistrationUrlLabel: 'External registration URL (optional)',
     externalRegistrationUrlPlaceholder: 'https://docs.google.com/forms/...',
     externalRegistrationUrlHint: 'Only Google Forms or Google Docs HTTPS links are accepted. The external site handles its own data.',
