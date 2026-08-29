@@ -74,7 +74,7 @@ describe('NotificationsPage', () => {
           }),
         }
       }
-      if (table === 'profiles') {
+      if (table === 'public_profiles') {
         return {
           select: vi.fn().mockReturnValue({
             in: vi.fn().mockResolvedValue({ data: [{ id: 'user-2', display_name: 'Alice' }], error: null }),

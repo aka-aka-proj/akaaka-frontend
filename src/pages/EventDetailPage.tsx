@@ -955,7 +955,7 @@ export function EventDetailPage() {
   }
 
   function renderThread(thread: EventThread, depth = 0) {
-    const displayName = thread.profile?.display_name || thread.profile_id
+    const displayName = thread.profile?.display_name || t('eventDetail.unnamedMember')
     const isHostComment = eventItem?.creator_id === thread.profile_id
     return (
       <li key={thread.id} className={`discussion-item${depth > 0 ? ' discussion-item-reply' : ''}`}>
@@ -1173,9 +1173,9 @@ export function EventDetailPage() {
               <img src={user && eventItem.creator ? getAvatarPath(eventItem.creator) : eventItem.creator_avatar_path || '/default-avatar.svg'} alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')}{' '}
               {user && eventItem.creator ? (
-                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator.display_name || eventItem.creator_id}</Link>
+                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator.display_name || t('eventDetail.unnamedMember')}</Link>
               ) : (
-                <span>{eventItem.creator_display_name || eventItem.creator_id}</span>
+                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_display_name || t('eventDetail.unnamedMember')}</Link>
               )}
             </p>
             {user && eventItem.creator ? (
@@ -1548,7 +1548,7 @@ export function EventDetailPage() {
                       <div className="thread-header">
                         <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                         <div>
-                          <p><Link to={`/profile/${reg.profile_id}`}>{profileNameMap.get(reg.profile_id) || reg.profile_id}</Link></p>
+                          <p><Link to={`/profile/${reg.profile_id}`}>{profileNameMap.get(reg.profile_id) || t('eventDetail.unnamedMember')}</Link></p>
                           <small>{new Date(reg.created_at).toLocaleString()}</small>
                           {status === 'waitlisted' && reg.waitlist_position ? (
                             <small> — {t('eventDetail.waitlistPosition', { position: reg.waitlist_position })}</small>
@@ -1718,7 +1718,7 @@ export function EventDetailPage() {
               <div key={fr.id} className="form-response-item">
                 <p className="form-response-meta">
                   {respondentId ? (
-                    <Link to={`/profile/${respondentId}`}>{profileNameMap.get(respondentId) || respondentId}</Link>
+                    <Link to={`/profile/${respondentId}`}>{profileNameMap.get(respondentId) || t('eventDetail.unnamedMember')}</Link>
                   ) : (
                     t('eventDetail.unnamedMember')
                   )}
