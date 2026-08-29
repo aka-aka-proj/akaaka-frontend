@@ -3550,7 +3550,7 @@ dd {
     display: inline-flex;
     position: fixed;
     bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-    right: 1rem;
+    right: max(1rem, env(safe-area-inset-right, 0px));
     z-index: 99;
     align-items: center;
     justify-content: center;
@@ -3569,7 +3569,7 @@ dd {
   .fab-menu {
     display: flex;
     position: fixed;
-    right: 1rem;
+    right: max(1rem, env(safe-area-inset-right, 0px));
     bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
     z-index: 99;
     flex-direction: column;
