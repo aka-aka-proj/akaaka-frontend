@@ -91,6 +91,14 @@ describe('EventsPage server-side search contract', () => {
     expect(screen.getByRole('menuitem', { name: '建立活動' }).getAttribute('href')).toBe('/events/new')
     expect(screen.getByRole('menuitem', { name: '建立活動系列' }).getAttribute('href')).toBe('/events/series/new')
 
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: '建立活動系列' }))
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: '建立活動' }))
+    await user.click(screen.getByRole('heading', { name: '探索活動' }))
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    await user.click(trigger)
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).toBeNull()
     expect(document.activeElement).toBe(trigger)
