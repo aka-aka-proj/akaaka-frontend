@@ -3490,6 +3490,18 @@ dd {
     font-family: inherit;
   }
 
+  .bottom-nav {
+    transition: transform 0.2s ease;
+  }
+
+  .bottom-nav.is-scroll-hidden {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px)));
+  }
+
+  .bottom-nav:focus-within {
+    transform: translateY(0);
+  }
+
   .bottom-nav-item.active {
     color: #0d6efd;
   }
@@ -3803,6 +3815,10 @@ dd {
   .nav button {
     min-height: 44px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav { transition: none; }
 }
 
 .notification-page {
