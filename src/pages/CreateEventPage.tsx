@@ -484,7 +484,20 @@ export function CreateEventPage() {
         return
       }
 
-      if (seriesId && !existing) {
+      if (seriesId) {
+        const { data: existingMembership, error: membershipLookupError } = await supabase
+          .from('event_series_membership')
+          .select('id')
+          .eq('series_id', seriesId)
+          .eq('event_id', currentEventId)
+          .maybeSingle()
+        if (membershipLookupError) {
+          setMessage(membershipLookupError.message)
+          return
+        }
+        if (existingMembership) {
+          return navigate(`/events/series/${seriesId}/manage`)
+        }
         const { count, error: countError } = await supabase
           .from('event_series_membership')
           .select('id', { count: 'exact', head: true })
