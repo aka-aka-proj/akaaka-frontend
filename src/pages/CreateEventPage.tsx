@@ -108,7 +108,12 @@ export function CreateEventPage() {
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
   const preserveActionBar = useCallback(
-    () => Boolean(document.activeElement?.matches('input, textarea, select, button, [contenteditable="true"]')),
+    () => {
+      const visualViewport = window.visualViewport
+      const keyboardOpen = visualViewport ? visualViewport.height < window.innerHeight - 80 : false
+      const actionBarFocused = Boolean(document.activeElement?.closest('[data-sticky-action-bar]'))
+      return keyboardOpen || actionBarFocused
+    },
     [],
   )
   const actionBarVisible = useScrollVisibility({ preserveWhen: preserveActionBar })
@@ -1099,7 +1104,7 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-        <div className={`${styles.stickyActionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
+        <div data-sticky-action-bar className={`${styles.stickyActionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className={styles.stickyActionButtons}>
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
