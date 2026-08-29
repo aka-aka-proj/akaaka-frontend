@@ -33,6 +33,7 @@ export function EventsPage() {
   const [myEventsOnly, setMyEventsOnly] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
   const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const [seriesError, setSeriesError] = useState('')
@@ -288,9 +289,28 @@ export function EventsPage() {
   return (
     <Layout>
       {user ? (
-        <Link to="/events/new" className="fab" aria-label={t('events.createEvent')}>
-          <Icon href="/nav-icons.svg" name="nav-create" size={24} />
-        </Link>
+        <>
+          {createMenuOpen && (
+            <div id="mobile-create-menu" className="fab-menu" role="menu" aria-label={t('events.createEvent')}>
+              <Link to="/events/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
+                {t('events.createEvent')}
+              </Link>
+              <Link to="/events/series/new" role="menuitem" onClick={() => setCreateMenuOpen(false)}>
+                {t('eventSeries.createSeriesTitle')}
+              </Link>
+            </div>
+          )}
+          <button
+            type="button"
+            className="fab"
+            aria-label={t('events.createEvent')}
+            aria-expanded={createMenuOpen}
+            aria-controls="mobile-create-menu"
+            onClick={() => setCreateMenuOpen((open) => !open)}
+          >
+            <Icon href="/nav-icons.svg" name="nav-create" size={24} />
+          </button>
+        </>
       ) : null}
 
       <section className="card">
@@ -299,7 +319,10 @@ export function EventsPage() {
             <p className="eyebrow">{t('events.title')}</p>
             <h1>{t('events.exploreTitle')}</h1>
           </div>
-          <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+          <div className="desktop-create-actions desktop-only">
+            <Link to="/events/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+            <Link to="/events/series/new" className="create-event-link"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('eventSeries.createSeriesTitle')}</Link>
+          </div>
         </div>
 
         <div className="category-tabs">
@@ -437,11 +460,6 @@ export function EventsPage() {
             >
               {t('events.myEvents')}
             </button>
-                {user && (
-                  <Link to="/events/series/new" className="chip chip-neutral" style={{ marginLeft: '0.5rem' }}>
-                    {t('eventSeries.createSeriesTitle')}
-                  </Link>
-                )}
               </div>
             )}
             {activeFilterCount > 0 ? <button type="button" className="clear-filters" onClick={clearFilters}>{t('events.clearFilters')}</button> : null}

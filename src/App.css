@@ -3262,6 +3262,15 @@ dd {
   display: none;
 }
 
+.fab-menu {
+  display: none;
+}
+
+.desktop-create-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
 /* ── More Drawer ── */
 
 .more-drawer-overlay {
@@ -3555,6 +3564,37 @@ dd {
     cursor: pointer;
     transition: background 0.15s, box-shadow 0.15s;
     text-decoration: none;
+  }
+
+  .fab-menu {
+    display: flex;
+    position: fixed;
+    right: 1rem;
+    bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
+    z-index: 99;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+    min-width: 10rem;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .fab-menu a {
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    color: var(--color-text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .fab-menu a:hover,
+  .fab-menu a:focus-visible {
+    background: var(--color-surface-muted);
   }
 
   .fab:hover {
