@@ -3386,7 +3386,8 @@ dd {
   .event-detail-hero,
   .event-registration-section,
   .event-admin-section,
-  .event-discussion-section {
+  .event-discussion-section,
+  .event-announcements-section {
     width: 100%;
   }
 
