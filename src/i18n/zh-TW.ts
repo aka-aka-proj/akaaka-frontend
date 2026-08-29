@@ -594,6 +594,7 @@ const zhTW = {
   },
   eventDetail: {
     title: '活動詳情',
+    recurringSeriesLabel: '定期活動 第 {current}／{total} 場',
     sectionCancellationPending: '取消參加申請',
     sectionCancellationRejected: '取消申請已被拒絕',
     regCancellationPending: '取消參加申請審核中...',
