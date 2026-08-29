@@ -596,6 +596,7 @@ availableSlots: 'Available',
   },
   eventDetail: {
     title: 'Event Detail',
+    recurringSeriesLabel: 'Recurring event {current} of {total}',
     sectionCancellationPending: 'Pending Cancellation ',
     sectionCancellationRejected: 'Cancellation Rejected',
     regCancellationPending: 'Cancellation pending...',

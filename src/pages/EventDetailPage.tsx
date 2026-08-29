@@ -1106,7 +1106,7 @@ export function EventDetailPage() {
           <>
             {seriesInstances.length > 0 ? (
               <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-surface-muted)' }}>
-                <strong>📅 系列活動 第 {seriesIndex}／{seriesInstances.length} 場</strong>
+                <strong>📅 {t('eventDetail.recurringSeriesLabel', { current: seriesIndex, total: seriesInstances.length })}</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.35rem' }}>
                   {seriesInstances.map((instance) => {
                     const closed = instance.registration_deadline ? new Date(instance.registration_deadline).getTime() <= Date.now() : false
