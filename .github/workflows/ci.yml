@@ -2,40 +2,84 @@ name: Frontend PR CI
 
 on:
   push:
-    branches: [ main, preview ]
+    branches: [main, preview]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Lint
         run: npm run lint
-
       - name: Test
         run: npm run test
-
       - name: Build
         run: npm run build
 
+  browser-smoke:
+    name: Playwright Chromium smoke
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_SUPABASE_URL: http://127.0.0.1:54321
+      VITE_SUPABASE_ANON_KEY: ci-public-test-key
+      BROWSER_FILTER: chromium
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Chromium smoke tests
+        run: npx playwright test
+      - name: Materialize runtime manifest artifact
+        if: always()
+        run: |
+          mkdir -p playwright-report
+          cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
+      - name: Validate runtime manifest
+        if: always()
+        run: npm run test:manifest
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-chromium-smoke-report
+          path: |
+            playwright-report/
+            test-results/**/*.zip
+          if-no-files-found: ignore
+          retention-days: 7
+
   browser-quality:
-    name: Playwright browser quality
+    name: Playwright full browser quality (shard ${{ matrix.shard }}/3)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -45,39 +89,31 @@ jobs:
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: ci-public-test-key
-      # Preview pushes run Chromium plus iPhone Safari/WebKit; main/PR runs full matrix.
-      BROWSER_FILTER: ${{ (github.ref_name == 'main' || github.event_name == 'pull_request') && '' || 'chromium,webkit-mobile' }}
+      BROWSER_FILTER: ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
-
-      - name: Run browser smoke matrix (shard ${{ matrix.shard }}/3)
+      - name: Run browser matrix
         run: npx playwright test --shard=${{ matrix.shard }}/3
-
       - name: Materialize runtime manifest artifact
         if: always()
         run: |
           mkdir -p playwright-report
           cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
-
       - name: Validate runtime manifest
         if: always()
         run: npm run test:manifest
-
       - name: Upload Playwright artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-browser-quality-report-shard-${{ matrix.shard }}
@@ -85,9 +121,11 @@ jobs:
             playwright-report/
             test-results/**/*.zip
           if-no-files-found: ignore
+          retention-days: 7
 
   lighthouse-quality:
     name: Lighthouse anonymous quality
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -96,26 +134,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-
       - name: Run Lighthouse gate
         run: npm run test:lighthouse
-
       - name: Upload Lighthouse artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-anonymous-quality-report
           path: lighthouse-report/
           if-no-files-found: ignore
+          retention-days: 7
