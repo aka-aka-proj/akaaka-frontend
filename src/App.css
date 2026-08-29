@@ -2804,30 +2804,6 @@ dd {
   margin: 0.75rem 0 0;
 }
 
-.event-quickfacts-cta {
-  margin-top: 0.85rem;
-}
-
-.event-quickfacts-cta .primary-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  text-align: center;
-  text-decoration: none;
-  font-size: 0.9375rem;
-  min-height: 3rem;
-}
-
-.event-quickfacts-cta .primary-cta--disabled,
-.event-quickfacts-cta .primary-cta:disabled {
-  font-weight: 600;
-}
-
-.event-mobile-action-bar {
-  display: none;
-}
-
 /* ── Capacity Status Badge & Progress ── */
 
 .capacity-status-badge-wrap {
@@ -3512,49 +3488,6 @@ dd {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-  }
-
-  .event-mobile-action-bar {
-    display: flex;
-    align-items: stretch;
-    gap: 0.6rem;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    z-index: 90;
-    padding: 0.6rem 0.75rem;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    border-top: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-    backdrop-filter: blur(10px);
-  }
-
-  .event-mobile-action-bar .primary-cta {
-    flex: 1 1 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .event-mobile-action-bar .event-bookmark-control {
-    flex: 0 0 auto;
-  }
-
-  .event-mobile-action-bar .event-bookmark-control > button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    min-height: 3rem;
-    padding: 0 0.9rem;
-  }
-
-  .page:has(.event-mobile-action-bar) {
-    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── FAB ── */
