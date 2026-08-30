@@ -374,8 +374,10 @@ export function ProfilePage() {
     }
 
     const nextFollowing = !isFollowing
+    const nextMutualFollow = nextFollowing && isFollowingBack && !isBlocked && !isBlockedByTarget
     setIsFollowing(nextFollowing)
-    setIsMutuallyFollowing(nextFollowing && isFollowingBack && !isBlocked && !isBlockedByTarget)
+    setIsMutuallyFollowing(nextMutualFollow)
+    setCanMessage(nextMutualFollow)
     setMessage(t(isFollowing ? 'profile.userUnfollowed' : 'profile.userFollowed'))
   }
 
