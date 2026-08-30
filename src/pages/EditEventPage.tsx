@@ -11,9 +11,10 @@ import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import type { EventItem, EventCategory, TaiwanRegion, PublicationStatus, RegistrationFormField, RegistrationMode, AttendanceFeeType } from '../types'
 import { TAIWAN_REGIONS } from '../types'
-import { EVENT_TYPES, getEventTypeI18nKey } from '../lib/event-types'
 import { parseEventTypes, stringifyEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
+import layoutStyles from '../components/EventFormLayout.module.css'
+import { FeeField, EventTypeField } from '../components/EventFormFields'
 
 export function EditEventPage() {
   const { id } = useParams()
@@ -70,12 +71,6 @@ export function EditEventPage() {
     return []
   }, [isSeriesMember, editScope, seriesMembers, eventLifecycle?.start_time])
   const lockedCount = scopedMembers.filter(isMemberLocked).length
-
-  const addType = (type: string) => {
-    if (type && !eventType.includes(type) && EVENT_TYPES.some((supported) => supported === type)) {
-      setEventType([...eventType, type])
-    }
-  }
 
   // Latest-ref pattern: reload must key on data identity only (id/userId),
   // so locale changes or navigation identity churn never wipe draft edits.
@@ -453,10 +448,17 @@ export function EditEventPage() {
 
   return (
     <Layout>
-      <form className="card" onSubmit={submit}>
+      <form className={`card ${layoutStyles.form}`} onSubmit={submit}>
+        <div className={layoutStyles.header}>
+          <div>
+            <h1>{t('editEvent.title')}</h1>
+            <p>{t('editEvent.formIntro')}</p>
+          </div>
+          <Link to={`/events/${id}`} className="secondary-button">{t('common.cancel')}</Link>
+        </div>
         {isSeriesMember ? (
           <>
-            <fieldset className="form-field">
+            <fieldset className={`${layoutStyles.contextPanel} form-field`}>
               <legend>{t('editEvent.seriesScopeLabel')}</legend>
               <small style={{ color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>{t('editEvent.seriesScopeHint')}</small>
               <label className="checkbox"><input type="radio" name="edit-scope" value="single" checked={editScope === 'single'} onChange={() => { setEditScope('single'); setDeadlineAction('keep') }} /> {t('editEvent.seriesScopeSingle')}</label>
@@ -472,7 +474,7 @@ export function EditEventPage() {
               ) : null}
             </fieldset>
             {editScope !== 'single' ? (
-              <fieldset className="form-field">
+              <fieldset className={`${layoutStyles.contextPanel} form-field`}>
                 <legend>{t('editEvent.batchDeadlineLabel')}</legend>
                 <label className="checkbox"><input type="radio" name="deadline-action" value="keep" checked={deadlineAction === 'keep'} onChange={() => setDeadlineAction('keep')} /> {t('editEvent.batchDeadlineKeep')}</label>
                 <label className="checkbox">
@@ -494,16 +496,7 @@ export function EditEventPage() {
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
           <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.attendanceFeeLabel')}</span>
-          <select aria-label={t('editEvent.attendanceFeeLabel')} value={attendanceFeeType} onChange={(event) => { setAttendanceFeeType(event.target.value as AttendanceFeeType); if (event.target.value !== 'fixed') setAttendanceFeeAmount('') }}>
-            <option value="free">{t('editEvent.attendanceFeeFree')}</option>
-            <option value="fixed">{t('editEvent.attendanceFeeFixed')}</option>
-            <option value="see_description">{t('editEvent.attendanceFeeDescription')}</option>
-          </select>
-          {attendanceFeeType === 'fixed' ? <input aria-label={t('editEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('editEvent.attendanceFeeAmountPlaceholder')} value={attendanceFeeAmount} onChange={(event) => setAttendanceFeeAmount(event.target.value)} /> : null}
-          <small>{t('editEvent.attendanceFeeHint')}</small>
-        </label>
+        <FeeField t={t} value={attendanceFeeType} onChange={setAttendanceFeeType} amount={attendanceFeeAmount} onAmountChange={setAttendanceFeeAmount} />
         <fieldset className="form-field">
           <legend>{t('editEvent.registrationModeLabel')}</legend>
           <label className="checkbox"><input type="radio" name="registration-mode" value="native" checked={registrationMode === 'native'} onChange={() => { setRegistrationMode('native'); setExternalRegistrationUrl('') }} /> {t('editEvent.registrationModeNative')}</label>
@@ -550,36 +543,7 @@ export function EditEventPage() {
             onChange={setDescription}
           />
         </label>
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.eventTypeLabel')}
-          </span>
-          <select 
-            onChange={(e) => addType(e.target.value)}
-            defaultValue=""
-            style={{ marginBottom: '8px', width: '100%' }}
-          >
-            <option value="" disabled>{t('editEvent.selectEventType')}</option>
-            {EVENT_TYPES.map(type => (
-              <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-            ))}
-          </select>
-          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
-            {eventType.map(type => (
-              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
-                {t(getEventTypeI18nKey(type))}
-                <button 
-                  type="button" 
-                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
-                  aria-label={t('editEvent.removeType')}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
-          </div>
-        </label>
+        <EventTypeField t={t} values={eventType} onChange={setEventType} />
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.startTimeLabel')}
@@ -695,9 +659,15 @@ export function EditEventPage() {
           </select>
         </div>
         {registrationMode === 'native' ? <RegistrationFormBuilder fields={formFields} setFields={setFormFields} /> : null}
-        <button type="submit" disabled={submitting}>
-          <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}
-        </button>
+        <div className={layoutStyles.actionBar}>
+          <span>{t('editEvent.formActionHint')}</span>
+          <div className={layoutStyles.actions}>
+            <Link to={`/events/${id}`} className="secondary-button">{t('common.cancel')}</Link>
+            <button type="submit" className="primary-cta" disabled={submitting}>
+              <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}
+            </button>
+          </div>
+        </div>
         {message ? <p className="message">{message}</p> : null}
       </form>
     </Layout>

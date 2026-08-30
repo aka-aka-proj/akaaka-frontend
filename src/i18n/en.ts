@@ -515,6 +515,8 @@ availableSlots: 'Available',
   },
   editEvent: {
     title: 'Edit Event',
+    formIntro: 'Update event details, registration settings, and publication status.',
+    formActionHint: 'Changes apply to the selected event scope.',
     titleLabel: 'Title',
     seriesScopeLabel: 'Apply to which occurrences',
     seriesScopeHint: 'This setting applies to all editable fields below, not just the registration deadline.',
