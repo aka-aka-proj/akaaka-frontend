@@ -102,7 +102,16 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
       <header className="topbar">
         <div className="topbar-brand">
           <Link to="/">
-            <img src="/logo-brand.svg" alt="BDSM 圈內揪" className="logo-img" />
+            <picture>
+              <source media="(max-width: 700px)" srcSet="/images/logo-brand-mobile.png" />
+              <img
+                src="/images/logo-brand-desktop.png"
+                srcSet="/images/logo-brand-desktop.png 960w, /images/logo-brand-retina.png 1440w"
+                sizes="(max-width: 700px) 230px, 400px"
+                alt="BDSM 圈內揪"
+                className="logo-img"
+              />
+            </picture>
           </Link>
         </div>
         <div className="topbar-actions">

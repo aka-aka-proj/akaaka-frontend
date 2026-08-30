@@ -1065,7 +1065,7 @@ dd {
 
 .logo-img {
   width: 400px;
-  height: 72px;
+  height: 112px;
   object-fit: contain;
 }
 
@@ -3515,8 +3515,8 @@ dd {
   }
 
   .logo-img {
-    width: 192px;
-    height: 56px;
+    width: 230px;
+    height: 88px;
   }
 
   .events-toolbar {
