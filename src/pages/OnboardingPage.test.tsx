@@ -109,7 +109,7 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: '我同意' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
-    expect(screen.getByRole('heading', { name: '要接收 AkaAka 通知嗎？' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '要接收 BDSM 圈內揪通知嗎？' })).toBeTruthy()
     expect(enableWebPush).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: '開啟通知' }))

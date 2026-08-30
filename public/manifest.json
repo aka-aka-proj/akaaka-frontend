@@ -1,7 +1,7 @@
 {
-  "name": "AkaAka",
-  "short_name": "AkaAka",
-  "description": "Trust-first社群活動平台",
+  "name": "BDSM 圈內揪",
+  "short_name": "圈內揪",
+  "description": "BDSM 同好活動與社交平台",
   "start_url": "/events",
   "display": "standalone",
   "theme_color": "#1f2937",
