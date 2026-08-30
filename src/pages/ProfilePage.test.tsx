@@ -301,14 +301,15 @@ describe('ProfilePage', () => {
     })
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
     expect(document.querySelectorAll('.social-link-item')).toHaveLength(1)
-    expect(screen.getByRole('link', { name: 'Open X.com profile' }).getAttribute('href')).toBe('https://x.com/target')
+    expect((screen.getByRole('button', { name: 'Send message' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole('status').textContent).toContain('X.com link provided')
   })
 
   it('opens a direct message flow from a mutually followed profile', async () => {
     const profilesQuery = queryBuilder({
       data: {
         id: 'target-user', role_status: 'general', display_name: 'Target User', bio: 'Public bio',
-        external_social_links: [], metadata: { visibility: { bio: 'public' } }, reputation_score: 3,
+        external_social_links: [{ platform: 'x', url: 'https://x.com/target' }], metadata: { visibility: { bio: 'public' } }, reputation_score: 3,
       },
       error: null,
     })
@@ -332,6 +333,7 @@ describe('ProfilePage', () => {
     )
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy())
+    expect(screen.getByRole('link', { name: 'Open X.com profile' }).getAttribute('href')).toBe('https://x.com/target')
     await userEvent.click(screen.getByRole('button', { name: 'Send message' }))
     expect(screen.getByText('New message flow')).toBeTruthy()
   })
