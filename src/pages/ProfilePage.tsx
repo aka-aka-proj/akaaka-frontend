@@ -34,6 +34,7 @@ export function ProfilePage() {
   const [isBlocked, setIsBlocked] = useState(false)
   const [isBlockedByTarget, setIsBlockedByTarget] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [isFollowingBack, setIsFollowingBack] = useState(false)
   const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
   const [canMessage, setCanMessage] = useState(false)
   const [isMutuallyFollowing, setIsMutuallyFollowing] = useState(false)
@@ -115,6 +116,7 @@ export function ProfilePage() {
     const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
     return externalLink?.url ?? null
   }, [isOwner, connectedIdentities, profile])
+  const hasXProfileLink = isOwner ? Boolean(xProfileUrl) : Boolean(profile?.x_link_provided)
 
   const linkSocialIdentity = async (platform: VerifiableSocialPlatform) => {
     if (isLinkingIdentity) return
@@ -140,10 +142,15 @@ export function ProfilePage() {
       return
     }
 
-    const isAdminViewer = Boolean(user?.app_metadata?.role === 'admin' && !isOwner)
-    const { data, error } = isAdminViewer
-      ? await supabase.rpc('get_public_profile', { target_profile_id: targetProfileId }).maybeSingle()
-      : await supabase.from('profiles').select('*').eq('id', targetProfileId).maybeSingle()
+    setCanMessage(false)
+    setIsMutuallyFollowing(false)
+    setIsFollowingBack(false)
+    setIsBlocked(false)
+    setIsBlockedByTarget(false)
+
+    const { data, error } = await supabase
+      .rpc('get_profile_for_viewer', { target_profile_id: targetProfileId })
+      .maybeSingle()
 
     if (error) {
       setMessage(error.message)
@@ -214,6 +221,7 @@ export function ProfilePage() {
           supabase.from('user_follows').select('follower_id').eq('follower_id', targetProfileId).eq('followed_id', user.id).maybeSingle(),
         ])
         const mutualFollow = Boolean(outgoingConnection && incomingConnection)
+        setIsFollowingBack(Boolean(incomingConnection))
         setIsMutuallyFollowing(mutualFollow)
         setCanMessage(mutualFollow)
 
@@ -365,7 +373,9 @@ export function ProfilePage() {
       return
     }
 
-    setIsFollowing((current) => !current)
+    const nextFollowing = !isFollowing
+    setIsFollowing(nextFollowing)
+    setIsMutuallyFollowing(nextFollowing && isFollowingBack && !isBlocked && !isBlockedByTarget)
     setMessage(t(isFollowing ? 'profile.userUnfollowed' : 'profile.userFollowed'))
   }
 
@@ -495,7 +505,7 @@ export function ProfilePage() {
                       onClick={() => navigate(`/messages/new?user=${targetProfileId}`)}
                       title={t('profile.sendMessage')}
                       disabled={!canMessage || isBlocked || isBlockedByTarget}
-                      aria-describedby="profile-message-availability"
+                      aria-describedby={!isOwner && (!canMessage || isBlocked || isBlockedByTarget) ? 'profile-message-availability' : undefined}
                     >
                       <Icon href="/nav-icons.svg" name="nav-message" size={18} />
                       {t('profile.sendMessage')}
@@ -527,7 +537,7 @@ export function ProfilePage() {
                     </div>
                   </div>
                 )}
-                {!canMessage || isBlocked || isBlockedByTarget ? (
+                {!isOwner && (!canMessage || isBlocked || isBlockedByTarget) ? (
                   <p id="profile-message-availability" className="profile-action-hint">
                     {t('profile.messageRequiresMutualFollow')}
                   </p>
@@ -644,7 +654,7 @@ export function ProfilePage() {
                     </a>
                   </li>
                   ))}
-                {xProfileUrl && (isOwner || isMutuallyFollowing) && (
+                {xProfileUrl && (isOwner || (isMutuallyFollowing && !isBlocked && !isBlockedByTarget)) && (
                   <li className="social-link-item">
                     <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label={t('profile.xProfileLink')}>
                       <Icon href="/social-icons.svg" name="social-x" size={32} />
@@ -655,7 +665,7 @@ export function ProfilePage() {
                 {!isOwner && !isMutuallyFollowing ? (
                   <li className="social-link-item social-link-item--restricted" role="status">
                     <Icon href="/social-icons.svg" name="social-x" size={32} />
-                    <span>{xProfileUrl ? t('profile.xProfileProvided') : t('profile.xProfileNotProvided')}</span>
+                    <span>{hasXProfileLink ? t('profile.xProfileProvided') : t('profile.xProfileNotProvided')}</span>
                     <small>{t('profile.socialLinksRequiresMutualFollow')}</small>
                   </li>
                 ) : null}

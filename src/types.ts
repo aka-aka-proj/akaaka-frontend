@@ -46,6 +46,7 @@ export interface Profile {
   display_name: string | null
   bio: string | null
   external_social_links: SocialLink[]
+  x_link_provided?: boolean
   metadata: {
     visibility?: {
       bio?: Visibility

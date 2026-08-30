@@ -6,6 +6,7 @@ import { ProfilePage } from './ProfilePage'
 
 const mockUseAuth = vi.fn()
 const from = vi.fn()
+const rpc = vi.fn()
 const functionsInvoke = vi.fn()
 const linkIdentity = vi.fn()
 const unlinkIdentity = vi.fn()
@@ -27,6 +28,7 @@ vi.mock('../supabaseClient', () => ({
       linkIdentity: (...args: unknown[]) => linkIdentity(...args),
       getUserIdentities: (...args: unknown[]) => getUserIdentities(...args),
     },
+    rpc: (...args: unknown[]) => rpc(...args),
     functions: {
       invoke: (...args: unknown[]) => functionsInvoke(...args),
     },
@@ -58,6 +60,8 @@ describe('ProfilePage', () => {
     getUserIdentities.mockReset()
     getUserIdentities.mockResolvedValue({ data: { identities: [] }, error: null })
     functionsInvoke.mockReset()
+    rpc.mockReset()
+    rpc.mockImplementation((name: string) => name === 'get_profile_for_viewer' ? from('profiles') : queryBuilder({ data: null, error: null }))
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile: vi.fn().mockResolvedValue(undefined),
