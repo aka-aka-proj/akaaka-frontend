@@ -128,6 +128,10 @@ export function ManageEventSeriesPage() {
 
   const handleSave = async (keepSaving = false): Promise<boolean> => {
     if (!user || !id) return false
+    if (!title.trim()) {
+      setMessage(t('eventSeries.seriesName') + ' is required')
+      return false
+    }
     setSaving(true)
     setMessage('')
 
@@ -236,6 +240,7 @@ export function ManageEventSeriesPage() {
   const handleMove = async (index: number, direction: -1 | 1) => {
     const target = index + direction
     if (target < 0 || target >= members.length) return
+    const previous = members
     const next = [...members]
     const a = next[index]
     const b = next[target]
@@ -247,9 +252,24 @@ export function ManageEventSeriesPage() {
     next[target] = { ...a, position: bPos }
     setMembers(next)
 
-    // Persist the swap
-    await supabase.from('event_series_membership').update({ position: aPos }).eq('id', b.id)
-    await supabase.from('event_series_membership').update({ position: bPos }).eq('id', a.id)
+    // Persist the swap and restore UI/DB if either write fails.
+    setSaving(true)
+    const first = await supabase.from('event_series_membership').update({ position: aPos }).eq('id', b.id)
+    if (first.error) {
+      setMembers(previous)
+      setSaving(false)
+      setMessage(first.error.message)
+      return
+    }
+    const second = await supabase.from('event_series_membership').update({ position: bPos }).eq('id', a.id)
+    if (second.error) {
+      await supabase.from('event_series_membership').update({ position: bPos }).eq('id', b.id)
+      setMembers(previous)
+      setSaving(false)
+      setMessage(second.error.message)
+      return
+    }
+    setSaving(false)
   }
 
   const handlePublish = async () => {
@@ -332,7 +352,7 @@ export function ManageEventSeriesPage() {
           </label>
 
           <div style={{ marginTop: '1rem' }}>
-            <button type="button" className="primary-cta primary-cta--small" disabled={saving} onClick={() => void handleSave()}>
+            <button type="button" className="primary-cta primary-cta--small" disabled={saving || !title.trim()} onClick={() => void handleSave()}>
               {saving ? t('common.processing') : t('eventSeries.saveSeries')}
             </button>
             {series.lifecycle_status === 'draft' && (
@@ -340,7 +360,7 @@ export function ManageEventSeriesPage() {
                 type="button"
                 className="primary-cta primary-cta--small"
                 style={{ marginLeft: '0.5rem' }}
-                disabled={saving || members.length < 2}
+                disabled={saving || members.length < 2 || !title.trim()}
                 onClick={() => void handlePublish()}
               >
                 {t('eventSeries.publishSeries')}
