@@ -36,11 +36,11 @@ done
 
 if [ "$run_browser_checks" -eq 1 ]; then
   echo "Browser-affecting changes detected; running Chromium Playwright checks..."
-  # Run the local browser gate serially to avoid Chromium resource exhaustion
-  # across the four viewport projects on developer machines.
+  # Keep the local browser gate focused on the affected event-form routes;
+  # the complete Chromium matrix remains enforced by PR CI.
   VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-http://127.0.0.1:54321}" \
   VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-ci-public-test-key}" \
-  BROWSER_FILTER=chromium npx playwright test --workers=1
+  BROWSER_FILTER=chromium npx playwright test tests/authenticated.spec.ts --project=chromium-desktop --project=chromium-mobile --grep "(/events/new|/events/synthetic-event/edit)" --workers=1
   npm run test:manifest
 fi
 
