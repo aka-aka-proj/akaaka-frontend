@@ -25,7 +25,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     case "$file" in
       src/*.test.ts|src/*.test.tsx|src/*/*.test.ts|src/*/*.test.tsx|src/*/*/*.test.ts|src/*/*/*.test.tsx)
         ;;
-      src/*|tests/*|playwright.config.ts|scripts/playwright-*|package-lock.json)
+      src/*|tests/*|public/*|index.html|vite.config.*|playwright.config.ts|scripts/playwright-*|package-lock.json)
         run_browser_checks=1
         ;;
     esac
