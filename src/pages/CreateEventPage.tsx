@@ -7,7 +7,6 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import { EVENT_TYPES, SOCIAL_TAGS, PRACTICE_TAGS, getEventTypeI18nKey } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
@@ -19,6 +18,8 @@ import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RecurrenceRule, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
 import styles from './CreateEventPage.module.css'
 import { useScrollVisibility } from '../hooks/useScrollVisibility'
+import layoutStyles from '../components/EventFormLayout.module.css'
+import { FeeField, EventTypeField } from '../components/EventFormFields'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
@@ -274,12 +275,6 @@ export function CreateEventPage() {
       setRegistrationDeadline('')
     }
     setAiMessage(t('createEvent.sourceImportPreview'))
-  }
-
-  const addType = (type: string) => {
-    if (type && !eventType.includes(type) && EVENT_TYPES.some((supported) => supported === type)) {
-      setEventType([...eventType, type])
-    }
   }
 
   const updateFormField = (id: string, updates: Partial<RegistrationFormField>) => {
@@ -610,8 +605,8 @@ export function CreateEventPage() {
 
   return (
     <Layout>
-      <form className={`card ${styles.createEventForm}`} onSubmit={submit}>
-        <div className={styles.createEventHeader}>
+      <form className={`card ${styles.createEventForm} ${layoutStyles.form}`} onSubmit={submit}>
+        <div className={`${styles.createEventHeader} ${layoutStyles.header}`}>
           <div>
             <h1>{t('createEvent.title')}</h1>
             <p>{t('createEvent.formIntro')}</p>
@@ -656,8 +651,8 @@ export function CreateEventPage() {
         {fromEventId && (
           <p className={styles.copyFrom}>{t('createEvent.copyFrom')}</p>
         )}
-        <section className={styles.formSection} aria-labelledby="basic-info-title">
-          <div className={styles.formSectionHeading}><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="basic-info-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
@@ -688,46 +683,10 @@ export function CreateEventPage() {
             {t('eventDetail.safetyProtocolDesc')}
           </p>
         )}
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
-          </span>
-          <select 
-            onChange={(e) => addType(e.target.value)}
-            defaultValue=""
-            className={styles.eventTypeSelect}
-          >
-            <option value="" disabled>{t('createEvent.selectEventType')}</option>
-            <optgroup label={t('createEvent.categorySocial')}>
-              {SOCIAL_TAGS.map((type) => (
-                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-              ))}
-            </optgroup>
-            <optgroup label={t('createEvent.categoryPractice')}>
-              {PRACTICE_TAGS.map((type) => (
-                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-              ))}
-            </optgroup>
-          </select>
-          <div className={styles.tagsInputContainer}>
-            {eventType.map(type => (
-              <span key={type} className={styles.tag}>
-                {t(getEventTypeI18nKey(type))}
-                <button 
-                  type="button" 
-                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  className={styles.tagRemove}
-                  aria-label={t('createEvent.removeType')}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
-          </div>
-        </label>
+        <EventTypeField t={t} values={eventType} onChange={setEventType} />
         </section>
-        <section className={styles.formSection} aria-labelledby="time-location-title">
-          <div className={styles.formSectionHeading}><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="time-location-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
@@ -878,21 +837,9 @@ export function CreateEventPage() {
           </p>
         ) : null}
         </section>
-        <section className={styles.formSection} aria-labelledby="registration-section-title">
-          <div className={styles.formSectionHeading}><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
-          <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
-            {([['free', t('createEvent.attendanceFeeFree')], ['fixed', t('createEvent.attendanceFeeFixed')], ['see_description', t('createEvent.attendanceFeeDescription')]] as const).map(([value, label]) => (
-              <label key={value} className={attendanceFeeType === value ? 'is-selected' : ''}>
-                <input type="radio" name="attendance-fee" value={value} checked={attendanceFeeType === value} onChange={() => { setAttendanceFeeType(value); if (value !== 'fixed') setAttendanceFeeAmount('') }} />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-          {attendanceFeeType === 'fixed' ? <input aria-label={t('createEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('createEvent.attendanceFeeAmountPlaceholder')} value={attendanceFeeAmount} onChange={(event) => setAttendanceFeeAmount(event.target.value)} /> : null}
-          <small>{t('createEvent.attendanceFeeHint')}</small>
-        </label>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="registration-section-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
+        <FeeField t={t} value={attendanceFeeType} onChange={setAttendanceFeeType} amount={attendanceFeeAmount} onAmountChange={setAttendanceFeeAmount} />
         <fieldset className="form-field">
           <legend>{t('createEvent.registrationModeLabel')}</legend>
           <div className="segmented-control registration-mode-control">
@@ -1104,9 +1051,9 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-        <div data-sticky-action-bar className={`${styles.stickyActionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
+        <div data-sticky-action-bar className={`${styles.stickyActionBar} ${layoutStyles.actionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
-          <div className={styles.stickyActionButtons}>
+          <div className={`${styles.stickyActionButtons} ${layoutStyles.actions}`}>
             <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {seriesId ? t('createEvent.saveSession') : t('createEvent.saveDraft')}
             </button>

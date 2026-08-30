@@ -513,6 +513,8 @@ const zhTW = {
   },
   editEvent: {
     title: '編輯活動',
+    formIntro: '更新活動內容、報名設定與公開狀態。',
+    formActionHint: '修改會套用至目前選擇的活動範圍。',
     titleLabel: '標題',
     seriesScopeLabel: '套用到哪些場次',
     seriesScopeHint: '此設定會套用至下方所有可編輯欄位，不只報名截止。',
