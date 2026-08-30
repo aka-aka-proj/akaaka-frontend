@@ -1,0 +1,35 @@
+#!/bin/sh
+
+set -eu
+
+echo "Running frontend pre-push validation..."
+npm run lint
+npm test
+npm run build
+
+run_browser_checks=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -n "${local_sha:-}" ] || continue
+
+  changed_files=""
+  if git rev-parse --verify origin/preview >/dev/null 2>&1; then
+    changed_files=$(git diff --name-only "origin/preview...${local_sha}" || true)
+  elif [ "${remote_sha}" != "0000000000000000000000000000000000000000" ]; then
+    changed_files=$(git diff --name-only "${remote_sha}" "${local_sha}" || true)
+  else
+    changed_files=$(git show --format= --name-only "${local_sha}" || true)
+  fi
+
+  if printf '%s\n' "$changed_files" | grep -Eq '^(src/|tests/|playwright\.config\.ts$|scripts/playwright-|package(-lock)?\.json$)'; then
+    run_browser_checks=1
+  fi
+done
+
+if [ "$run_browser_checks" -eq 1 ]; then
+  echo "Browser-affecting changes detected; running Chromium Playwright checks..."
+  BROWSER_FILTER=chromium npx playwright test
+  npm run test:manifest
+fi
+
+echo "Frontend pre-push validation passed."
