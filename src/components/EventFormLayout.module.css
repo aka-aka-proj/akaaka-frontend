@@ -97,7 +97,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  min-width: 10rem;
+  min-width: var(--action-button-min-width);
   min-height: var(--touch-target);
   padding: var(--space-2) var(--space-4);
   border: 1px solid transparent;

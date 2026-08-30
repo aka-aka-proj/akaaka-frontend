@@ -66,6 +66,7 @@
   --shadow-popover: 0 8px 24px rgba(31, 41, 55, 0.16);
   --shadow-modal: 0 8px 32px rgba(31, 41, 55, 0.2);
   --touch-target: 2.75rem;
+  --action-button-min-width: 10rem;
 }
 
 body {
