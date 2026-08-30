@@ -601,6 +601,7 @@ export function EditEventPage() {
             aria-label={t('editEvent.registrationDeadlineLabel')}
             type="datetime-local"
             value={registrationDeadline}
+            disabled={editScope !== 'single'}
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label> : null}
