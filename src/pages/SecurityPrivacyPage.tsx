@@ -92,7 +92,7 @@ export function SecurityPrivacyPage() {
     setMfaMessage('')
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
-      friendlyName: 'AkaAka Authenticator',
+      friendlyName: 'BDSM Circle Connect Authenticator',
     })
     setMfaLoading(false)
     if (error) {
@@ -348,7 +348,7 @@ export function SecurityPrivacyPage() {
 
       <section className="card">
         <p style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
-          AkaAka — 安全、透明、隱私優先
+          BDSM 圈內揪 — 安全、透明、隱私優先
         </p>
       </section>
     </Layout>

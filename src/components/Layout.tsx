@@ -102,7 +102,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
       <header className="topbar">
         <div className="topbar-brand">
           <Link to="/">
-            <img src="/icons/icon-whole.png" alt="BDSM 圈內揪" className="logo-img" />
+            <img src="/logo-brand.svg" alt="BDSM 圈內揪" className="logo-img" />
           </Link>
         </div>
         <div className="topbar-actions">
