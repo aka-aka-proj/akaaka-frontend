@@ -38,7 +38,9 @@ if [ "$run_browser_checks" -eq 1 ]; then
   echo "Browser-affecting changes detected; running Chromium Playwright checks..."
   VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-http://127.0.0.1:54321}" \
   VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-ci-public-test-key}" \
-  BROWSER_FILTER=chromium npx playwright test
+  # Run the local browser gate serially to avoid Chromium resource exhaustion
+  # across the four viewport projects on developer machines.
+  BROWSER_FILTER=chromium npx playwright test --workers=1
   npm run test:manifest
 fi
 
