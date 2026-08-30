@@ -103,7 +103,7 @@ export function CreateEventPage() {
   const [recurrenceLimitMode, setRecurrenceLimitMode] = useState<'count' | 'until'>('count')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean; seriesStartIso?: string; seriesRuleJson?: string } | null>(null)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean; recurrenceIncomplete?: boolean; seriesStartIso?: string; seriesRuleJson?: string } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
@@ -383,7 +383,7 @@ export function CreateEventPage() {
       return
     }
 
-    if (recurrenceEnabled && registrationMode === 'native' && effectiveRegistrationDeadline && startTime
+    if (recurrenceEnabled && registrationMode === 'native' && effectiveRegistrationDeadline
       && new Date(startTime).getTime() - new Date(effectiveRegistrationDeadline).getTime() <= 0) {
       setMessage(t('createEvent.seriesDeadlineBeforeStartInvalid'))
       return
@@ -502,7 +502,7 @@ export function CreateEventPage() {
         // failure), so only an explicit success !== false means fully created.
         if (!recurrenceError && recurrenceResult && recurrenceResult.success !== false && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
-          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
+          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, recurrenceIncomplete: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
           return true
         }
         const zeroCreated = Boolean(
@@ -519,7 +519,7 @@ export function CreateEventPage() {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
         }
         if (createdEventRef.current) {
-          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
+          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated, recurrenceIncomplete: !zeroCreated, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
         }
         return false
       }
@@ -529,6 +529,10 @@ export function CreateEventPage() {
       }
 
       const parentId = existing ? existing.eventId : data?.id
+      if (existing?.recurrenceIncomplete) {
+        setMessage(t('createEvent.recurrencePartialFailed', { created: existing.instanceIds.length, failed: 1 }))
+        return
+      }
       if (parentId && (recurrenceEnabled && recurrenceRule) && (!existing || existing.recurrenceRetryable)) {
         const completed = await ensureRecurrenceInstances(parentId)
         if (!completed) return
