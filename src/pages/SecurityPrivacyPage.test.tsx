@@ -75,7 +75,7 @@ describe('SecurityPrivacyPage MFA', () => {
       challengeId: 'challenge-1',
       code: '123456',
     }))
-    expect(enroll).toHaveBeenCalledWith({ factorType: 'totp', friendlyName: 'AkaAka Authenticator' })
+    expect(enroll).toHaveBeenCalledWith({ factorType: 'totp', friendlyName: 'BDSM Circle Connect Authenticator' })
     expect(challenge).toHaveBeenCalledWith({ factorId: 'factor-1' })
     expect(screen.getByText('雙重驗證已啟用。')).toBeTruthy()
   })

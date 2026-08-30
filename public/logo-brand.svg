@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2009" height="415" viewBox="0 0 2009 415" role="img" aria-labelledby="title desc">
+  <title id="title">BDSM 圈內揪</title>
+  <desc id="desc">BDSM 同好活動與社交平台</desc>
+  <defs>
+    <linearGradient id="brand-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed" />
+      <stop offset="0.55" stop-color="#d946ef" />
+      <stop offset="1" stop-color="#fb7185" />
+    </linearGradient>
+    <clipPath id="mascot-clip">
+      <rect x="1490" y="0" width="519" height="415" />
+    </clipPath>
+  </defs>
+  <text x="24" y="270" fill="url(#brand-gradient)" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif" font-size="152" font-weight="600" letter-spacing="3">BDSM 圈內揪</text>
+  <image href="/icons/icon-whole.png" x="0" y="0" width="2009" height="415" clip-path="url(#mascot-clip)" preserveAspectRatio="none" />
+  <line x1="0" y1="404" x2="1490" y2="404" stroke="url(#brand-gradient)" stroke-width="4" />
+</svg>
