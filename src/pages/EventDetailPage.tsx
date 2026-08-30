@@ -375,14 +375,14 @@ export function EventDetailPage() {
     // unconditionally — even when RLS already grants a direct read — so the
     // bearer token never lingers in the address bar or history.
     const hashToken = readShareTokenFromHash()
-    if (id && hashToken) {
+    if (hashToken) {
       storeShareToken(id, hashToken)
       window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
     }
 
     // Non-creators cannot read private rows directly; fall back to the
     // controlled read-only token path via same-tab session storage.
-    if (!currentEvent && id) {
+    if (!currentEvent) {
       const shareToken = readStoredShareToken(id)
       if (shareToken) {
         const { data: tokenData, error: tokenError } = await supabase
