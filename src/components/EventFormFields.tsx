@@ -1,6 +1,7 @@
 import { Icon } from './Icon'
 import { EVENT_TYPES, PRACTICE_TAGS, SOCIAL_TAGS, getEventTypeI18nKey } from '../lib/event-types'
 import type { AttendanceFeeType } from '../types'
+import styles from './EventFormLayout.module.css'
 
 interface FeeFieldProps {
   t: (key: string) => string
@@ -18,8 +19,8 @@ export function FeeField({ t, value, onChange, amount, onAmountChange }: FeeFiel
   ] as const
 
   return (
-    <label className="form-field">
-      <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
+    <fieldset className="form-field">
+      <legend><span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span></legend>
       <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
         {options.map(([option, label]) => (
           <label key={option} className={value === option ? 'is-selected' : ''}>
@@ -39,7 +40,7 @@ export function FeeField({ t, value, onChange, amount, onAmountChange }: FeeFiel
       </div>
       {value === 'fixed' ? <input aria-label={t('createEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('createEvent.attendanceFeeAmountPlaceholder')} value={amount} onChange={(event) => onAmountChange(event.target.value)} /> : null}
       <small>{t('createEvent.attendanceFeeHint')}</small>
-    </label>
+    </fieldset>
   )
 }
 
@@ -66,11 +67,11 @@ export function EventTypeField({ t, values, onChange }: EventTypeFieldProps) {
           {PRACTICE_TAGS.map((type) => <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>)}
         </optgroup>
       </select>
-      <div className="tags-input-container">
+      <div className={styles.tagsInput}>
         {values.map((type) => (
-          <span className="tag" key={type}>
+          <span className={styles.tag} key={type}>
             {t(getEventTypeI18nKey(type))}
-            <button type="button" onClick={() => onChange(values.filter((item) => item !== type))} aria-label={t('createEvent.removeType')}>×</button>
+            <button className={styles.tagRemove} type="button" onClick={() => onChange(values.filter((item) => item !== type))} aria-label={t('createEvent.removeType')}>×</button>
           </span>
         ))}
       </div>

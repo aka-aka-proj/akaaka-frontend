@@ -492,47 +492,12 @@ export function EditEventPage() {
             ) : null}
           </>
         ) : null}
+        <section className={layoutStyles.section} aria-labelledby="edit-basic-info-title">
+          <div className={layoutStyles.sectionHeading}><h2 id="edit-basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
         <label className="form-field">
           <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.titleLabel')}</span>
           <input aria-label={t('editEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
-        <FeeField t={t} value={attendanceFeeType} onChange={setAttendanceFeeType} amount={attendanceFeeAmount} onAmountChange={setAttendanceFeeAmount} />
-        <fieldset className="form-field">
-          <legend>{t('editEvent.registrationModeLabel')}</legend>
-          <label className="checkbox"><input type="radio" name="registration-mode" value="native" checked={registrationMode === 'native'} onChange={() => { setRegistrationMode('native'); setExternalRegistrationUrl('') }} /> {t('editEvent.registrationModeNative')}</label>
-          <small>{t('editEvent.registrationModeNativeHint')}</small>
-          <label className="checkbox"><input type="radio" name="registration-mode" value="external" checked={registrationMode === 'external'} onChange={() => { setRegistrationMode('external'); setFormFields([]); setMaxCapacity(''); setRegistrationDeadline('') }} /> {t('editEvent.registrationModeExternal')}</label>
-          <small>{t('editEvent.registrationModeExternalHint')}</small>
-        </fieldset>
-        {registrationMode === 'external' ? <label className="form-field">
-          <span className="form-label-row">{t('editEvent.externalRegistrationUrlLabel')}</span>
-          <input type="url" inputMode="url" aria-label={t('editEvent.externalRegistrationUrlLabel')} placeholder={t('editEvent.externalRegistrationUrlPlaceholder')} value={externalRegistrationUrl} onChange={(event) => setExternalRegistrationUrl(event.target.value)} />
-          <small>{t('editEvent.externalRegistrationUrlHint')}</small>
-        </label> : null}
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.publicationStatusLabel')}</span>
-          <select
-            aria-label={t('editEvent.publicationStatusLabel')}
-            value={publicationStatus}
-            onChange={(event) => setPublicationStatus(event.target.value as PublicationStatus)}
-          >
-            <option value="published">{t('editEvent.publicationPublished')}</option>
-            <option value="closed">{t('editEvent.publicationClosed')}</option>
-          </select>
-          <small>{t('editEvent.publicationStatusHint')}</small>
-        </label>
-        {!isDraft ? (
-          <>
-            <label className="form-field">
-              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span>
-              <input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
-            </label>
-            <label className="form-field">
-              <span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span>
-              <input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} />
-            </label>
-          </>
-        ) : null}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.descriptionLabel')}
@@ -544,6 +509,16 @@ export function EditEventPage() {
           />
         </label>
         <EventTypeField t={t} values={eventType} onChange={setEventType} />
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.categoryLabel')}</span>
+          <select aria-label={t('editEvent.categoryLabel')} value={category} onChange={(event) => setCategory(event.target.value as EventCategory)}>
+            <option value="Social">{t('createEvent.categorySocial')}</option>
+            <option value="Practice">{t('createEvent.categoryPractice')}</option>
+          </select>
+        </label>
+        </section>
+        <section className={layoutStyles.section} aria-labelledby="edit-time-location-title">
+          <div className={layoutStyles.sectionHeading}><h2 id="edit-time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.startTimeLabel')}
@@ -574,19 +549,6 @@ export function EditEventPage() {
             ))}
 </select>
         </label>
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.categoryLabel')}
-          </span>
-          <select
-            aria-label={t('editEvent.categoryLabel')}
-            value={category}
-            onChange={(event) => setCategory(event.target.value as EventCategory)}
-          >
-            <option value="Social">{t('createEvent.categorySocial')}</option>
-            <option value="Practice">{t('createEvent.categoryPractice')}</option>
-          </select>
-        </label>
         {locationRegion && locationRegion !== 'Online' && (
         <label className="form-field">
             <span className="form-label-row">
@@ -600,6 +562,22 @@ export function EditEventPage() {
             />
           </label>
         )}
+        </section>
+        <section className={layoutStyles.section} aria-labelledby="edit-registration-title">
+          <div className={layoutStyles.sectionHeading}><h2 id="edit-registration-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
+        <FeeField t={t} value={attendanceFeeType} onChange={setAttendanceFeeType} amount={attendanceFeeAmount} onAmountChange={setAttendanceFeeAmount} />
+        <fieldset className="form-field">
+          <legend>{t('editEvent.registrationModeLabel')}</legend>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="native" checked={registrationMode === 'native'} onChange={() => { setRegistrationMode('native'); setExternalRegistrationUrl('') }} /> {t('editEvent.registrationModeNative')}</label>
+          <small>{t('editEvent.registrationModeNativeHint')}</small>
+          <label className="checkbox"><input type="radio" name="registration-mode" value="external" checked={registrationMode === 'external'} onChange={() => { setRegistrationMode('external'); setFormFields([]); setMaxCapacity(''); setRegistrationDeadline('') }} /> {t('editEvent.registrationModeExternal')}</label>
+          <small>{t('editEvent.registrationModeExternalHint')}</small>
+        </fieldset>
+        {registrationMode === 'external' ? <label className="form-field">
+          <span className="form-label-row">{t('editEvent.externalRegistrationUrlLabel')}</span>
+          <input type="url" inputMode="url" aria-label={t('editEvent.externalRegistrationUrlLabel')} placeholder={t('editEvent.externalRegistrationUrlPlaceholder')} value={externalRegistrationUrl} onChange={(event) => setExternalRegistrationUrl(event.target.value)} />
+          <small>{t('editEvent.externalRegistrationUrlHint')}</small>
+        </label> : null}
         {registrationMode === 'native' ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('editEvent.maxCapacityLabel')}
@@ -659,8 +637,21 @@ export function EditEventPage() {
           </select>
         </div>
         {registrationMode === 'native' ? <RegistrationFormBuilder fields={formFields} setFields={setFormFields} /> : null}
+        <label className="form-field">
+          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-eye" size={16} /> {t('editEvent.publicationStatusLabel')}</span>
+          <select aria-label={t('editEvent.publicationStatusLabel')} value={publicationStatus} onChange={(event) => setPublicationStatus(event.target.value as PublicationStatus)}>
+            <option value="published">{t('editEvent.publicationPublished')}</option>
+            <option value="closed">{t('editEvent.publicationClosed')}</option>
+          </select>
+          <small>{t('editEvent.publicationStatusHint')}</small>
+        </label>
+        {!isDraft ? <>
+          <label className="form-field"><span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.publishAtLabel')}</span><input aria-label={t('editEvent.publishAtLabel')} type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} /></label>
+          <label className="form-field"><span className="form-label-row"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.unpublishAtLabel')}</span><input aria-label={t('editEvent.unpublishAtLabel')} type="datetime-local" value={unpublishAt} onChange={(event) => setUnpublishAt(event.target.value)} /></label>
+        </> : null}
+        </section>
         <div className={layoutStyles.actionBar}>
-          <span>{t('editEvent.formActionHint')}</span>
+          <span role={message ? 'alert' : 'status'}>{message || t('editEvent.formActionHint')}</span>
           <div className={layoutStyles.actions}>
             <Link to={`/events/${id}`} className="secondary-button">{t('common.cancel')}</Link>
             <button type="submit" className="primary-cta" disabled={submitting}>
@@ -668,7 +659,6 @@ export function EditEventPage() {
             </button>
           </div>
         </div>
-        {message ? <p className="message">{message}</p> : null}
       </form>
     </Layout>
   )
