@@ -651,6 +651,19 @@ button {
 }
 
 @media (max-width: 700px) {
+  .topbar {
+    gap: 0.5rem;
+  }
+
+  .topbar-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .topbar-brand > a {
+    max-width: 100%;
+  }
+
   .sticky-action-buttons {
     width: 100%;
   }
@@ -3515,7 +3528,7 @@ dd {
   }
 
   .logo-img {
-    width: 230px;
+    width: min(230px, calc(100vw - 120px));
     height: 88px;
   }
 

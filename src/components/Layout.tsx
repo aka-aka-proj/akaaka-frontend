@@ -103,7 +103,11 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
         <div className="topbar-brand">
           <Link to="/">
             <picture>
-              <source media="(max-width: 700px)" srcSet="/images/logo-brand-mobile.png" />
+              <source
+                media="(max-width: 700px)"
+                srcSet="/images/logo-brand-mobile.png 480w, /images/logo-brand-desktop.png 960w, /images/logo-brand-retina.png 1440w"
+                sizes="(max-width: 360px) calc(100vw - 120px), 230px"
+              />
               <img
                 src="/images/logo-brand-desktop.png"
                 srcSet="/images/logo-brand-desktop.png 960w, /images/logo-brand-retina.png 1440w"
