@@ -964,8 +964,8 @@ button {
 .profile-message-action { align-items: center; display: inline-flex; gap: 0.4rem; min-height: var(--touch-target); }
 
 .profile-action-hint {
-  color: var(--color-text-muted, #656d76);
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
   margin: 0;
 }
 
@@ -2070,14 +2070,13 @@ dd {
 }
 
 .social-link-item--restricted {
-  color: var(--color-text-muted, #656d76);
+  color: var(--color-text-muted);
   flex-wrap: wrap;
-  max-width: 20rem;
 }
 
 .social-link-item--restricted small {
   flex-basis: 100%;
-  margin-left: 2.35rem;
+  padding-inline-start: var(--space-5);
 }
 
 .thread-item {
