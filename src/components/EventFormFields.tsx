@@ -19,9 +19,9 @@ export function FeeField({ t, value, onChange, amount, onAmountChange }: FeeFiel
   ] as const
 
   return (
-    <fieldset className="form-field">
+    <fieldset className="form-field" aria-label={t('createEvent.attendanceFeeLabel')}>
       <legend><span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span></legend>
-      <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
+      <div className="segmented-control">
         {options.map(([option, label]) => (
           <label key={option} className={value === option ? 'is-selected' : ''}>
             <input
