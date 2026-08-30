@@ -26,6 +26,39 @@ export function SeriesRegistrationFlow({
 
   const handleSeriesRegister = async () => {
     setSubmitting(true)
+
+    const { data: memberships, error: membershipError } = await supabase
+      .from('event_series_membership')
+      .select('event_id')
+      .eq('series_id', seriesId)
+    if (membershipError) {
+      setSubmitting(false)
+      showError(membershipError.message)
+      return
+    }
+
+    const eventIds = (memberships ?? []).map((membership) => membership.event_id)
+    if (eventIds.length > 0) {
+      const { data: memberEvents, error: memberEventsError } = await supabase
+        .from('events')
+        .select('registration_form_config')
+        .in('id', eventIds)
+      if (memberEventsError) {
+        setSubmitting(false)
+        showError(memberEventsError.message)
+        return
+      }
+      const hasRequiredSeriesForm = (memberEvents ?? []).some((event) =>
+        Array.isArray(event.registration_form_config)
+        && event.registration_form_config.some((field: { required?: boolean }) => field.required === true),
+      )
+      if (hasRequiredSeriesForm) {
+        setSubmitting(false)
+        showError('This series contains required registration questions. Whole-series registration is unavailable until all required answers can be collected.')
+        return
+      }
+    }
+
     const { error } = await supabase.functions.invoke('register-for-event-series', {
       body: { series_id: seriesId },
     })
