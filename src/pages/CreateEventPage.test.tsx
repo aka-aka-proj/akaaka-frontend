@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateEventPage } from './CreateEventPage'
 
+// CreateEventPage renders a large form; slower local runners can exceed Vitest's
+// default 5-second per-test timeout even though the interaction is deterministic.
+vi.setConfig({ testTimeout: 15000 })
+
 const mockUseAuth = vi.fn()
 const from = vi.fn()
 const insert = vi.fn()
@@ -183,7 +187,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('活動發想'), '週末桌遊聚會\n台北北部一起認識新朋友')
     await user.click(screen.getByRole('button', { name: 'AI 整理' }))
 
-    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('週末桌遊聚會')
+    await waitFor(() => expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('週末桌遊聚會'))
     expect((screen.getByLabelText('活動地區') as HTMLSelectElement).value).toBe('North')
     expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
   })
@@ -279,8 +283,8 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
-    expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
-    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動')
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } }))
+    await waitFor(() => expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動'))
     expect(screen.getByRole('textbox', { name: '描述' }).textContent?.trim()).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
@@ -310,7 +314,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://docs.google.com/forms/d/e/example/viewform')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
-    expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform')
+    await waitFor(() => expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform'))
     expect((screen.getByRole('radio', { name: /外部報名/ }) as HTMLInputElement).checked).toBe(true)
   })
 

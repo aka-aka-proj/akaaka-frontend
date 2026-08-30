@@ -21,13 +21,23 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     changed_files=$(git show --format= --name-only "${local_sha}" || true)
   fi
 
-  if printf '%s\n' "$changed_files" | grep -Eq '^(src/|tests/|playwright\.config\.ts$|scripts/playwright-|package(-lock)?\.json$)'; then
-    run_browser_checks=1
-  fi
+  while IFS= read -r file; do
+    case "$file" in
+      src/*.test.ts|src/*.test.tsx|src/*/*.test.ts|src/*/*.test.tsx|src/*/*/*.test.ts|src/*/*/*.test.tsx)
+        ;;
+      src/*|tests/*|playwright.config.ts|scripts/playwright-*|package-lock.json)
+        run_browser_checks=1
+        ;;
+    esac
+  done <<EOF
+$changed_files
+EOF
 done
 
 if [ "$run_browser_checks" -eq 1 ]; then
   echo "Browser-affecting changes detected; running Chromium Playwright checks..."
+  VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-http://127.0.0.1:54321}" \
+  VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-ci-public-test-key}" \
   BROWSER_FILTER=chromium npx playwright test
   npm run test:manifest
 fi
