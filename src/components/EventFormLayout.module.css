@@ -1,5 +1,7 @@
 .form {
-  width: min(100%, 52rem);
+  width: 100%;
+  max-width: 52rem;
+  align-self: center;
   margin-inline: auto;
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }

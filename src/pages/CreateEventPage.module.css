@@ -1,9 +1,3 @@
-.createEventForm {
-  width: min(100%, 52rem);
-  margin-inline: auto;
-  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
-}
-
 .createEventForm :global(.form-field) { min-width: 0; }
 .createEventForm :global(input),
 .createEventForm :global(textarea),

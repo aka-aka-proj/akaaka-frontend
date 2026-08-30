@@ -55,6 +55,8 @@ Implementation MUST NOT 使用 iPhone detection、Android detection、tablet use
 
 Page container 與 shared layout MUST 使用 canonical layout／spacing token。活動詳情頁目前的 page container 為 `960px`，但其他頁面不得因此被強迫採用活動詳情頁的雙欄結構。
 
+Create Event 與 Edit Event MUST 使用同一個 `EventFormLayout` form shell；shell 以 `width: 100%` 搭配 `max-width: 52rem` 並在 page container 內置中，兩頁不得各自定義表單外框寬度。
+
 ### Spacing
 
 頁面與元件 MUST 使用 `008-design-tokens-spec.md` 登錄的 canonical spacing token。MUST NOT 在 page-local CSS 新增 arbitrary spacing；若需求無法用現有 token 表達：
