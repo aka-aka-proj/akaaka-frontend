@@ -660,7 +660,6 @@ export function ProfilePage() {
                   <li className="social-link-item">
                     <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label={t('profile.xProfileLink')}>
                       <Icon href="/social-icons.svg" name="social-x" size={32} />
-                      <span className="social-link-label">X.com</span>
                     </a>
                   </li>
                 )}
