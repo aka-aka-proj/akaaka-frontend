@@ -454,7 +454,6 @@ export function EditEventPage() {
             <h1>{t('editEvent.title')}</h1>
             <p>{t('editEvent.formIntro')}</p>
           </div>
-          <Link to={`/events/${id}`} className="secondary-button">{t('common.cancel')}</Link>
         </div>
         {isSeriesMember ? (
           <>
@@ -653,8 +652,8 @@ export function EditEventPage() {
         <div className={layoutStyles.actionBar}>
           <span role={message ? 'alert' : 'status'}>{message || t('editEvent.formActionHint')}</span>
           <div className={layoutStyles.actions}>
-            <Link to={`/events/${id}`} className="secondary-button">{t('common.cancel')}</Link>
-            <button type="submit" className="primary-cta" disabled={submitting}>
+            <Link to={`/events/${id}`} className={layoutStyles.secondaryAction}>{t('common.cancel')}</Link>
+            <button type="submit" className={layoutStyles.primaryAction} disabled={submitting}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('editEvent.saveEvent')}
             </button>
           </div>
