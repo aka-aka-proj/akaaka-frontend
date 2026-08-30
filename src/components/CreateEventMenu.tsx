@@ -73,7 +73,12 @@ export function CreateEventMenu() {
       >
         <Icon href="/nav-icons.svg" name="nav-create" size={20} />
         <span className={styles.triggerLabel}>{t('events.createEvent')}</span>
-        <span className={styles.chevron} aria-hidden="true">⌄</span>
+        <Icon
+          href="/nav-icons.svg"
+          name={open ? 'nav-chevron-up' : 'nav-chevron-down'}
+          size={16}
+          className={styles.chevron}
+        />
       </button>
     </div>
   )

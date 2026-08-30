@@ -27,7 +27,7 @@
   outline-offset: 2px;
 }
 
-.chevron { font-size: 1rem; line-height: 1; }
+.chevron { flex-shrink: 0; }
 
 .menu {
   position: absolute;
@@ -84,6 +84,8 @@
     white-space: nowrap;
     border: 0;
   }
+
+  .chevron { display: none; }
 
   .menu {
     top: auto;
