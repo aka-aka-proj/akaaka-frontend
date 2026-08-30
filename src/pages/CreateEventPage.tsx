@@ -1054,10 +1054,10 @@ export function CreateEventPage() {
         <div data-sticky-action-bar className={`${styles.stickyActionBar} ${layoutStyles.actionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
           <div className={`${styles.stickyActionButtons} ${layoutStyles.actions}`}>
-            <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
+            <button type="submit" className={layoutStyles.secondaryAction} onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {seriesId ? t('createEvent.saveSession') : t('createEvent.saveDraft')}
             </button>
-            {!seriesId && <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
+            {!seriesId && <button type="submit" className={layoutStyles.primaryAction} onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
             </button>}
           </div>
