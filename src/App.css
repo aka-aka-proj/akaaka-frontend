@@ -1077,9 +1077,9 @@ dd {
 }
 
 .logo-img {
-  width: 400px;
-  height: 112px;
-  object-fit: contain;
+  width: min(400px, 34vw);
+  height: auto;
+  aspect-ratio: 960 / 411;
 }
 
 .topbar-title {
@@ -3529,7 +3529,7 @@ dd {
 
   .logo-img {
     width: min(230px, calc(100vw - 120px));
-    height: 88px;
+    height: auto;
   }
 
   .events-toolbar {
