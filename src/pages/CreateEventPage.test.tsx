@@ -85,6 +85,27 @@ describe('CreateEventPage', () => {
     ])
   })
 
+  it('shows validation feedback in the action bar and focuses the first missing field', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Incomplete event')
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    expect(screen.getByRole('alert').textContent).toContain('標題、開始時間和活動地區為必填。')
+    expect(document.activeElement).toBe(screen.getByLabelText('開始時間'))
+    expect(insert).not.toHaveBeenCalled()
+  })
+
   it('shows series deadline modes only for recurring events', async () => {
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1' },
