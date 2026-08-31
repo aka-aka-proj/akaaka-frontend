@@ -537,7 +537,7 @@ const zhTW = {
     batchPartialFailure: '批次更新部分失敗：已更新 {updated} 場、略過 {skipped} 場（已開始或已結束）、失敗 {failed} 場。',
     batchSuccessWithSkipped: '批次更新完成：已更新 {updated} 場、略過 {skipped} 場（已開始或已結束）。',
     batchVenueAutoDerived: '批次模式下「場地方主辦」將依你的場地方資格自動套用至受影響場次',
-    startTimeSeriesLockedHint: '系列成員的開始時間不可個別變更',
+    startTimeSeriesLockedHint: '定期活動場次的開始時間不可個別變更',
     descriptionLabel: '描述',
     eventTypeLabel: '活動類型',
     selectEventType: '請選擇活動類型',
