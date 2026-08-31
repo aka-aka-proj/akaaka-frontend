@@ -90,7 +90,7 @@
   color: var(--color-text-muted);
   font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
 }
-.actionBar > span.message { color: var(--color-danger); }
+.actionBar > span:global(.message) { color: var(--color-danger); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .actions > :global(button), .actions > :global(a) {
   box-sizing: border-box;
