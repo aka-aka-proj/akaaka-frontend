@@ -1068,7 +1068,7 @@ export function CreateEventPage() {
         </fieldset> : null}
         </section>
         <div data-sticky-action-bar className={`${styles.stickyActionBar} ${layoutStyles.actionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
-          <span className={message ? 'message' : undefined} role={message ? 'alert' : undefined} aria-live="assertive">
+          <span className={message ? 'message' : undefined} role={message ? 'alert' : undefined} aria-live={message ? 'assertive' : undefined}>
             {message || (sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice'))}
           </span>
           <div className={`${styles.stickyActionButtons} ${layoutStyles.actions}`}>
