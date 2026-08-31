@@ -426,6 +426,8 @@ describe('CreateEventPage', () => {
       </MemoryRouter>,
     )
 
+    expect(document.querySelector('[aria-live="assertive"]')).toBeNull()
+
     await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Original Title')
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
@@ -435,6 +437,7 @@ describe('CreateEventPage', () => {
     await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
+    expect(screen.getByRole('alert').classList.contains('message')).toBe(true)
 
     const titleInput = screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement
     await user.clear(titleInput)
