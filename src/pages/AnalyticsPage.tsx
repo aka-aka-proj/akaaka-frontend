@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { ShareToXModal } from '../components/ShareToXModal'
 import type { ShareTemplateType } from '../components/ShareToXModal'
@@ -96,7 +96,7 @@ export function AnalyticsPage() {
   const [shareOpen, setShareOpen] = useState(false)
   const [shareType, setShareType] = useState<ShareTemplateType>('participant_review')
 
-  const loadStats = async (p: Period) => {
+  const loadStats = useCallback(async (p: Period) => {
     if (!user) return
     setLoading(true)
 
@@ -116,11 +116,11 @@ export function AnalyticsPage() {
     } else {
       showError(t('analytics.loadError'), null)
     }
-  }
+  }, [user, t, showError])
 
   useEffect(() => {
     void loadStats(period)
-  }, [user, period])
+  }, [loadStats, period])
 
   const handleShare = (type: ShareTemplateType) => {
     setShareType(type)

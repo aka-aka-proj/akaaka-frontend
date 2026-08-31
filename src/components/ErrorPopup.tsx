@@ -63,7 +63,7 @@ export function ErrorPopup() {
       `--- Browser / Device Info ---`,
       `User Agent: ${nav.userAgent}`,
       `Language: ${nav.language}`,
-      `Platform: ${(nav as any).platform || 'N/A'}`,
+      `Platform: ${nav.platform || 'N/A'}`,
       `Screen: ${screen.width}x${screen.height}`,
       `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
     )
@@ -109,7 +109,7 @@ export function ErrorPopup() {
             {error.message}
           </p>
 
-          {error.response && (
+          {error.response ? (
             <div style={{ marginTop: '0.75rem' }}>
               <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.25rem' }}>{t('errorPopup.response')}</h3>
               <pre
@@ -129,9 +129,9 @@ export function ErrorPopup() {
                   : String(error.response)}
               </pre>
             </div>
-          )}
+          ) : null}
 
-          {error.debugInfo && (
+          {error.debugInfo ? (
             <div style={{ marginTop: '0.75rem' }}>
               <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.25rem' }}>{t('errorPopup.debugInfo')}</h3>
               <pre
@@ -151,7 +151,7 @@ export function ErrorPopup() {
                   : String(error.debugInfo)}
               </pre>
             </div>
-          )}
+          ) : null}
 
           {/* User note — shown before submitting */}
           {!submitSuccess && (

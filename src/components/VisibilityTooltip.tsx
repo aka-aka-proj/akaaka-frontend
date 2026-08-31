@@ -139,7 +139,7 @@ export function VisibilityTooltip({ fieldName }: VisibilityTooltipProps) {
             {t('visibilityTooltip.connectionsOnlyExplanation')}
           </p>
           <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-muted)' }}>
-            {t(`visibilityTooltip.${fieldKey}` as any)}
+            {t(`visibilityTooltip.${fieldKey}`)}
           </p>
         </div>
       )}

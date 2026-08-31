@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2009" height="415" viewBox="0 0 2009 415" role="img" aria-labelledby="title desc">
+  <title id="title">BDSM 圈內揪</title>
+  <desc id="desc">BDSM 同好活動與社交平台</desc>
+  <defs>
+    <linearGradient id="brand-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed" />
+      <stop offset="0.55" stop-color="#d946ef" />
+      <stop offset="1" stop-color="#fb7185" />
+    </linearGradient>
+  </defs>
+  <text x="24" y="270" fill="url(#brand-gradient)" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif" font-size="152" font-weight="600" letter-spacing="3">BDSM 圈內揪</text>
+  <g transform="translate(1650 54)" fill="none" stroke="url(#brand-gradient)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M52 78c0-29 24-52 52-52s52 23 52 52-24 52-52 52" />
+    <path d="M156 78c0-29 24-52 52-52s52 23 52 52-24 52-52 52" />
+    <path d="M104 130v75M208 130v75M104 205h104" />
+    <circle cx="104" cy="78" r="10" fill="#fff" stroke="none" />
+    <circle cx="208" cy="78" r="10" fill="#fff" stroke="none" />
+  </g>
+  <line x1="0" y1="404" x2="1490" y2="404" stroke="url(#brand-gradient)" stroke-width="4" />
+</svg>

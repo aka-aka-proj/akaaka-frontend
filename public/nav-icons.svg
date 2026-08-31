@@ -11,6 +11,12 @@
     <circle cx="10" cy="10" r="7.5" fill="none" stroke="#ffffff" stroke-width="1.35"/>
     <path d="M10 6.25v7.5M6.25 10h7.5" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
   </symbol>
+  <symbol id="nav-chevron-down" viewBox="0 0 20 20">
+    <path d="m5 7.5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="nav-chevron-up" viewBox="0 0 20 20">
+    <path d="m5 12.5 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
   <symbol id="nav-profile" viewBox="0 0 20 20">
     <circle cx="10" cy="6.667" r="3.333" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <path d="M3.333 17.5c0-3.683 2.984-6.667 6.667-6.667s6.667 2.984 6.667 6.667" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
@@ -65,5 +71,9 @@
     <rect x="2.5" y="10" width="3.333" height="6.667" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <rect x="8.333" y="5" width="3.333" height="11.667" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
     <rect x="14.167" y="7.5" width="3.333" height="9.167" rx="1" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+  </symbol>
+  <symbol id="nav-schedule" viewBox="0 0 20 20">
+    <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="#aa3bff" stroke-width="1.35"/>
+    <path d="M6 1.8v3M14 1.8v3M3 7h14M6.5 10h2M11.5 10h2M6.5 13h2M11.5 13h2" fill="none" stroke="#aa3bff" stroke-width="1.35" stroke-linecap="round"/>
   </symbol>
 </svg>

@@ -6,6 +6,7 @@ import { ProfilePage } from './ProfilePage'
 
 const mockUseAuth = vi.fn()
 const from = vi.fn()
+const rpc = vi.fn()
 const functionsInvoke = vi.fn()
 const linkIdentity = vi.fn()
 const unlinkIdentity = vi.fn()
@@ -27,6 +28,7 @@ vi.mock('../supabaseClient', () => ({
       linkIdentity: (...args: unknown[]) => linkIdentity(...args),
       getUserIdentities: (...args: unknown[]) => getUserIdentities(...args),
     },
+    rpc: (...args: unknown[]) => rpc(...args),
     functions: {
       invoke: (...args: unknown[]) => functionsInvoke(...args),
     },
@@ -58,6 +60,8 @@ describe('ProfilePage', () => {
     getUserIdentities.mockReset()
     getUserIdentities.mockResolvedValue({ data: { identities: [] }, error: null })
     functionsInvoke.mockReset()
+    rpc.mockReset()
+    rpc.mockImplementation((name: string) => name === 'get_profile_for_viewer' ? from('profiles') : queryBuilder({ data: null, error: null }))
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile: vi.fn().mockResolvedValue(undefined),
@@ -301,6 +305,41 @@ describe('ProfilePage', () => {
     })
     expect(screen.getByText('Bio: Hidden (private)')).toBeTruthy()
     expect(document.querySelectorAll('.social-link-item')).toHaveLength(1)
+    expect((screen.getByRole('button', { name: 'Send message' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole('status').textContent).toContain('X.com link provided')
+  })
+
+  it('opens a direct message flow from a mutually followed profile', async () => {
+    const profilesQuery = queryBuilder({
+      data: {
+        id: 'target-user', role_status: 'general', display_name: 'Target User', bio: 'Public bio',
+        external_social_links: [{ platform: 'x', url: 'https://x.com/target' }], metadata: { visibility: { bio: 'public' } }, reputation_score: 3,
+      },
+      error: null,
+    })
+    const blocksQuery = queryBuilder({ data: null, error: null })
+    const followsQuery = queryBuilder({ data: { followed_id: 'target-user' }, error: null })
+
+    from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesQuery
+      if (table === 'blocks') return blocksQuery
+      if (table === 'user_follows') return followsQuery
+      return queryBuilder({ data: null, error: null })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/profile/target-user']}>
+        <Routes>
+          <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/messages/new" element={<div>New message flow</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy())
+    expect(screen.getByRole('link', { name: 'Open X.com profile' }).getAttribute('href')).toBe('https://x.com/target')
+    await userEvent.click(screen.getByRole('button', { name: 'Send message' }))
+    expect(screen.getByText('New message flow')).toBeTruthy()
   })
 
   it('follows another user from their profile', async () => {

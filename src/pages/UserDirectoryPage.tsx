@@ -48,7 +48,7 @@ export function UserDirectoryPage() {
     }
     void load()
     return () => { cancelled = true }
-  }, [user?.id])
+  }, [user])
 
   const filteredProfiles = useMemo(() => {
     const query = search.trim().toLocaleLowerCase()

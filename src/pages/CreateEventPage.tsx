@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -7,7 +7,6 @@ import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
-import { EVENT_TYPES, SOCIAL_TAGS, PRACTICE_TAGS, getEventTypeI18nKey } from '../lib/event-types'
 import { stringifyEventTypes } from '../lib/event-utils'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { organizeEventIdea } from '../lib/event-ai-organizer'
@@ -17,10 +16,15 @@ import type { EventSourcePreview } from '../lib/event-source'
 import { MarkdownEditor } from '../components/MarkdownEditor'
 import { TAIWAN_REGIONS } from '../types'
 import type { TaiwanRegion, EventCategory, RecurrenceRule, RegistrationFormField, RegistrationMode, AttendanceFeeType, Visibility } from '../types'
+import styles from './CreateEventPage.module.css'
+import { useScrollVisibility } from '../hooks/useScrollVisibility'
+import layoutStyles from '../components/EventFormLayout.module.css'
+import { FeeField, EventTypeField } from '../components/EventFormFields'
 
 const MAX_FORM_FIELDS = 10
 const OPTION_FIELD_TYPES: RegistrationFormField['type'][] = ['select', 'radio', 'checkbox']
 const FORM_FIELD_TYPES: RegistrationFormField['type'][] = ['text', 'textarea', 'radio', 'checkbox', 'select']
+type SeriesDeadlineMode = 'relative' | 'absolute' | 'none'
 
 const VISIBILITY_HINT_KEYS: Record<Visibility, string> = {
   public: 'createEvent.visibilityPublicHint',
@@ -43,6 +47,15 @@ function weekdayOf(timestamp: string): string {
   return dayNames[new Date(timestamp).getDay()] ?? 'Mon'
 }
 
+// Retry schedule-lock comparison ignores registration_deadline_offset_minutes:
+// changing only the deadline template never reschedules an occurrence (spec 007).
+function scheduleComparableRule(rule: RecurrenceRule | null): Omit<RecurrenceRule, 'registration_deadline_offset_minutes'> | null {
+  if (!rule) return null
+  const rest = { ...rule }
+  delete rest.registration_deadline_offset_minutes
+  return rest
+}
+
 const PREVIEW_DATE_LIMIT = 12
 
 export function CreateEventPage() {
@@ -51,6 +64,7 @@ export function CreateEventPage() {
   const { t, locale } = useT()
   const [searchParams] = useSearchParams()
   const fromEventId = searchParams.get('from_event_id')
+  const seriesId = searchParams.get('series_id')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [attendanceFeeType, setAttendanceFeeType] = useState<AttendanceFeeType>('free')
@@ -62,6 +76,8 @@ export function CreateEventPage() {
   const [locationDetail, setLocationDetail] = useState('')
   const [maxCapacity, setMaxCapacity] = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
+  const [seriesDeadlineMode, setSeriesDeadlineMode] = useState<SeriesDeadlineMode>('relative')
+  const [seriesDeadlineOffsetMinutes, setSeriesDeadlineOffsetMinutes] = useState('')
   const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('native')
   const [externalRegistrationUrl, setExternalRegistrationUrl] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -87,11 +103,40 @@ export function CreateEventPage() {
   const [recurrenceLimitMode, setRecurrenceLimitMode] = useState<'count' | 'until'>('count')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean; seriesStartIso?: string; seriesRuleJson?: string } | null>(null)
+  const createdEventRef = useRef<{ eventId: string; instanceIds: string[]; recurrenceRetryable: boolean; recurrenceIncomplete?: boolean; seriesStartIso?: string; seriesRuleJson?: string } | null>(null)
   const [idea, setIdea] = useState('')
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
+  const preserveActionBar = useCallback(
+    () => {
+      const visualViewport = window.visualViewport
+      const keyboardOpen = visualViewport ? visualViewport.height < window.innerHeight - 80 : false
+      const actionBarFocused = Boolean(document.activeElement?.closest('[data-sticky-action-bar]'))
+      return keyboardOpen || actionBarFocused
+    },
+    [],
+  )
+  const actionBarVisible = useScrollVisibility({ preserveWhen: preserveActionBar })
+
+  const derivedSeriesDeadlineOffsetMinutes = useMemo(() => {
+    if (!startTime || !registrationDeadline) return ''
+    const offsetMinutes = Math.round((new Date(startTime).getTime() - new Date(registrationDeadline).getTime()) / 60000)
+    return offsetMinutes > 0 ? String(offsetMinutes) : ''
+  }, [startTime, registrationDeadline])
+
+  const effectiveSeriesDeadlineOffsetMinutes = seriesDeadlineOffsetMinutes || derivedSeriesDeadlineOffsetMinutes
+
+  const effectiveRegistrationDeadline = useMemo(() => {
+    if (registrationMode !== 'native') return null
+    if (!recurrenceEnabled) return registrationDeadline ? new Date(registrationDeadline).toISOString() : null
+    if (seriesDeadlineMode === 'none') return null
+    if (seriesDeadlineMode === 'absolute') return registrationDeadline ? new Date(registrationDeadline).toISOString() : null
+    if (!startTime || !effectiveSeriesDeadlineOffsetMinutes) return null
+    const offsetMinutes = Number(effectiveSeriesDeadlineOffsetMinutes)
+    if (!Number.isInteger(offsetMinutes) || offsetMinutes <= 0) return null
+    return new Date(new Date(startTime).getTime() - offsetMinutes * 60000).toISOString()
+  }, [registrationMode, recurrenceEnabled, seriesDeadlineMode, registrationDeadline, startTime, effectiveSeriesDeadlineOffsetMinutes])
 
   const recurrenceRule = useMemo<RecurrenceRule | null>(() => {
     if (!recurrenceEnabled) return null
@@ -113,8 +158,14 @@ export function CreateEventPage() {
       rule.until = new Date(`${recurrenceEndDate}T23:59:59`).toISOString()
     }
     rule.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (registrationMode === 'native' && seriesDeadlineMode === 'relative' && effectiveSeriesDeadlineOffsetMinutes) {
+      const offsetMinutes = Number(effectiveSeriesDeadlineOffsetMinutes)
+      if (offsetMinutes > 0) {
+        rule.registration_deadline_offset_minutes = offsetMinutes
+      }
+    }
     return rule
-  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime])
+  }, [recurrenceEnabled, recurrenceFreq, recurrenceInterval, recurrenceDays, recurrenceMonthlyBy, recurrenceWeekOrdinal, recurrenceLimitMode, recurrenceCount, recurrenceEndDate, startTime, registrationMode, seriesDeadlineMode, effectiveSeriesDeadlineOffsetMinutes])
 
   const effectiveRecurrenceDays = recurrenceDays.length > 0 ? recurrenceDays : startTime ? [weekdayOf(startTime)] : []
 
@@ -123,19 +174,23 @@ export function CreateEventPage() {
     if (!recurrenceEnabled || !base || Number.isNaN(base.getTime()) || !recurrenceRule) return null
     const missingEndDate = recurrenceLimitMode === 'until' && !recurrenceEndDate
     if (missingEndDate || validateRecurrenceRule(recurrenceRule)) {
-      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0 }
+      return { invalid: true as const, tooLong: false as const, dates: [] as Date[], total: 0, deadlines: null as Date[] | null }
     }
     let dates: Date[]
     try {
       dates = generateRecurringDates(base, recurrenceRule)
     } catch (error) {
       if (error instanceof RecurrenceSeriesTooLongError) {
-        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0 }
+        return { invalid: true as const, tooLong: true as const, dates: [] as Date[], total: 0, deadlines: null as Date[] | null }
       }
       throw error
     }
-    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1 }
-  }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate])
+    const offsetMinutes = recurrenceRule.registration_deadline_offset_minutes ?? null
+    const deadlines = seriesDeadlineMode === 'absolute' && registrationDeadline
+      ? dates.map(() => new Date(registrationDeadline))
+      : offsetMinutes !== null ? dates.map((date) => new Date(date.getTime() - offsetMinutes * 60000)) : null
+    return { invalid: false as const, tooLong: false as const, dates, total: dates.length + 1, deadlines }
+  }, [recurrenceEnabled, startTime, recurrenceRule, recurrenceLimitMode, recurrenceEndDate, seriesDeadlineMode, registrationDeadline])
 
   const formatPreviewDate = (date: Date) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', {
@@ -222,12 +277,6 @@ export function CreateEventPage() {
     setAiMessage(t('createEvent.sourceImportPreview'))
   }
 
-  const addType = (type: string) => {
-    if (type && !eventType.includes(type) && EVENT_TYPES.includes(type as any)) {
-      setEventType([...eventType, type])
-    }
-  }
-
   const updateFormField = (id: string, updates: Partial<RegistrationFormField>) => {
     setFormFields((fields) => fields.map((field) => field.id === id ? { ...field, ...updates } : field))
   }
@@ -289,7 +338,7 @@ export function CreateEventPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const shouldPublish = publishIntentRef.current && !importing && sourcePreview === null
+    const shouldPublish = !seriesId && publishIntentRef.current && !importing && sourcePreview === null
     publishIntentRef.current = false
     if (!user) {
       setMessage(t('createEvent.signInFirst'))
@@ -322,13 +371,31 @@ export function CreateEventPage() {
       return
     }
 
+    if (recurrenceEnabled && registrationMode === 'native' && seriesDeadlineMode === 'relative'
+      && (!effectiveSeriesDeadlineOffsetMinutes || !Number.isInteger(Number(effectiveSeriesDeadlineOffsetMinutes))
+        || Number(effectiveSeriesDeadlineOffsetMinutes) < 1 || Number(effectiveSeriesDeadlineOffsetMinutes) > 525600)) {
+      setMessage(t('createEvent.seriesDeadlineOffsetInvalid'))
+      return
+    }
+
+    if (recurrenceEnabled && registrationMode === 'native' && seriesDeadlineMode === 'absolute' && !registrationDeadline) {
+      setMessage(t('createEvent.seriesDeadlineAbsoluteRequired'))
+      return
+    }
+
+    if (recurrenceEnabled && registrationMode === 'native' && effectiveRegistrationDeadline
+      && new Date(startTime).getTime() - new Date(effectiveRegistrationDeadline).getTime() <= 0) {
+      setMessage(t('createEvent.seriesDeadlineBeforeStartInvalid'))
+      return
+    }
+
     setSubmitting(true)
 
     // Retry after a failed publish must not INSERT again; reuse the draft recorded in createdEventRef.
     const existing = createdEventRef.current
     // Fields every instance in the series must keep identical (spec 007) — the Edge Function copies
     // these at creation time, except attendance fee which is pending iac#69; retried edits sync them all.
-    const sharedInstanceFields = () => ({
+    const sharedInstanceFields = (deadline = effectiveRegistrationDeadline) => ({
       title: title.trim(),
       description: description.trim() || null,
       attendance_fee_type: attendanceFeeType,
@@ -340,7 +407,7 @@ export function CreateEventPage() {
       is_venue_hosted: isVenueHosted,
       visibility_settings: { type: visibilityType },
       max_capacity: registrationMode === 'native' && maxCapacity ? parseInt(maxCapacity, 10) : null,
-      registration_deadline: registrationMode === 'native' && registrationDeadline ? new Date(registrationDeadline).toISOString() : null,
+      registration_deadline: deadline,
       registration_form_config: registrationMode === 'native' && formFields.length > 0 ? formFields : null,
       external_registration_url: registrationMode === 'external' ? externalRegistrationUrl.trim() : null,
       source_url: sourceUrl.trim() || null,
@@ -374,7 +441,7 @@ export function CreateEventPage() {
         const scheduleChanged =
           existing.seriesStartIso != null &&
           (existing.seriesStartIso !== new Date(startTime).toISOString() ||
-            existing.seriesRuleJson !== JSON.stringify(recurrenceRule))
+            existing.seriesRuleJson !== JSON.stringify(scheduleComparableRule(recurrenceRule)))
         if (childInstanceIds.length > 0 && scheduleChanged) {
           setMessage(t('createEvent.retryScheduleLocked'))
           return
@@ -390,10 +457,24 @@ export function CreateEventPage() {
           return
         }
         if (childInstanceIds.length > 0) {
-          const { error: childSyncError } = await supabase
+          const { data: childEvents, error: childReadError } = await supabase
             .from('events')
-            .update(sharedInstanceFields())
+            .select('id, start_time')
             .in('id', childInstanceIds)
+          if (childReadError) {
+            setMessage(childReadError.message)
+            return
+          }
+          const childSyncResults = await Promise.all((childEvents ?? []).map((childEvent) => {
+            const childStart = new Date(childEvent.start_time).getTime()
+            const childDeadline = seriesDeadlineMode === 'none'
+              ? null
+              : seriesDeadlineMode === 'absolute'
+                ? effectiveRegistrationDeadline
+                : new Date(childStart - Number(effectiveSeriesDeadlineOffsetMinutes) * 60000).toISOString()
+            return supabase.from('events').update(sharedInstanceFields(childDeadline)).eq('id', childEvent.id)
+          }))
+          const childSyncError = childSyncResults.find((result) => result.error)?.error
           if (childSyncError) {
             setMessage(childSyncError.message)
             return
@@ -409,7 +490,7 @@ export function CreateEventPage() {
       const ensureRecurrenceInstances = async (parentEventId: string): Promise<boolean> => {
         if (!recurrenceEnabled || !recurrenceRule) return true
         const attemptStartIso = new Date(startTime).toISOString()
-        const attemptRuleJson = JSON.stringify(recurrenceRule)
+        const attemptRuleJson = JSON.stringify(scheduleComparableRule(recurrenceRule))
         const { error: recurrenceError, data: recurrenceResult } = await supabase.functions.invoke('create-recurring-events', {
           body: {
             parent_event_id: parentEventId,
@@ -417,26 +498,28 @@ export function CreateEventPage() {
             start_time: new Date(startTime).toISOString(),
           },
         })
-        if (!recurrenceError && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
+        // instance_ids is always present per spec 007 (HTTP 200 even on
+        // failure), so only an explicit success !== false means fully created.
+        if (!recurrenceError && recurrenceResult && recurrenceResult.success !== false && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
-          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
+          createdEventRef.current = { eventId: parentEventId, instanceIds: publishInstanceIds, recurrenceRetryable: false, recurrenceIncomplete: false, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
           return true
         }
         const zeroCreated = Boolean(
           !recurrenceError && recurrenceResult && recurrenceResult.success === false && recurrenceResult.created_instance_count === 0,
         )
         if (zeroCreated) {
-          setMessage(t('createEvent.recurrenceCreateRetry'))
+          setMessage(t('createEvent.recurrenceCreateRetry', { action: shouldPublish ? t('createEvent.saveAndPublish') : t('createEvent.saveDraft') }))
         } else if (recurrenceError) {
           setMessage(`活動已建立，但週期場次建立失敗：${recurrenceError.message}`)
         } else {
-          setMessage(`活動已建立，但有 ${recurrenceResult?.failed_instance_count} 個週期場次建立失敗。`)
+          setMessage(t('createEvent.recurrencePartialFailed', { created: Number(recurrenceResult?.created_instance_count ?? 0), failed: Number(recurrenceResult?.failed_instance_count ?? 0) }))
         }
         if (recurrenceError === null && recurrenceResult && Array.isArray(recurrenceResult.instance_ids)) {
           publishInstanceIds = recurrenceResult.instance_ids as string[]
         }
         if (createdEventRef.current) {
-          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
+          createdEventRef.current = { ...createdEventRef.current, instanceIds: publishInstanceIds, recurrenceRetryable: zeroCreated, recurrenceIncomplete: !zeroCreated, seriesStartIso: attemptStartIso, seriesRuleJson: attemptRuleJson }
         }
         return false
       }
@@ -446,6 +529,10 @@ export function CreateEventPage() {
       }
 
       const parentId = existing ? existing.eventId : data?.id
+      if (existing?.recurrenceIncomplete) {
+        setMessage(t('createEvent.recurrencePartialFailed', { created: existing.instanceIds.length, failed: 1 }))
+        return
+      }
       if (parentId && (recurrenceEnabled && recurrenceRule) && (!existing || existing.recurrenceRetryable)) {
         const completed = await ensureRecurrenceInstances(parentId)
         if (!completed) return
@@ -455,6 +542,37 @@ export function CreateEventPage() {
       if (!currentEventId) {
         setMessage('活動建立失敗：缺少活動 ID')
         return
+      }
+
+      if (seriesId) {
+        const { data: existingMembership, error: membershipLookupError } = await supabase
+          .from('event_series_membership')
+          .select('id')
+          .eq('series_id', seriesId)
+          .eq('event_id', currentEventId)
+          .maybeSingle()
+        if (membershipLookupError) {
+          setMessage(membershipLookupError.message)
+          return
+        }
+        if (existingMembership) {
+          return navigate(-1)
+        }
+        const { count, error: countError } = await supabase
+          .from('event_series_membership')
+          .select('id', { count: 'exact', head: true })
+          .eq('series_id', seriesId)
+        if (countError) {
+          setMessage(countError.message)
+          return
+        }
+        const { error: membershipError } = await supabase
+          .from('event_series_membership')
+          .insert({ series_id: seriesId, event_id: currentEventId, position: (count ?? 0) + 1 })
+        if (membershipError) {
+          setMessage(membershipError.message)
+          return
+        }
       }
 
       if (shouldPublish) {
@@ -479,7 +597,11 @@ export function CreateEventPage() {
       }
 
       createdEventRef.current = null
-      navigate(`/events/${currentEventId}`, { replace: true })
+      if (seriesId) {
+        navigate(-1)
+      } else {
+        navigate(`/events/${currentEventId}`, { replace: true })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -487,18 +609,18 @@ export function CreateEventPage() {
 
   return (
     <Layout>
-      <form className="card create-event-form" onSubmit={submit}>
-        <div className="create-event-header">
+      <form className={`card ${styles.createEventForm} ${layoutStyles.form}`} onSubmit={submit}>
+        <div className={`${styles.createEventHeader} ${layoutStyles.header}`}>
           <div>
             <h1>{t('createEvent.title')}</h1>
             <p>{t('createEvent.formIntro')}</p>
           </div>
-          <button type="button" className="secondary-button assist-toggle" aria-expanded={showAssistTools} onClick={() => setShowAssistTools((visible) => !visible)}>
+          <button type="button" className={`secondary-button ${styles.assistToggle}`} aria-expanded={showAssistTools} onClick={() => setShowAssistTools((visible) => !visible)}>
             {showAssistTools ? t('createEvent.hideAssistTools') : t('createEvent.showAssistTools')}
           </button>
         </div>
-        {showAssistTools ? <div className="assist-tools">
-          <section className="assist-card" aria-labelledby="ai-organizer-title">
+        {showAssistTools ? <div className={styles.assistTools}>
+          <section className={styles.assistCard} aria-labelledby="ai-organizer-title">
             <h2 id="ai-organizer-title">{t('createEvent.aiOrganizerTitle')}</h2>
             <p>{t('createEvent.aiOrganizerDescription')}</p>
             <textarea
@@ -513,7 +635,7 @@ export function CreateEventPage() {
             </button>
             {aiMessage ? <p className="message">{aiMessage}</p> : null}
           </section>
-          <section className="assist-card assist-card--info" aria-labelledby="event-source-import-title">
+          <section className={`${styles.assistCard} ${styles.assistCardInfo}`} aria-labelledby="event-source-import-title">
             <h2 id="event-source-import-title">{t('createEvent.sourceImportTitle')}</h2>
             <p>{t('createEvent.sourceImportDescription')}</p>
             <input
@@ -529,11 +651,12 @@ export function CreateEventPage() {
             {sourcePreview ? <p className="message" role="status">{t('createEvent.sourcePreviewNotice', { provider: sourcePreview.provider })}</p> : null}
           </section>
         </div> : null}
+        {seriesId ? <p className={styles.copyFrom}>{t('createEvent.seriesSessionNotice')}</p> : null}
         {fromEventId && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{t('createEvent.copyFrom')}</p>
+          <p className={styles.copyFrom}>{t('createEvent.copyFrom')}</p>
         )}
-        <section className="form-section" aria-labelledby="basic-info-title">
-          <div className="form-section-heading"><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="basic-info-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="basic-info-title">{t('createEvent.basicInfoSection')}</h2><span>1</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
@@ -560,50 +683,14 @@ export function CreateEventPage() {
           </select>
         </label>
         {category === 'Practice' && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', background: 'var(--color-warning-surface)', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+          <p className={styles.safetyNotice}>
             {t('eventDetail.safetyProtocolDesc')}
           </p>
         )}
-        <label className="form-field">
-          <span className="form-label-row">
-            <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.eventTypeLabel')}
-          </span>
-          <select 
-            onChange={(e) => addType(e.target.value)}
-            defaultValue=""
-            style={{ marginBottom: '8px', width: '100%' }}
-          >
-            <option value="" disabled>{t('createEvent.selectEventType')}</option>
-            <optgroup label={t('createEvent.categorySocial')}>
-              {SOCIAL_TAGS.map((type) => (
-                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-              ))}
-            </optgroup>
-            <optgroup label={t('createEvent.categoryPractice')}>
-              {PRACTICE_TAGS.map((type) => (
-                <option key={type} value={type}>{t(getEventTypeI18nKey(type))}</option>
-              ))}
-            </optgroup>
-          </select>
-          <div className="tags-input-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'var(--color-surface)' }}>
-            {eventType.map(type => (
-              <span key={type} className="tag" style={{ background: 'var(--color-surface-muted)', padding: '4px 8px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px' }}>
-                {t(getEventTypeI18nKey(type))}
-                <button 
-                  type="button" 
-                  onClick={() => setEventType(eventType.filter(t => t !== type))} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: '1', color: 'var(--color-text-muted)' }}
-                  aria-label={t('createEvent.removeType')}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
-          </div>
-        </label>
+        <EventTypeField t={t} values={eventType} onChange={setEventType} />
         </section>
-        <section className="form-section" aria-labelledby="time-location-title">
-          <div className="form-section-heading"><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="time-location-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
@@ -615,16 +702,16 @@ export function CreateEventPage() {
             onChange={(event) => setStartTime(event.target.value)}
           />
         </label>
-        <label className="checkbox">
+        {!seriesId && <label className="checkbox">
           <input type="checkbox" checked={recurrenceEnabled} onChange={(e) => setRecurrenceEnabled(e.target.checked)} />
           {t('createEvent.recurrenceLabel')}
-        </label>
-        {recurrenceEnabled && (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: '0.375rem', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        </label>}
+        {!seriesId && recurrenceEnabled && (
+            <div className={styles.recurrencePanel}>
             <label>
               {t('createEvent.recurrenceEvery')}
-              <input type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} style={{ width: '60px', marginLeft: '0.5rem' }} />
-              <select value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')} style={{ marginLeft: '0.5rem' }}>
+              <input className={styles.inlineNumber} type="number" min={1} value={recurrenceInterval} onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)} />
+              <select className={styles.inlineSelect} value={recurrenceFreq} onChange={(e) => setRecurrenceFreq(e.target.value as 'weekly' | 'monthly')}>
                 <option value="weekly">{t('createEvent.recurrenceWeeks')}</option>
                 <option value="monthly">{t('createEvent.recurrenceMonths')}</option>
               </select>
@@ -632,7 +719,7 @@ export function CreateEventPage() {
             {recurrenceFreq === 'monthly' && (
               <label>
                 {t('createEvent.recurrenceMonthlyBy')}:
-                <select value={recurrenceMonthlyBy} onChange={(e) => setRecurrenceMonthlyBy(e.target.value as 'date' | 'weekday')} style={{ marginLeft: '0.5rem' }}>
+                <select className={styles.inlineSelect} value={recurrenceMonthlyBy} onChange={(e) => setRecurrenceMonthlyBy(e.target.value as 'date' | 'weekday')}>
                   <option value="date">{t('createEvent.recurrenceByDate')}</option>
                   <option value="weekday">{t('createEvent.recurrenceByWeekday')}</option>
                 </select>
@@ -652,7 +739,7 @@ export function CreateEventPage() {
             {recurrenceFreq === 'monthly' && recurrenceMonthlyBy === 'weekday' && (
               <label>
                 {t('createEvent.recurrenceOrdinal')}:
-                <select value={recurrenceWeekOrdinal} onChange={(e) => setRecurrenceWeekOrdinal(parseInt(e.target.value))} style={{ marginLeft: '0.5rem' }}>
+                <select className={styles.inlineSelect} value={recurrenceWeekOrdinal} onChange={(e) => setRecurrenceWeekOrdinal(parseInt(e.target.value))}>
                   {[1, 2, 3, 4].map((ordinal) => <option key={ordinal} value={ordinal}>{t(`createEvent.recurrenceOrdinal${ordinal}`)}</option>)}
                   <option value={5}>{t('createEvent.recurrenceOrdinalLast')}</option>
                 </select>
@@ -668,7 +755,7 @@ export function CreateEventPage() {
             </div>
             {recurrenceLimitMode === 'count' ? (
               <label>
-                {t('createEvent.recurrenceCount')}: <input type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} style={{ width: '60px' }} />
+                {t('createEvent.recurrenceCount')}: <input className={styles.inlineNumber} type="number" min={1} max={52} value={recurrenceCount} onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)} />
               </label>
             ) : (
               <label>
@@ -677,7 +764,7 @@ export function CreateEventPage() {
             )}
             <div aria-live="polite">
               {recurrencePreview && (
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
+                <div className={styles.recurrencePreview}>
                   <strong>{t('createEvent.recurrencePreviewTitle')}</strong>
                   {recurrencePreview.invalid ? (
                     recurrencePreview.tooLong
@@ -687,8 +774,21 @@ export function CreateEventPage() {
                     <p>{t('createEvent.recurrencePreviewNone')}</p>
                   ) : (
                     <>
-                      <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>
-                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date) => <li key={date.toISOString()}>{formatPreviewDate(date)}</li>)}
+                        <ul className={styles.recurrenceDates}>
+                        {recurrencePreview.dates.slice(0, PREVIEW_DATE_LIMIT).map((date, index) => {
+                          const deadline = recurrencePreview.deadlines?.[index]
+                          const closed = deadline ? deadline.getTime() <= Date.now() : false
+                          return (
+                            <li key={date.toISOString()}>
+                              {formatPreviewDate(date)}
+                              {deadline ? (
+                                  <small className={closed ? styles.closedDeadline : styles.deadline}>
+                                  報名截止：{formatPreviewDate(deadline)}{closed ? '（報名已關閉）' : ''}
+                                </small>
+                              ) : null}
+                            </li>
+                          )
+                        })}
                       </ul>
                       <p>{t('createEvent.recurrencePreviewTotal', { n: recurrencePreview.total })}</p>
                       {recurrencePreview.dates.length > PREVIEW_DATE_LIMIT ? (
@@ -713,7 +813,7 @@ export function CreateEventPage() {
             <option value="" disabled>{t('createEvent.locationRegionPlaceholder')}</option>
             {TAIWAN_REGIONS.map((region) => (
               <option key={region} value={region}>
-                {t(`events.region${region}` as any)}
+                {t(`events.region${region}`)}
               </option>
             ))}
           </select>
@@ -741,21 +841,9 @@ export function CreateEventPage() {
           </p>
         ) : null}
         </section>
-        <section className="form-section" aria-labelledby="registration-section-title">
-          <div className="form-section-heading"><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
-        <label className="form-field">
-          <span className="form-label-row"><Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.attendanceFeeLabel')}</span>
-          <div className="segmented-control" aria-label={t('createEvent.attendanceFeeLabel')}>
-            {([['free', t('createEvent.attendanceFeeFree')], ['fixed', t('createEvent.attendanceFeeFixed')], ['see_description', t('createEvent.attendanceFeeDescription')]] as const).map(([value, label]) => (
-              <label key={value} className={attendanceFeeType === value ? 'is-selected' : ''}>
-                <input type="radio" name="attendance-fee" value={value} checked={attendanceFeeType === value} onChange={() => { setAttendanceFeeType(value); if (value !== 'fixed') setAttendanceFeeAmount('') }} />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-          {attendanceFeeType === 'fixed' ? <input aria-label={t('createEvent.attendanceFeeAmountLabel')} type="number" min="1" step="1" placeholder={t('createEvent.attendanceFeeAmountPlaceholder')} value={attendanceFeeAmount} onChange={(event) => setAttendanceFeeAmount(event.target.value)} /> : null}
-          <small>{t('createEvent.attendanceFeeHint')}</small>
-        </label>
+        <section className={`${styles.formSection} ${layoutStyles.section}`} aria-labelledby="registration-section-title">
+          <div className={`${styles.formSectionHeading} ${layoutStyles.sectionHeading}`}><h2 id="registration-section-title">{t('createEvent.registrationSection')}</h2><span>3</span></div>
+        <FeeField t={t} value={attendanceFeeType} onChange={setAttendanceFeeType} amount={attendanceFeeAmount} onAmountChange={setAttendanceFeeAmount} />
         <fieldset className="form-field">
           <legend>{t('createEvent.registrationModeLabel')}</legend>
           <div className="segmented-control registration-mode-control">
@@ -795,7 +883,7 @@ export function CreateEventPage() {
             onChange={(event) => setMaxCapacity(event.target.value)}
           />
         </label> : null}
-        {registrationMode === 'native' ? <label className="form-field">
+        {registrationMode === 'native' && !recurrenceEnabled ? <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.registrationDeadlineLabel')}
           </span>
@@ -806,6 +894,51 @@ export function CreateEventPage() {
             onChange={(event) => setRegistrationDeadline(event.target.value)}
           />
         </label> : null}
+        {registrationMode === 'native' && recurrenceEnabled ? <fieldset className="form-field">
+          <legend>{t('createEvent.seriesDeadlineModeLabel')}</legend>
+          <small>{t('createEvent.seriesDeadlineModeHint')}</small>
+          <div className={styles.seriesDeadlineOption}>
+            <label className="checkbox">
+              <input type="radio" name="series-deadline-mode" value="relative" checked={seriesDeadlineMode === 'relative'} onChange={() => setSeriesDeadlineMode('relative')} />
+              {t('createEvent.seriesDeadlineRelativeLabel')}
+            </label>
+            <input
+              aria-label={t('createEvent.seriesDeadlineOffsetAria')}
+              type="number"
+              min="1"
+              max="525600"
+              step="1"
+              placeholder={t('createEvent.seriesDeadlineOffsetPlaceholder')}
+              value={effectiveSeriesDeadlineOffsetMinutes}
+              onChange={(event) => setSeriesDeadlineOffsetMinutes(event.target.value)}
+              disabled={seriesDeadlineMode !== 'relative'}
+              className={styles.seriesDeadlineOffset}
+            />
+            {t('createEvent.seriesDeadlineMinutesSuffix')}
+          </div>
+          {seriesDeadlineMode === 'relative' && effectiveRegistrationDeadline ? <small style={{ color: 'var(--color-text-muted)' }}>
+            {t('createEvent.seriesDeadlineOriginalHint', { deadline: formatPreviewDate(new Date(effectiveRegistrationDeadline)) })}
+          </small> : null}
+          <div className={styles.seriesDeadlineOption}>
+            <label className="checkbox">
+              <input type="radio" name="series-deadline-mode" value="absolute" checked={seriesDeadlineMode === 'absolute'} onChange={() => setSeriesDeadlineMode('absolute')} />
+              {t('createEvent.seriesDeadlineAbsoluteLabel')}
+            </label>
+            <input
+              aria-label={t('createEvent.registrationDeadlineLabel')}
+              type="datetime-local"
+              value={registrationDeadline}
+              onChange={(event) => setRegistrationDeadline(event.target.value)}
+              disabled={seriesDeadlineMode !== 'absolute'}
+              className={styles.seriesDeadlineAbsolute}
+            />
+          </div>
+          <label className="checkbox">
+            <input type="radio" name="series-deadline-mode" value="none" checked={seriesDeadlineMode === 'none'} onChange={() => setSeriesDeadlineMode('none')} />
+            {t('createEvent.seriesDeadlineNoneLabel')}
+          </label>
+          {seriesDeadlineMode === 'absolute' ? <small style={{ color: 'var(--color-text-muted)' }}>{t('createEvent.seriesDeadlineAbsoluteHint')}</small> : null}
+        </fieldset> : null}
         {profile?.role_status === 'venue_approved' && (
           <label className="checkbox">
             <input
@@ -846,7 +979,7 @@ export function CreateEventPage() {
           </div>
           {!showFormPreview && formFields.map((field, idx) => {
             const isExpanded = expandedFieldId === field.id
-            const typeLabel = t(`createEvent.formBuilder${field.type.charAt(0).toUpperCase() + field.type.slice(1)}` as any)
+            const typeLabel = t(`createEvent.formBuilder${field.type.charAt(0).toUpperCase() + field.type.slice(1)}`)
             return (
               <div
                 key={field.id}
@@ -881,7 +1014,7 @@ export function CreateEventPage() {
                         const type = event.target.value as RegistrationFormField['type']
                         updateFormField(field.id, { type, options: OPTION_FIELD_TYPES.includes(type) ? (field.options?.length ? field.options : ['']) : undefined })
                       }}>
-                        {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}` as any)}</option>)}
+                        {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilder${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}
                       </select>
                     </label>
                     <label className="form-builder-toggle">
@@ -914,7 +1047,7 @@ export function CreateEventPage() {
             <div className="form-builder-add-row">
               <select aria-label={t('createEvent.formBuilderAddField')} defaultValue="" onChange={(event) => { if (event.target.value) { addFormField(event.target.value as RegistrationFormField['type']); event.target.value = '' } }} disabled={formFields.length >= MAX_FORM_FIELDS}>
                 <option value="">+ {t('createEvent.formBuilderAddField')}</option>
-                {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}` as any)}</option>)}
+                {FORM_FIELD_TYPES.map((type) => <option key={type} value={type}>{t(`createEvent.formBuilderAdd${type.charAt(0).toUpperCase() + type.slice(1)}`)}</option>)}
               </select>
               {formFields.length >= MAX_FORM_FIELDS ? <span className="form-builder-limit">{t('createEvent.formBuilderLimit')}</span> : null}
             </div>
@@ -922,15 +1055,15 @@ export function CreateEventPage() {
           {deletedField ? <div className="form-builder-toast" role="status">{t('createEvent.formBuilderDeleted')} <button type="button" onClick={undoRemoveFormField}>{t('createEvent.formBuilderUndo')}</button></div> : null}
         </fieldset> : null}
         </section>
-        <div className="sticky-action-bar">
+        <div data-sticky-action-bar className={`${styles.stickyActionBar} ${layoutStyles.actionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
           <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
-          <div className="sticky-action-buttons">
-            <button type="submit" className="secondary-button" onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
-              {t('createEvent.saveDraft')}
+          <div className={`${styles.stickyActionButtons} ${layoutStyles.actions}`}>
+            <button type="submit" className={layoutStyles.secondaryAction} onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
+              {seriesId ? t('createEvent.saveSession') : t('createEvent.saveDraft')}
             </button>
-            <button type="submit" className="primary-cta" onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
+            {!seriesId && <button type="submit" className={layoutStyles.primaryAction} onClick={() => { publishIntentRef.current = true }} disabled={submitting || importing || sourcePreview !== null}>
               <Icon href="/action-icons.svg" name="action-plus" size={16} /> {t('createEvent.saveAndPublish')}
-            </button>
+            </button>}
           </div>
         </div>
         {message ? <p className="message">{message}</p> : null}

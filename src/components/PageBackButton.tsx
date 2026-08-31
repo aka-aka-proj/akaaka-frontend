@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useT } from '../hooks/useT'
+import styles from './PageBackButton.module.css'
 
 const FALLBACK_PARENT_ROUTES: Array<[RegExp, string | ((pathname: string) => string)]> = [
   [/^\/events\/[^/]+\/edit$/, (pathname) => pathname.replace(/\/edit$/, '')],
   [/^\/events\/(new|bookmarks)$/, '/events'],
+  [/^\/events\/series\/new$/, '/events'],
   [/^\/events\/[^/]+$/, '/events'],
   [/^\/profile\/me\/edit$/, '/profile/me'],
   [/^\/profile\/[^/]+\/(feedback|reports)$/, (pathname) => pathname.replace(/\/(feedback|reports)$/, '')],
@@ -41,8 +43,8 @@ export function PageBackButton() {
   if (!shouldShow) return null
 
   return (
-    <div className="page-back-container">
-      <button type="button" className="page-back-button" onClick={handleBack}>
+    <div className={styles.container}>
+      <button type="button" className={styles.button} onClick={handleBack}>
         <span aria-hidden="true">←</span>
         <span>{t('common.back')}</span>
       </button>

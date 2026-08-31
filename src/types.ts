@@ -46,6 +46,7 @@ export interface Profile {
   display_name: string | null
   bio: string | null
   external_social_links: SocialLink[]
+  x_link_provided?: boolean
   metadata: {
     visibility?: {
       bio?: Visibility
@@ -246,6 +247,10 @@ export interface RecurrenceRule {
   count?: number
   until?: string
   timezone?: string
+  /** Per-instance registration deadline offset from each copy's start_time (minutes).
+   *  When set, each recurring copy's registration_deadline = its own start_time − offset.
+   *  Omit to copy the parent's absolute registration_deadline (backward compatible). */
+  registration_deadline_offset_minutes?: number
 }
 
 export interface RegistrationResponse {

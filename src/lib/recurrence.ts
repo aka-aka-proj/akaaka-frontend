@@ -29,11 +29,6 @@ export class RecurrenceSeriesTooLongError extends Error {
   }
 }
 
-// Legacy payloads (no `timezone`, required `count`, optional `until` alongside it)
-// stay valid until the revised frontend ships to production — flip this off then
-// (spec「部署相容期」, tracked in akaaka-iac DEPLOYMENT-NOTES.md).
-const LEGACY_PAYLOAD_COMPAT_ENABLED = true
-
 // Hard guards so generators always terminate even when callers bypass validation;
 // validated input always terminates earlier via the count/until/series-cap checks.
 const MAX_WEEK_STEPS = 5200
@@ -146,12 +141,12 @@ function nthWeekdayOfMonth(year: number, month: number, weekday: number, ordinal
 
 function modeAllowedFields(rule: UnvalidatedRecurrenceRule): Set<string> {
   if (rule.frequency === 'weekly') {
-    return new Set(['frequency', 'interval', 'days', 'count', 'until', 'timezone'])
+    return new Set(['frequency', 'interval', 'days', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
   }
   if (rule.monthly_by === 'weekday') {
-    return new Set(['frequency', 'interval', 'monthly_by', 'week_ordinal', 'days', 'count', 'until', 'timezone'])
+    return new Set(['frequency', 'interval', 'monthly_by', 'week_ordinal', 'days', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
   }
-  return new Set(['frequency', 'interval', 'monthly_by', 'count', 'until', 'timezone'])
+  return new Set(['frequency', 'interval', 'monthly_by', 'count', 'until', 'timezone', 'registration_deadline_offset_minutes'])
 }
 
 export function validateRecurrenceRule(rule: UnvalidatedRecurrenceRule): string | null {
@@ -178,22 +173,21 @@ export function validateRecurrenceRule(rule: UnvalidatedRecurrenceRule): string 
     return 'until must be a valid timestamp'
   }
 
-  const newStylePayload = rule.timezone !== undefined && rule.timezone !== null
-  if (newStylePayload || !LEGACY_PAYLOAD_COMPAT_ENABLED) {
-    if (typeof rule.timezone !== 'string' || !isValidTimeZone(rule.timezone)) {
-      return 'timezone must be a valid IANA time zone name'
+  if (typeof rule.timezone !== 'string' || !isValidTimeZone(rule.timezone)) {
+    return 'timezone must be a valid IANA time zone name'
+  }
+  if (rule.registration_deadline_offset_minutes !== undefined) {
+    if (!Number.isInteger(rule.registration_deadline_offset_minutes) || rule.registration_deadline_offset_minutes < 1 || rule.registration_deadline_offset_minutes > 525600) {
+      return 'registration_deadline_offset_minutes must be an integer between 1 and 525600'
     }
-    if ((rule.count !== undefined) === hasUntil) {
-      return 'provide either count or until, not both'
+  }
+  if ((rule.count !== undefined) === hasUntil) {
+    return 'provide either count or until, not both'
+  }
+  for (const key of Object.keys(rule)) {
+    if (!modeAllowedFields(rule).has(key)) {
+      return `field "${key}" is not allowed for ${rule.frequency} recurrence`
     }
-    for (const key of Object.keys(rule)) {
-      if (!modeAllowedFields(rule).has(key)) {
-        return `field "${key}" is not allowed for ${rule.frequency} recurrence`
-      }
-    }
-  } else if (rule.count === undefined) {
-    // Legacy contract: count is required, until optional alongside it.
-    return 'count must be an integer between 1 and 52'
   }
 
   if (rule.week_ordinal !== undefined && !(rule.frequency === 'monthly' && rule.monthly_by === 'weekday')) {

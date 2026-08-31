@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
@@ -48,7 +48,7 @@ export function SecurityPrivacyPage() {
   const verifiedMfaFactors = mfaFactors.filter((factor) => factor.status === 'verified')
   const pendingMfaFactors = mfaFactors.filter((factor) => factor.status === 'unverified')
 
-  const loadMfaFactors = async () => {
+  const loadMfaFactors = useCallback(async () => {
     const [{ data: factorData, error: factorError }, { data: assuranceData, error: assuranceError }] = await Promise.all([
       supabase.auth.mfa.listFactors(),
       supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
@@ -59,9 +59,9 @@ export function SecurityPrivacyPage() {
     }
     setMfaFactors((factorData?.all ?? []) as MfaFactor[])
     setMfaAssuranceLevel(assuranceData?.currentLevel ?? 'aal1')
-  }
+  }, [])
 
-  const loadAuditLogs = async () => {
+  const loadAuditLogs = useCallback(async () => {
     if (!user) return
     setAuditLoading(true)
     setAuditError('')
@@ -79,12 +79,12 @@ export function SecurityPrivacyPage() {
       setAuditLogs((data ?? []) as AuditEntry[])
     }
     setAuditLoading(false)
-  }
+  }, [user])
 
   useEffect(() => {
     void loadAuditLogs()
     if (user) void loadMfaFactors()
-  }, [user?.id])
+  }, [user, loadAuditLogs, loadMfaFactors])
 
   const beginMfaEnrollment = async () => {
     setMfaLoading(true)
@@ -92,7 +92,7 @@ export function SecurityPrivacyPage() {
     setMfaMessage('')
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
-      friendlyName: 'AkaAka Authenticator',
+      friendlyName: 'BDSM Circle Connect Authenticator',
     })
     setMfaLoading(false)
     if (error) {
@@ -348,7 +348,7 @@ export function SecurityPrivacyPage() {
 
       <section className="card">
         <p style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
-          AkaAka — 安全、透明、隱私優先
+          BDSM 圈內揪 — 安全、透明、隱私優先
         </p>
       </section>
     </Layout>

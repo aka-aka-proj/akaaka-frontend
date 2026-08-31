@@ -3,8 +3,7 @@ import { generateRecurringDates, validateRecurrenceRule, RecurrenceSeriesTooLong
 import type { UnvalidatedRecurrenceRule } from './recurrence'
 import type { RecurrenceRule } from '../types'
 
-// Shared canonical test vectors — must stay in sync with akaaka-iac supabase/functions/_shared/recurrence_test.ts
-// (branch feat/recurring-tz-whitelist @ 7de851f).
+// Shared canonical test vectors — must stay in sync with akaaka-iac supabase/functions/_shared/recurrence_test.ts (main).
 
 const iso = (dates: Date[]) => dates.map((date) => date.toISOString())
 
@@ -206,27 +205,6 @@ describe('generateRecurringDates', () => {
       '2026-04-05T00:30:00.000Z',
     ])
   })
-
-  it('V20 legacy count and until coexist: filter by until first, then truncate by count', () => {
-    const base = new Date('2026-08-10T12:00:00.000Z')
-    const boundedByUntil = generateRecurringDates(base, {
-      frequency: 'weekly',
-      interval: 1,
-      count: 4,
-      until: '2026-08-24T12:00:00.000Z',
-    })
-    expect(iso(boundedByUntil)).toEqual([
-      '2026-08-17T12:00:00.000Z',
-      '2026-08-24T12:00:00.000Z',
-    ])
-    const truncatedByCount = generateRecurringDates(base, {
-      frequency: 'weekly',
-      interval: 1,
-      count: 2,
-      until: '2027-01-01T00:00:00.000Z',
-    })
-    expect(iso(truncatedByCount)).toEqual(['2026-08-17T12:00:00.000Z'])
-  })
 })
 
 describe('validateRecurrenceRule', () => {
@@ -241,21 +219,21 @@ describe('validateRecurrenceRule', () => {
 
   it('V9 rejects invalid monthly weekday rules', () => {
     expect(
-      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', days: ['Wed'], interval: 1, count: 2 }),
+      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', days: ['Wed'], interval: 1, count: 2, timezone: 'UTC' }),
     ).toBe('week_ordinal must be an integer between 1 and 5')
     expect(
-      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', week_ordinal: 6, days: ['Wed'], interval: 1, count: 2 }),
+      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', week_ordinal: 6, days: ['Wed'], interval: 1, count: 2, timezone: 'UTC' }),
     ).toBe('week_ordinal must be an integer between 1 and 5')
     expect(
-      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', week_ordinal: 2, interval: 1, count: 2 }),
+      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'weekday', week_ordinal: 2, interval: 1, count: 2, timezone: 'UTC' }),
     ).toBe('days must contain at least one weekday when monthly_by is "weekday"')
     expect(
-      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'date', week_ordinal: 2, interval: 1, count: 2 }),
-    ).toBe('week_ordinal is only allowed when monthly_by is "weekday"')
+      validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'date', week_ordinal: 2, interval: 1, count: 2, timezone: 'UTC' }),
+    ).toBe('field "week_ordinal" is not allowed for monthly recurrence')
     expect(
-      validateRecurrenceRule({ frequency: 'weekly', monthly_by: 'weekday', week_ordinal: 2, days: ['Mon'], interval: 1, count: 2 }),
-    ).toBe('monthly_by and week_ordinal are only allowed for monthly frequency')
-    expect(validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'yearly', interval: 1, count: 2 })).toBe(
+      validateRecurrenceRule({ frequency: 'weekly', monthly_by: 'weekday', week_ordinal: 2, days: ['Mon'], interval: 1, count: 2, timezone: 'UTC' }),
+    ).toBe('field "monthly_by" is not allowed for weekly recurrence')
+    expect(validateRecurrenceRule({ frequency: 'monthly', monthly_by: 'yearly', interval: 1, count: 2, timezone: 'UTC' })).toBe(
       'monthly_by must be "date" or "weekday"',
     )
   })
@@ -305,13 +283,21 @@ describe('validateRecurrenceRule', () => {
     }
   })
 
-  it('V19 timezone must be a valid IANA name on new-style payloads; legacy payloads stay valid', () => {
+  it('V20 legacy payload shapes are rejected once the compat period ends', () => {
+    expect(validateRecurrenceRule({ frequency: 'weekly', interval: 1, count: 4 })).toBe(
+      'timezone must be a valid IANA time zone name',
+    )
+    expect(validateRecurrenceRule({ frequency: 'weekly', interval: 1, count: 2, until: '2026-09-30T00:00:00.000Z' })).toBe(
+      'timezone must be a valid IANA time zone name',
+    )
+  })
+
+  it('V19 timezone must be a valid IANA name on every payload', () => {
     expect(validateRecurrenceRule({ frequency: 'weekly', interval: 1, count: 2, timezone: 'Mars/Olympus' })).toBe(
       'timezone must be a valid IANA time zone name',
     )
     expect(
       validateRecurrenceRule(ruleWithExtraFields({ frequency: 'weekly', interval: 1, count: 2, timezone: 123 })),
     ).toBe('timezone must be a valid IANA time zone name')
-    expect(validateRecurrenceRule({ frequency: 'weekly', interval: 1, count: 4, until: '2026-09-30T00:00:00.000Z' })).toBeNull()
   })
 })

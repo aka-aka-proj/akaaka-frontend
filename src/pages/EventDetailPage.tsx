@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
@@ -9,7 +10,11 @@ import { ShareToXModal } from '../components/ShareToXModal'
 import { ReportForm } from '../components/ReportForm'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
 import { MarkdownRenderer } from '../components/MarkdownRenderer'
+import { MarkdownEditor } from '../components/MarkdownEditor'
 import { EventAnnouncements } from '../components/EventAnnouncements'
+import { SeriesNavigation } from '../components/SeriesNavigation'
+import { SeriesRegistrationFlow } from '../components/SeriesRegistrationFlow'
+import { useEventSeries, useIsEventInSeries } from '../hooks/useEventSeries'
 import { useAuth } from '../context/AuthContext'
 import { useError } from '../context/ErrorContext'
 import { useT } from '../hooks/useT'
@@ -19,6 +24,8 @@ import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../li
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
+import { getInitialHostConsoleView, shouldShowPublishShortcut } from '../lib/event-detail-view'
+import type { HostConsoleView } from '../lib/event-detail-view'
 import type { EventItem, EventThread, Registration, RegistrationFormField, RegistrationResponse, ExternalGuest, EventInvitation, PublicProfilePreview } from '../types'
 
 interface Attendee {
@@ -34,6 +41,33 @@ interface PublicCapacitySummary {
 
 interface FormResponseWithRegistrant extends RegistrationResponse {
   registration?: { profile_id: string } | null
+}
+
+const SHARE_TOKEN_STORAGE_PREFIX = 'event-share-token:'
+
+function readShareTokenFromHash(): string | null {
+  const hash = window.location.hash
+  if (!hash.startsWith('#t=')) {
+    return null
+  }
+  return hash.slice(3) || null
+}
+
+function readStoredShareToken(eventId: string): string | null {
+  try {
+    return sessionStorage.getItem(SHARE_TOKEN_STORAGE_PREFIX + eventId)
+  } catch {
+    // Storage unavailable (e.g. blocked cookies); the hash token still works.
+    return null
+  }
+}
+
+function storeShareToken(eventId: string, token: string): void {
+  try {
+    sessionStorage.setItem(SHARE_TOKEN_STORAGE_PREFIX + eventId, token)
+  } catch {
+    // Storage unavailable; the current-page session keeps working via state.
+  }
 }
 
 function getCompatibleFormData(
@@ -60,6 +94,8 @@ export function EventDetailPage() {
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
+  const [seriesInstances, setSeriesInstances] = useState<{ id: string; start_time: string; registration_deadline: string | null }[]>([])
+  const [seriesIndex, setSeriesIndex] = useState(0)
   const [threads, setThreads] = useState<EventThread[]>([])
   const [content, setContent] = useState('')
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
@@ -72,8 +108,10 @@ export function EventDetailPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [publicCapacityOccupied, setPublicCapacityOccupied] = useState<number | null>(null)
+  const [capacityQueryFailed, setCapacityQueryFailed] = useState(false)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
+  const [publicationPending, setPublicationPending] = useState(false)
   const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
@@ -98,22 +136,142 @@ export function EventDetailPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
   const [invitationToRetract, setInvitationToRetract] = useState<EventInvitation | null>(null)
+  const [hostConsoleView, setHostConsoleView] = useState<HostConsoleView>('participants')
+
+  const { loading: loadingSeries, seriesId: eventSeriesId } = useIsEventInSeries(id)
+  const eventSeries = useEventSeries(eventSeriesId)
+  const [seriesMembersEvents, setSeriesMembersEvents] = useState<EventItem[]>([])
+
+  useEffect(() => {
+    if (!eventSeriesId) return
+    let cancelled = false
+
+    const loadEventSeriesMembers = async () => {
+      const { data: memberships } = await supabase
+        .from('event_series_membership')
+        .select('event_id, position')
+        .eq('series_id', eventSeriesId)
+        .order('position', { ascending: true })
+
+      const rows = (memberships as { event_id: string; position: number }[] | null) ?? []
+      if (rows.length === 0) {
+        if (!cancelled) setSeriesMembersEvents([])
+        return
+      }
+
+      const { data: memberEvents } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', rows.map((row) => row.event_id))
+
+      if (cancelled) return
+      const byId = new Map(((memberEvents as EventItem[] | null) ?? []).map((event) => [event.id, event]))
+      setSeriesMembersEvents(rows.flatMap((row) => {
+        const event = byId.get(row.event_id)
+        return event ? [event] : []
+      }))
+    }
+
+    void loadEventSeriesMembers()
+    return () => { cancelled = true }
+  }, [eventSeriesId])
 
   const isHost = user && eventItem && user.id === eventItem.creator_id
+
+  useEffect(() => {
+    // The event loads asynchronously; select the host console once ownership is known.
+    setHostConsoleView(getInitialHostConsoleView(Boolean(isHost)))
+  }, [id, isHost])
+
+  const seriesBlocksSingleRegistration = Boolean(
+    eventSeriesId && (loadingSeries || eventSeries?.is_whole_series_required),
+  )
   const isEditLocked = eventItem ? isEventEditLocked(eventItem) : false
   const [, setEditLockClock] = useState(0)
 
+  const deadlinePending = Boolean(
+    eventItem?.registration_deadline
+    && new Date(eventItem.registration_deadline).getTime() > Date.now(),
+  )
+
   useEffect(() => {
-    if (!eventItem || !isHost || isEditLocked || eventItem.lifecycle_status === 'draft') {
+    const hostNeedsEditLockClock = Boolean(
+      eventItem && isHost && !isEditLocked && eventItem.lifecycle_status !== 'draft',
+    )
+    if (!eventItem || (!hostNeedsEditLockClock && !deadlinePending)) {
       return
     }
-    // Bumping unused state forces a re-render so isEventEditLocked() is re-evaluated after start_time passes.
+    // Bumping unused state forces a re-render so isEventEditLocked() and
+    // deadline-derived values are re-evaluated as time passes.
     const timer = window.setInterval(() => setEditLockClock((tick) => tick + 1), 30_000)
     return () => window.clearInterval(timer)
-  }, [eventItem, isHost, isEditLocked])
+  }, [eventItem, isHost, isEditLocked, deadlinePending])
   const isRegistrationClosed = eventItem?.registration_deadline
     ? new Date(eventItem.registration_deadline).getTime() <= Date.now()
     : false
+  const [shareLinkPending, setShareLinkPending] = useState(false)
+  const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false)
+
+  const registrationSectionRef = useRef<HTMLElement | null>(null)
+  const scrollToRegistration = useCallback(() => {
+    registrationSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const isPrivateShareable = Boolean(
+    eventItem
+    && isHost
+    && eventItem.lifecycle_status !== 'draft'
+    && eventItem.publication_status === 'published'
+    && eventItem.visibility_settings?.type === 'private',
+  )
+
+  const sharedEventUrl = (() => {
+    if (!eventItem) {
+      return window.location.href
+    }
+    const storedToken = readStoredShareToken(eventItem.id)
+    return storedToken
+      ? `${window.location.origin}/events/${eventItem.id}#t=${storedToken}`
+      : window.location.href
+  })()
+
+  const deliverShareUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      alert(t('eventDetail.shareLinkCopied'))
+    } catch {
+      // Clipboard denied/unavailable — surface the full URL for manual copy.
+      window.prompt(t('events.shareFailed'), url)
+    }
+  }
+
+  const copyShareLink = async (rotate: boolean) => {
+    if (!eventItem || !isHost || shareLinkPending) {
+      return
+    }
+    setShareLinkPending(true)
+    try {
+      const { data: token, error } = await supabase.rpc(
+        rotate ? 'rotate_event_share_token' : 'ensure_event_share_token',
+        { p_event_id: eventItem.id },
+      )
+      if (error || typeof token !== 'string' || !token) {
+        showError(error?.message ?? t('events.shareFailed'), error)
+        return
+      }
+      await deliverShareUrl(`${window.location.origin}/events/${eventItem.id}#t=${token}`)
+    } finally {
+      setShareLinkPending(false)
+    }
+  }
+
+  const registrationIntakeActive = Boolean(
+    eventItem
+    && (eventItem.lifecycle_status === 'published' || eventItem.lifecycle_status === 'registration_open')
+    && eventItem.publication_status !== 'closed',
+  )
+  const registrationEntryBlocked = !registrationIntakeActive
+    || Boolean(eventItem?.registration_deadline && isRegistrationClosed)
   const capacityExternalGuests = useMemo(
     () => externalGuests.filter((g) => g.count_towards_capacity),
     [externalGuests],
@@ -128,6 +286,17 @@ export function EventDetailPage() {
   }, [attendees.length, capacityExternalGuests.length, eventItem?.max_capacity])
   const capacityOccupied = isHost ? totalCapacityOccupied : publicCapacityOccupied
   const isAtCapacity = Boolean(eventItem?.max_capacity && capacityOccupied !== null && capacityOccupied >= eventItem.max_capacity)
+  const capacityKnown = Boolean(isHost) || publicCapacityOccupied !== null
+  const capacityOccupiedValue = isHost ? totalCapacityOccupied : (publicCapacityOccupied ?? 0)
+  const capacityRatio = eventItem?.max_capacity
+    ? Math.min(1, capacityOccupiedValue / eventItem.max_capacity)
+    : 0
+  const capacityBadgeKind = isRegistrationClosed ? 'closed' : isAtCapacity ? 'full' : 'open'
+  const capacityBadgeKey = isRegistrationClosed
+    ? 'eventDetail.statusBadgeRegClosed'
+    : isAtCapacity
+      ? 'eventDetail.statusBadgeFull'
+      : 'eventDetail.statusBadgeOpen'
   const pendingInvitations = useMemo(
     () => invitations.filter((inv) => inv.status === 'pending'),
     [invitations],
@@ -161,7 +330,7 @@ export function EventDetailPage() {
     return t('eventDetail.daysAgo', { count: Math.floor(elapsedHours / 24) })
   }
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) {
       return
     }
@@ -199,20 +368,77 @@ export function EventDetailPage() {
       return
     }
 
-    setEventItem((eventData as EventItem | null) ?? null)
+    let currentEvent = (eventData as EventItem | null) ?? null
+    let usedShareToken: string | null = null
+
+    // Private-event share link (ADR-022): consume the fragment token
+    // unconditionally — even when RLS already grants a direct read — so the
+    // bearer token never lingers in the address bar or history.
+    const hashToken = readShareTokenFromHash()
+    if (hashToken) {
+      storeShareToken(id, hashToken)
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    }
+
+    // Non-creators cannot read private rows directly; fall back to the
+    // controlled read-only token path via same-tab session storage.
+    if (!currentEvent) {
+      const shareToken = readStoredShareToken(id)
+      if (shareToken) {
+        const { data: tokenData, error: tokenError } = await supabase
+          .rpc('get_event_by_share_token', { p_token: shareToken })
+          .maybeSingle()
+        if (tokenError) {
+          showError(tokenError.message, tokenError)
+          return
+        }
+        if (tokenData && (tokenData as EventItem).id === id) {
+          currentEvent = tokenData as EventItem
+          usedShareToken = shareToken
+        }
+      }
+    }
+
+    setEventItem(currentEvent)
     setThreads((threadData as EventThread[]) ?? [])
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
-    const currentEvent = eventData as EventItem | null
+    // Series context: load sibling instances when this event belongs to a recurring series.
+    // Standalone events (no series_id and no recurrence_rule) skip these queries entirely;
+    // parent/child lookups run in parallel so they don't delay capacity/registration loads.
+    setSeriesInstances([])
+    setSeriesIndex(0)
+    if (currentEvent && (currentEvent.series_id != null || currentEvent.recurrence_rule != null)) {
+      const seriesParentId = currentEvent.series_id ?? currentEvent.id
+      const [seriesParentRes, seriesChildRes] = await Promise.all([
+        supabase.from('events').select('id, start_time, registration_deadline').eq('id', seriesParentId).maybeSingle(),
+        supabase.from('events').select('id, start_time, registration_deadline').eq('series_id', seriesParentId).order('start_time', { ascending: true }),
+      ])
+      type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
+      const parentInstance = (seriesParentRes.data as SeriesInstance | null) ?? null
+      const childInstances = ((seriesChildRes.data as SeriesInstance[] | null) ?? [])
+      if (childInstances.length > 0) {
+        const instances = [...(parentInstance ? [parentInstance] : []), ...childInstances]
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+        const index = instances.findIndex((instance) => instance.id === currentEvent.id)
+        if (index >= 0 && instances.length > 1) {
+          setSeriesInstances(instances)
+          setSeriesIndex(index + 1)
+        }
+      }
+    }
     if (currentEvent?.max_capacity && (!user || user.id !== currentEvent.creator_id)) {
-      const { data: capacityData, error: capacityError } = await supabase
-        .rpc('get_event_capacity', { p_event_id: id })
-        .maybeSingle()
+      const capacityResponse = usedShareToken
+        ? await supabase.rpc('get_event_capacity_by_share_token', { p_token: usedShareToken }).maybeSingle()
+        : await supabase.rpc('get_event_capacity', { p_event_id: id }).maybeSingle()
+      const { data: capacityData, error: capacityError } = capacityResponse
 
       if (capacityError || !capacityData) {
         setPublicCapacityOccupied(null)
+        setCapacityQueryFailed(true)
       } else {
+        setCapacityQueryFailed(false)
         const capacitySummary = capacityData as PublicCapacitySummary
         setPublicCapacityOccupied(
           Number(capacitySummary.approved_registration_count ?? 0)
@@ -221,13 +447,14 @@ export function EventDetailPage() {
       }
     } else {
       setPublicCapacityOccupied(null)
+      setCapacityQueryFailed(false)
     }
 
-    if (user && eventData) {
+    if (user && currentEvent) {
       const { data: reportStats } = await supabase
         .from('profile_report_stats')
         .select('report_count')
-        .eq('profile_id', (eventData as EventItem).creator_id)
+        .eq('profile_id', currentEvent.creator_id)
         .maybeSingle()
       setCreatorReportCount(Number(reportStats?.report_count ?? 0))
     }
@@ -286,7 +513,7 @@ export function EventDetailPage() {
 
     // External events never expose native registration state or registrant profiles.
     const allRegs = user
-      ? (eventData && (eventData as EventItem).external_registration_url
+      ? (currentEvent && currentEvent.external_registration_url
           ? []
           : (await supabase
             .from('event_registrations')
@@ -347,14 +574,37 @@ export function EventDetailPage() {
       )
     } else {
       setAttendees([])
-}
-  }
+    }
+
+    // Load series member events if current event belongs to a series
+    const eventDataParsed = eventData as EventItem | null
+    if (eventDataParsed?.series_id) {
+      const seriesMembershipQuery = await supabase
+        .from('event_series_membership')
+        .select('event_id, position')
+        .eq('series_id', eventDataParsed.series_id)
+        .order('position', { ascending: true })
+
+      const memberships = (seriesMembershipQuery.data as { event_id: string; position: number }[] | null) ?? []
+      if (memberships.length > 0) {
+        const memberIds = memberships.map((m) => m.event_id)
+        const { data: memberEventsData } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', memberIds)
+          .eq('lifecycle_status', 'published')
+
+        setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
+      }
+    }
+
+  }, [id, user, t, showError])
 
   useEffect(() => {
     void load()
-  }, [id, user?.id])
+  }, [load])
 
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!id || !user) {
       return
     }
@@ -367,13 +617,38 @@ export function EventDetailPage() {
     setSubmitting(false)
 
     if (error) {
-      const errorMessage = (error as any).context?.message || error.message
+      const errorMessage = error.message
       showError(errorMessage, error)
       return
     }
 
     await load()
-  }
+  }, [id, user, showError, load])
+
+  const mobileRegistrationShortcut = useMemo(() => {
+    if (!eventItem
+      || eventItem.lifecycle_status === 'draft'
+      || eventItem.publication_status === 'closed'
+      || isHost) {
+      return null
+    }
+
+    if (registrationEntryBlocked) {
+      return (
+        <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+          {t('eventDetail.registrationClosedCta')}
+        </button>
+      )
+    }
+
+    return (
+      <button type="button" className="primary-cta" onClick={scrollToRegistration}>
+        {isAtCapacity && !eventItem.external_registration_url
+          ? t('eventDetail.waitlistRegister')
+          : t('eventDetail.registration')}
+      </button>
+    )
+  }, [eventItem, isHost, registrationEntryBlocked, isAtCapacity, scrollToRegistration, t])
 
   const handleCancelRegistration = async () => {
     if (!id || !user) {
@@ -418,19 +693,24 @@ export function EventDetailPage() {
   }
 
   const handlePublicationChange = async (status: 'published' | 'closed') => {
-    if (!eventItem || !user || !isHost) return
-    const { data, error } = await supabase.rpc('set_event_publication', {
-      p_event_id: eventItem.id,
-      p_publication_status: status,
-      p_publish_at: null,
-      p_unpublish_at: null,
-    })
-    if (error) {
-      showError(error.message, error)
-      return
+    if (!eventItem || !user || !isHost || publicationPending) return
+    setPublicationPending(true)
+    try {
+      const { data, error } = await supabase.rpc('set_event_publication', {
+        p_event_id: eventItem.id,
+        p_publication_status: status,
+        p_publish_at: null,
+        p_unpublish_at: null,
+      })
+      if (error) {
+        showError(error.message, error)
+        return
+      }
+      setEventItem(data as EventItem)
+      setPublicationConfirmOpen(false)
+    } finally {
+      setPublicationPending(false)
     }
-    setEventItem(data as EventItem)
-    setPublicationConfirmOpen(false)
   }
 
   const handleCheckIn = async (registrationId: string) => {
@@ -566,8 +846,7 @@ export function EventDetailPage() {
     await load()
   }
 
-  const postThread = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const postThread = async () => {
     if (!id || !user || !content.trim()) {
       return
     }
@@ -634,7 +913,7 @@ export function EventDetailPage() {
   }
 
   function renderThread(thread: EventThread, depth = 0) {
-    const displayName = thread.profile?.display_name || thread.profile_id
+    const displayName = thread.profile?.display_name || t('eventDetail.unnamedMember')
     const isHostComment = eventItem?.creator_id === thread.profile_id
     return (
       <li key={thread.id} className={`discussion-item${depth > 0 ? ' discussion-item-reply' : ''}`}>
@@ -686,9 +965,121 @@ export function EventDetailPage() {
   return (
     <Layout>
       <div className="event-detail-layout">
+      {isHost && eventItem ? (
+        <div className="host-view-tabs" role="group" aria-label={t('eventDetail.managementConsole')}>
+          <span className="host-view-tabs-label">
+            <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.hostTools')}
+          </span>
+          <div className="host-view-tab-group">
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'participants'}
+              className={`host-view-tab${hostConsoleView === 'participants' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('participants')}
+            >
+              {t('eventDetail.hostTabParticipants')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={hostConsoleView === 'management'}
+              className={`host-view-tab${hostConsoleView === 'management' ? ' host-view-tab--active' : ''}`}
+              onClick={() => setHostConsoleView('management')}
+            >
+              {t('eventDetail.hostTabManagement')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isHost && hostConsoleView === 'management' && eventItem ? (
+        <section className="card event-admin-section event-management-console" aria-labelledby="event-management-title">
+          <div className="section-heading-row">
+            <div>
+              <p className="eyebrow">{t('eventDetail.hostTools')}</p>
+              <h3 id="event-management-title">{t('eventDetail.managementConsole')}</h3>
+            </div>
+            <span className="chip chip-neutral">
+              {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
+            </span>
+          </div>
+          <div className="event-admin-summary" role="status">
+            {!eventItem.external_registration_url ? <span>{t('eventDetail.allRegistrations')}: {registrations.length}</span> : null}
+            {eventItem.max_capacity ? <span>{t('eventDetail.capacityLabel')}: {totalCapacityOccupied} / {eventItem.max_capacity}</span> : null}
+            {pendingInvitations.length > 0 ? <span>{t('eventDetail.invitations')}: {pendingInvitations.length}</span> : null}
+          </div>
+          <div className="event-admin-actions">
+            {shouldShowPublishShortcut(eventItem.lifecycle_status, eventItem.publication_status) ? (
+              <button type="button" className="secondary-action" disabled={publicationPending} onClick={() => void handlePublicationChange('published')}>
+                {publicationPending ? t('common.processing') : eventItem.lifecycle_status === 'draft' ? t('eventDetail.publishEvent') : t('eventDetail.publishNow')}
+              </button>
+            ) : null}
+            {!isEditLocked ? (
+              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
+              </Link>
+            ) : null}
+            <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
+              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
+            </button>
+            {eventItem.registration_form_config && !eventItem.external_registration_url ? (
+              <button type="button" className="secondary-action" onClick={async () => {
+                const { data } = await supabase
+                  .from('event_registration_responses')
+                  .select('*, registration:event_registrations!inner(profile_id)')
+                  .in('registration.event_id', [eventItem.id])
+                if (data) setFormResponses(data as FormResponseWithRegistrant[])
+              }}>
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
+              </button>
+            ) : null}
+            <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
+            </button>
+            <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
+              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
+            </button>
+            {isPrivateShareable ? (
+              <>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => void copyShareLink(false)}>
+                  <Icon href="/form-icons.svg" name="form-eye" size={14} /> {t('eventDetail.copyShareLink')}
+                </button>
+                <button type="button" className="secondary-action" disabled={shareLinkPending} onClick={() => setRotateConfirmOpen(true)}>
+                  {t('eventDetail.rotateShareLink')}
+                </button>
+              </>
+            ) : null}
+          </div>
+          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
+            <div className="event-admin-danger-zone">
+              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
+                {t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="card event-detail-hero">
         {eventItem ? (
           <>
+            {seriesInstances.length > 0 ? (
+              <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-surface-muted)' }}>
+                <strong>📅 {t('eventDetail.recurringSeriesLabel', { current: seriesIndex, total: seriesInstances.length })}</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.35rem' }}>
+                  {seriesInstances.map((instance) => {
+                    const closed = instance.registration_deadline ? new Date(instance.registration_deadline).getTime() <= Date.now() : false
+                    const isCurrent = instance.id === eventItem.id
+                    const label = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(instance.start_time))
+                    return (
+                      <span key={instance.id}>
+                        {isCurrent ? <strong>{label}</strong> : <Link to={`/events/${instance.id}`}>{label}</Link>}
+                        {!isCurrent && closed ? <small>（報名已關閉）</small> : null}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
             <h2>{eventItem.title}</h2>
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>
@@ -740,9 +1131,9 @@ export function EventDetailPage() {
               <img src={user && eventItem.creator ? getAvatarPath(eventItem.creator) : eventItem.creator_avatar_path || '/default-avatar.svg'} alt="" width={24} height={24} className="avatar avatar-sm" />
               {t('eventDetail.createdBy')}{' '}
               {user && eventItem.creator ? (
-                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator.display_name || eventItem.creator_id}</Link>
+                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator.display_name || t('eventDetail.unnamedMember')}</Link>
               ) : (
-                <span>{eventItem.creator_display_name || eventItem.creator_id}</span>
+                <Link to={`/profile/${eventItem.creator_id}`}>{eventItem.creator_display_name || t('eventDetail.unnamedMember')}</Link>
               )}
             </p>
             {user && eventItem.creator ? (
@@ -757,71 +1148,6 @@ export function EventDetailPage() {
               </span>
             </div>
             ) : null}
-            <div className="event-summary-grid" aria-label={t('eventDetail.summaryLabel')}>
-              {eventItem.location_region ? (
-                <div className={`event-summary-item${eventItem.location_detail ? ' event-summary-item--full' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-location" size={18} />
-                  <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}` as any)}{eventItem.location_detail ? ` — ${eventItem.location_detail}` : ''}</span>
-                </div>
-              ) : null}
-              {eventItem.location_detail ? (
-                <div className="event-summary-item">
-                  <Icon href="/form-icons.svg" name="form-location" size={18} />
-                  <span><strong>{t('eventDetail.mapLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{t('eventDetail.openInGoogleMaps')}</a></span>
-                </div>
-              ) : null}
-              <div className="event-summary-item">
-                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
-                <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
-              </div>
-              {eventItem.max_capacity ? (
-                <div className={`event-summary-item${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-user" size={18} />
-                  <span><strong>{t('eventDetail.capacityLabel')}</strong>
-                    {isHost
-                      ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
-                      : (publicCapacityOccupied === null
-                        ? t('eventDetail.capacity', { max: eventItem.max_capacity, current: '?' })
-                        : (isAtCapacity
-                          ? t('eventDetail.full')
-                          : t('eventDetail.capacity', { max: eventItem.max_capacity, current: publicCapacityOccupied })))}</span>
-                </div>
-              ) : null}
-              {eventItem.registration_deadline ? (
-                <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
-                  <Icon href="/form-icons.svg" name="form-calendar" size={18} />
-                  <span><strong>{t('eventDetail.registrationDeadlineLabel')}</strong>{new Date(eventItem.registration_deadline).toLocaleString()}</span>
-                </div>
-              ) : null}
-              <div className="event-summary-item">
-                <Icon href="/form-icons.svg" name="form-edit" size={18} />
-                <span><strong>{t('eventDetail.attendanceFeeLabel')}</strong>{getAttendanceFeeLabel(eventItem.attendance_fee_type ?? 'free', eventItem.attendance_fee_amount, locale)}</span>
-              </div>
-            </div>
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>
-              {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
-              <details className="calendar-menu">
-                <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
-                <div className="calendar-menu-items">
-                  <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
-                    {t('events.downloadIcs')}
-                  </button>
-                  <a href={getGoogleCalendarUrl(eventItem)} target="_blank" rel="noopener noreferrer" className="calendar-btn">
-                    {t('events.googleCalendar')}
-                  </a>
-                </div>
-              </details>
-              <ShareButton
-                title={eventItem.title}
-                text={eventItem.description ?? ''}
-                url={window.location.href}
-              />
-              {isHost ? (
-                <button type="button" className="calendar-btn" onClick={() => setShareOpen(true)}>
-                  {t('shareModal.broadcastToX')}
-                </button>
-              ) : null}
-            </div> : isHost ? <div className="calendar-actions" aria-label={t('eventDetail.eventTools')}>{user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}</div> : null}
           </>
         ) : (
           <p>{t('eventDetail.notFound')}</p>
@@ -829,42 +1155,197 @@ export function EventDetailPage() {
       </section>
 
       {eventItem ? (
+        <aside className="card event-quickfacts-card" aria-label={t('eventDetail.summaryLabel')}>
+          <h3>{t('eventDetail.quickFactsTitle')}</h3>
+          <div className="event-summary-grid">
+            {eventItem.location_detail ? (
+              <div className="event-summary-item event-summary-item--full">
+                <Icon href="/form-icons.svg" name="form-location" size={18} />
+                <span><strong>{t('eventDetail.locationLabel')}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventItem.location_detail)}`} target="_blank" rel="noopener noreferrer">{eventItem.location_detail}</a></span>
+              </div>
+            ) : eventItem.location_region ? (
+              <div className="event-summary-item">
+                <Icon href="/form-icons.svg" name="form-location" size={18} />
+                <span><strong>{t('eventDetail.locationLabel')}</strong>{t(`events.region${eventItem.location_region}`)}</span>
+              </div>
+            ) : null}
+            <div className="event-summary-item">
+              <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+              <span><strong>{t('eventDetail.startTimeLabel')}</strong>{new Date(eventItem.start_time).toLocaleString()}</span>
+            </div>
+            {eventItem.max_capacity && !eventItem.external_registration_url ? (
+              <div className={`event-summary-item event-summary-item--full${isAtCapacity ? ' event-summary-item-warning' : ''}`}>
+                <Icon href="/form-icons.svg" name="form-user" size={18} />
+                <span>
+                  <strong>{t('eventDetail.capacityLabel')}</strong>
+                  {isHost
+                    ? t('eventDetail.capacityHost', { max: eventItem.max_capacity, current: totalCapacityOccupied }) + (extraExternalGuests.length > 0 ? ` (+${extraExternalGuests.length} ${t('eventDetail.externalGuestBadge')})` : '')
+                    : (publicCapacityOccupied === null
+                      ? t(capacityQueryFailed ? 'eventDetail.capacityRemainingUnavailable' : 'eventDetail.capacityRemainingUnknown', { max: eventItem.max_capacity })
+                      : t('eventDetail.capacityRemaining', { max: eventItem.max_capacity, remaining: Math.max(0, eventItem.max_capacity - publicCapacityOccupied) }))}
+                  {registrationIntakeActive ? (
+                    <span className="capacity-status-badge-wrap">
+                      <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
+                    </span>
+                  ) : null}
+                  {capacityKnown ? (
+                    <span
+                      className={`capacity-progress${isAtCapacity ? ' capacity-progress--full' : capacityRatio >= 0.8 ? ' capacity-progress--warning' : ''}`}
+                      role="progressbar"
+                      aria-label={t('eventDetail.capacityProgressLabel')}
+                      aria-valuemin={0}
+                      aria-valuemax={eventItem.max_capacity}
+                      aria-valuenow={Math.min(capacityOccupiedValue, eventItem.max_capacity)}
+                    >
+                      <span className="capacity-progress-fill" style={{ width: `${Math.round(capacityRatio * 100)}%` }} />
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            ) : null}
+            {eventItem.registration_deadline && !eventItem.external_registration_url ? (
+              <div className={`event-summary-item${isRegistrationClosed ? ' event-summary-item-warning' : ''}`}>
+                <Icon href="/form-icons.svg" name="form-calendar" size={18} />
+                <span>
+                  <strong>{t('eventDetail.registrationDeadlineLabel')}</strong>
+                  {new Date(eventItem.registration_deadline).toLocaleString()}
+                  {registrationIntakeActive && !eventItem.max_capacity ? (
+                    <span className="capacity-status-badge-wrap">
+                      <span className={`chip capacity-status-badge capacity-status-badge--${capacityBadgeKind}`}>{t(capacityBadgeKey)}</span>
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            ) : null}
+            <div className="event-summary-item">
+              <Icon href="/form-icons.svg" name="form-edit" size={18} />
+              <span><strong>{t('eventDetail.attendanceFeeLabel')}</strong>{getAttendanceFeeLabel(eventItem.attendance_fee_type ?? 'free', eventItem.attendance_fee_amount, locale)}</span>
+            </div>
+          </div>
+          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' ? (
+            <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+              {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+               <details className="calendar-menu">
+                 <summary className="calendar-btn">{t('events.addToCalendar')} <span aria-hidden="true">⌄</span></summary>
+                 <div className="calendar-menu-items">
+                   <button type="button" className="calendar-btn" onClick={() => downloadIcs(eventItem)}>
+                     {t('events.downloadIcs')}
+                   </button>
+                   <a href={getGoogleCalendarUrl(eventItem)} target="_blank" rel="noopener noreferrer" className="calendar-btn">
+                     {t('events.googleCalendar')}
+                   </a>
+                 </div>
+               </details>
+               <button
+                 type="button"
+                 className="secondary-action event-action-button"
+                 onClick={async () => {
+                   try {
+                     await navigator.clipboard.writeText(window.location.href)
+                     alert(t('eventDetail.urlCopied'))
+                   } catch (err) {
+                     console.error('Failed to copy URL:', err)
+                     alert(t('events.shareFailed'))
+                   }
+                 }}
+               >
+                 {t('eventDetail.copyUrlLabel')}
+               </button>
+               {!(isHost && eventItem.visibility_settings?.type === 'private') ? (
+                 <ShareButton
+                   title={eventItem.title}
+                   text={eventItem.description ?? ''}
+                   url={sharedEventUrl}
+                 />
+               ) : null}
+              {isHost ? (
+                <button type="button" className="calendar-btn event-action-button event-action-button--wide" onClick={() => setShareOpen(true)}>
+                  {t('shareModal.broadcastToX')}
+                </button>
+              ) : null}
+            </div>
+          ) : isHost ? (
+            <div className="event-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+              {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
+
+      {eventItem ? (
         <EventAnnouncements
           eventId={eventItem.id}
           isHost={Boolean(isHost)}
           nativeRegistration={!eventItem.external_registration_url}
+          isAuthenticated={Boolean(user)}
+        />
+      ) : null}
+
+      {eventItem && (eventSeriesId || eventItem.series_id) ? (
+        <SeriesNavigation
+          seriesId={eventSeriesId ?? eventItem.series_id}
+          currentEventId={id}
+          memberEvents={seriesMembersEvents}
+          loading={loadingSeries}
         />
       ) : null}
 
       {/* Registration Section */}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationNotice')}</p>
-          <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="primary-cta">
-            {t('eventDetail.externalRegistrationCta')}
-          </a>
+          {registrationEntryBlocked ? (
+            <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+              {t('eventDetail.registrationClosedCta')}
+            </button>
+          ) : (
+            <a href={eventItem.external_registration_url} target="_blank" rel="noopener noreferrer" className="primary-cta">
+              {t('eventDetail.externalRegistrationCta')}
+            </a>
+          )}
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !isHost && eventItem.external_registration_url && !isAllowedExternalRegistrationUrl(eventItem.external_registration_url) ? (
-        <section className="card event-registration-section" role="status">
+        <section ref={registrationSectionRef} className="card event-registration-section" role="status">
           <h3>{t('eventDetail.registration')}</h3>
           <p className="registration-hint">{t('eventDetail.externalRegistrationUnavailable')}</p>
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && !user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
-          <p className="registration-hint">{t('eventDetail.loginToRegister')}</p>
-          <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className="primary-cta">
-            {t('eventDetail.loginToRegisterCta')}
-          </Link>
+          {registrationEntryBlocked ? (
+            <>
+              <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+                {t('eventDetail.registrationClosedCta')}
+              </button>
+              <p className="registration-hint">{t('eventDetail.registrationClosed')}</p>
+            </>
+          ) : (
+            <>
+              <p className="registration-hint">{t('eventDetail.loginToRegister')}</p>
+              <Link to={`/auth?from=${encodeURIComponent(window.location.pathname)}`} className="primary-cta">
+                {t('eventDetail.loginToRegisterCta')}
+              </Link>
+            </>
+          )}
         </section>
       ) : null}
       {eventItem && eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'closed' && user && !isHost && !eventItem.external_registration_url ? (
-        <section className="card event-registration-section">
+        <section ref={registrationSectionRef} className="card event-registration-section">
           <h3>{t('eventDetail.registration')}</h3>
-          {!myRegistration && isAtCapacity ? (
+          {!myRegistration && eventSeriesId && eventSeries && (
+            <SeriesRegistrationFlow
+              seriesId={eventSeriesId}
+              isWholeSeriesRequired={eventSeries.is_whole_series_required}
+              submitting={submitting}
+              setSubmitting={setSubmitting}
+              onRegistrationChanged={() => void load()}
+              showError={showError}
+            />
+          )}
+          {!myRegistration && !seriesBlocksSingleRegistration && isAtCapacity ? (
             <p className="registration-hint">{t('eventDetail.waitlistHint')}</p>
           ) : null}
           {myRegistration ? (
@@ -889,8 +1370,13 @@ export function EventDetailPage() {
             ) : null}
 
             </div>
-          ) : eventItem.registration_deadline && isRegistrationClosed ? (
-            <p className="message">{t('eventDetail.registrationClosed')}</p>
+          ) : seriesBlocksSingleRegistration ? null : registrationEntryBlocked ? (
+            <>
+              <button type="button" className="primary-cta primary-cta--disabled" disabled aria-disabled="true">
+                {t('eventDetail.registrationClosedCta')}
+              </button>
+              <p className="registration-hint">{t('eventDetail.registrationClosed')}</p>
+            </>
           ) : eventItem.registration_form_config ? (
             showForm ? (
               <div>
@@ -951,7 +1437,7 @@ export function EventDetailPage() {
                   })
                   setSubmitting(false)
                   if (error) {
-                    const response = (error as any).context as Response | undefined
+                    const response = error instanceof FunctionsHttpError ? error.context : undefined
                     let responseBody: { error?: string; message?: string } | null = null
                     if (response?.status === 400) {
                       responseBody = await response.clone().json().catch(() => null)
@@ -959,7 +1445,7 @@ export function EventDetailPage() {
                     if (response?.status === 400 && responseBody?.error === 'form_validation_error') {
                       setFormValidationError(t('eventDetail.formValidationError'))
                     } else {
-                      showError(responseBody?.message || (error as any).context?.message || error.message, error)
+                      showError(responseBody?.message || error.message, error)
                     }
                     return
                   }
@@ -989,61 +1475,8 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {isHost && eventItem ? (
-        <section className="card event-admin-section" aria-labelledby="event-management-title">
-          <div className="section-heading-row">
-            <div>
-              <p className="eyebrow">{t('eventDetail.hostTools')}</p>
-              <h3 id="event-management-title">{t('eventDetail.managementConsole')}</h3>
-            </div>
-            <span className="chip chip-neutral">
-              {eventItem.publication_status === 'published' ? t('eventDetail.statusPublished') : t('eventDetail.statusClosed')}
-            </span>
-          </div>
-          <div className="event-admin-actions">
-            {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status !== 'published' ? (
-              <button type="button" className="secondary-action" onClick={() => void handlePublicationChange('published')}>
-                {t('eventDetail.publishNow')}
-              </button>
-            ) : null}
-            {!isEditLocked ? (
-              <Link to={`/events/${eventItem.id}/edit`} className="secondary-action">
-                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
-              </Link>
-            ) : null}
-            <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
-              <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
-            </button>
-            {eventItem.registration_form_config && !eventItem.external_registration_url ? (
-              <button type="button" className="secondary-action" onClick={async () => {
-                const { data } = await supabase
-                  .from('event_registration_responses')
-                  .select('*, registration:event_registrations!inner(profile_id)')
-                  .in('registration.event_id', [eventItem.id])
-                if (data) setFormResponses(data as FormResponseWithRegistrant[])
-              }}>
-                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.viewFormResponses')}
-              </button>
-            ) : null}
-            <button type="button" className="secondary-action" onClick={() => setShowAddGuest(true)}>
-              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.addExternalGuest')}
-            </button>
-            <button type="button" className="secondary-action" onClick={() => setShowInviteModal(true)}>
-              <Icon href="/form-icons.svg" name="form-user" size={14} /> {t('eventDetail.inviteMember')}
-            </button>
-          </div>
-          {eventItem.lifecycle_status !== 'draft' && eventItem.publication_status === 'published' ? (
-            <div className="event-admin-danger-zone">
-              <button type="button" className="danger-action" onClick={() => setPublicationConfirmOpen(true)}>
-                {t('eventDetail.unpublishNow')}
-              </button>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
       {/* Host Review Section - All Registrations */}
-      {isHost && registrations.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && registrations.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.allRegistrations')} ({registrations.length})</h3>
           {(['pending', 'approved', 'waitlisted', 'rejected', 'cancellation_pending', 'cancellation_rejected'] as const).map((status) => {
@@ -1067,7 +1500,7 @@ export function EventDetailPage() {
                       <div className="thread-header">
                         <img src="/default-avatar.svg" alt="" width={32} height={32} className="avatar" />
                         <div>
-                          <p><Link to={`/profile/${reg.profile_id}`}>{profileNameMap.get(reg.profile_id) || reg.profile_id}</Link></p>
+                          <p><Link to={`/profile/${reg.profile_id}`}>{profileNameMap.get(reg.profile_id) || t('eventDetail.unnamedMember')}</Link></p>
                           <small>{new Date(reg.created_at).toLocaleString()}</small>
                           {status === 'waitlisted' && reg.waitlist_position ? (
                             <small> — {t('eventDetail.waitlistPosition', { position: reg.waitlist_position })}</small>
@@ -1127,7 +1560,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Attendees Section */}
-      {isHost && attendees.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && attendees.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.attendees')} ({attendees.length})</h3>
           <ul>
@@ -1147,7 +1580,7 @@ export function EventDetailPage() {
       ) : null}
       
       {/* External Guests Section (host only) */}
-      {isHost && externalGuests.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && externalGuests.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.externalGuests')} ({externalGuests.length})</h3>
           <ul>
@@ -1198,7 +1631,7 @@ export function EventDetailPage() {
       ) : null}
 
       {/* Pending Invitations Section (host only) */}
-      {isHost && pendingInvitations.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && pendingInvitations.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.invitations')} ({pendingInvitations.length})</h3>
           <ul>
@@ -1227,7 +1660,7 @@ export function EventDetailPage() {
         </section>
       ) : null}
 
-      {isHost && formResponses.length > 0 ? (
+      {isHost && hostConsoleView === 'management' && formResponses.length > 0 ? (
         <section className="card event-admin-section event-admin-section--wide">
           <h3>{t('eventDetail.formResponsesTitle')}</h3>
           {formResponses.map((fr) => {
@@ -1237,7 +1670,7 @@ export function EventDetailPage() {
               <div key={fr.id} className="form-response-item">
                 <p className="form-response-meta">
                   {respondentId ? (
-                    <Link to={`/profile/${respondentId}`}>{profileNameMap.get(respondentId) || respondentId}</Link>
+                    <Link to={`/profile/${respondentId}`}>{profileNameMap.get(respondentId) || t('eventDetail.unnamedMember')}</Link>
                   ) : (
                     t('eventDetail.unnamedMember')
                   )}
@@ -1280,20 +1713,27 @@ export function EventDetailPage() {
           </div>
           {discussionStatus ? <p className="discussion-status" role="status">{discussionStatus}</p> : null}
         </div>
-        <form className="discussion-composer" onSubmit={postThread}>
-          <textarea
-            aria-label={t('eventDetail.discussion')}
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder={t('eventDetail.postComment')}
-            rows={3}
-          />
-          <div className="discussion-form-actions">
-            <button type="submit" className="primary-cta" disabled={postingThread || !content.trim()}>
-              <Icon href="/action-icons.svg" name="action-reply" size={16} /> {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
-            </button>
-          </div>
-        </form>
+        <MarkdownEditor
+          value={content}
+          onChange={(newValue) => {
+            setContent(newValue)
+          }}
+          className="discussion-composer"
+          aria-label={t('eventDetail.discussion')}
+          allowLinks={true}
+          placeholder={t('eventDetail.postComment')}
+        />
+        <div className="discussion-form-actions">
+          <button
+            type="button"
+            className="primary-cta"
+            disabled={postingThread || !content.trim()}
+            onClick={postThread as any}
+          >
+            <Icon href="/action-icons.svg" name="action-reply" size={16} />
+            {postingThread ? t('eventDetail.posting') : t('eventDetail.post')}
+          </button>
+        </div>
         {visibleThreads.length === 0 ? (
           <div className="empty-state">
             <p>{t('eventDetail.discussionEmpty')}</p>
@@ -1306,6 +1746,13 @@ export function EventDetailPage() {
       </section>
       ) : null}
       </div>
+
+      {eventItem && !isHost && mobileRegistrationShortcut ? (
+        <div className="event-mobile-action-bar" role="group" aria-label={t('eventDetail.eventTools')}>
+          {mobileRegistrationShortcut}
+          {user ? <EventBookmarkButton eventId={eventItem.id} isBookmarked={isBookmarked} onChange={setIsBookmarked} /> : null}
+        </div>
+      ) : null}
 
       {id && user ? (
         <section className="event-report-section" aria-label={t('report.title')}>
@@ -1341,8 +1788,30 @@ export function EventDetailPage() {
               <button type="button" className="secondary-action" onClick={() => setPublicationConfirmOpen(false)}>
                 {t('common.cancelReply')}
               </button>
-              <button type="button" className="danger-action" onClick={() => void handlePublicationChange('closed')}>
-                {t('eventDetail.unpublishNow')}
+              <button type="button" className="danger-action" disabled={publicationPending} onClick={() => void handlePublicationChange('closed')}>
+                {publicationPending ? t('common.processing') : t('eventDetail.unpublishNow')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {eventItem && rotateConfirmOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setRotateConfirmOpen(false)
+        }}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="rotate-share-link-dialog-title">
+            <h3 id="rotate-share-link-dialog-title">{t('eventDetail.rotateShareLinkConfirmTitle')}</h3>
+            <p>{t('eventDetail.rotateShareLinkWarning')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="secondary-action" onClick={() => setRotateConfirmOpen(false)}>
+                {t('common.cancelReply')}
+              </button>
+              <button type="button" className="danger-action" disabled={shareLinkPending} onClick={() => {
+                setRotateConfirmOpen(false)
+                void copyShareLink(true)
+              }}>
+                {t('eventDetail.rotateShareLink')}
               </button>
             </div>
           </div>

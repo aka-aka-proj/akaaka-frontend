@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { supabase } from '../supabaseClient'
@@ -43,7 +43,7 @@ export function NotificationsPage() {
   const [mfaAssuranceLevel, setMfaAssuranceLevel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const { data, error } = await supabase
@@ -79,18 +79,16 @@ export function NotificationsPage() {
       setAnnouncementEventIds({})
     }
     if (actorIds.length > 0) {
-      const actorProfileRequest = user.app_metadata?.role === 'admin'
-        ? Promise.all(actorIds.map(async (profileId) => {
-          const { data: profile } = await supabase.rpc('get_public_profile', { target_profile_id: profileId }).maybeSingle()
-          const publicProfile = profile as { display_name?: string } | null
-          return publicProfile ? { id: profileId, display_name: publicProfile.display_name ?? null } : null
-        }))
-        : supabase.from('profiles').select('id, display_name').in('id', actorIds).then(({ data }) => data ?? [])
+      const actorProfileRequest = supabase
+        .from('public_profiles')
+        .select('id, display_name')
+        .in('id', actorIds)
+        .then(({ data }) => data ?? [])
       const [{ data: follows }, actorProfiles] = await Promise.all([
         supabase.from('user_follows').select('followed_id').eq('follower_id', user.id).in('followed_id', actorIds),
         actorProfileRequest,
       ])
-      setActorNames(Object.fromEntries(actorProfiles.filter(Boolean).map((profile) => [profile!.id, profile!.display_name || profile!.id])))
+      setActorNames(Object.fromEntries(actorProfiles.map((profile) => [profile.id, profile.display_name || t('eventDetail.unnamedMember')])))
       setFollowedBackIds(new Set((follows ?? []).map((follow) => String(follow.followed_id))))
     } else {
       setActorNames({})
@@ -106,11 +104,11 @@ export function NotificationsPage() {
       setApplicationProfiles({})
     }
     setLoading(false)
-  }
+  }, [t, user])
 
   useEffect(() => {
     void loadNotifications()
-  }, [user?.id])
+  }, [loadNotifications])
 
   useEffect(() => {
     if (user?.app_metadata?.role !== 'admin') return
@@ -179,7 +177,7 @@ export function NotificationsPage() {
       body: { event_id: notification.event_id },
     })
     if (error) {
-      setMessage((error as any).context?.message || error.message)
+      setMessage(error.message)
       setProcessingInvitationId(null)
       return
     }
@@ -271,7 +269,7 @@ export function NotificationsPage() {
             const isAnnouncementNotification = notification.notification_type === 'event_announcement'
             const applicationProfile = notification.venue_application_profile_id ? applicationProfiles[notification.venue_application_profile_id] : undefined
             const actorId = notification.actor_profile_id
-            const actorName = actorNames[actorId ?? ''] ?? actorId ?? notification.title
+            const actorName = actorNames[actorId ?? ''] ?? (actorId ? t('eventDetail.unnamedMember') : notification.title)
             const targetEventId = notification.event_id ?? announcementEventIds[notification.event_announcement_id ?? ''] ?? null
             const content = (
               <>
@@ -348,7 +346,7 @@ export function NotificationsPage() {
                       to={`/profile/${notification.venue_application_profile_id}`}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {t('notifications.viewApplicant')}: {applicationProfile?.display_name || notification.venue_application_profile_id}
+                      {t('notifications.viewApplicant')}: {applicationProfile?.display_name || t('eventDetail.unnamedMember')}
                     </Link>
                   ) : null}
                   {user?.app_metadata?.role === 'admin' && applicationProfile?.role_status === 'venue_pending' ? (

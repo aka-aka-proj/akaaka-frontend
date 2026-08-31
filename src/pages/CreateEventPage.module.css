@@ -1,0 +1,248 @@
+.createEventForm :global(.form-field) { min-width: 0; }
+.createEventForm :global(input),
+.createEventForm :global(textarea),
+.createEventForm :global(select) { min-height: var(--touch-target); }
+.createEventForm :global(.form-label-row) {
+  font: var(--type-label-weight) var(--type-label-size) / var(--type-label-line-height) var(--font-family-sans);
+  color: var(--color-text-strong);
+}
+.createEventForm :global(.form-field-hint),
+.createEventForm :global(small) {
+  font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
+  color: var(--color-text-muted);
+}
+
+.createEventHeader,
+.formSectionHeading,
+.stickyActionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.createEventHeader { margin-bottom: var(--space-4); }
+.createEventHeader h1 {
+  margin: 0;
+  font: var(--type-page-title-weight) var(--type-page-title-size) / var(--type-page-title-line-height) var(--font-family-sans);
+  color: var(--color-text-strong);
+}
+.createEventHeader p { margin: var(--space-1) 0 0; color: var(--color-text-muted); }
+.assistToggle { flex: 0 0 auto; }
+
+.assistTools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.assistCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+.assistCardInfo { background: var(--color-info-surface); }
+.assistCard h2,
+.assistCard p { margin: 0; }
+.assistCard h2 { font: var(--type-section-title-weight) var(--type-section-title-size) / var(--type-section-title-line-height) var(--font-family-sans); }
+
+.copyFrom { color: var(--color-text-muted); }
+.formSection {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.formSectionHeading { grid-column: 1 / -1; justify-content: flex-start; }
+.formSectionHeading h2 {
+  margin: 0;
+  font: var(--type-section-title-weight) var(--type-section-title-size) / var(--type-section-title-line-height) var(--font-family-sans);
+  color: var(--color-text-strong);
+}
+.formSectionHeading span {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+.formSection > :global(.form-builder),
+.formSection > :global(fieldset.form-field),
+.formSection > :global(.checkbox),
+.formSection > p { grid-column: 1 / -1; min-width: 0; }
+
+.safetyNotice {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+.eventTypeSelect { width: 100%; margin-bottom: var(--space-2); }
+.tagsInputContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
+}
+.tagRemove {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.recurrencePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+.inlineNumber { width: 5rem; }
+.inlineSelect { margin-inline-start: var(--space-2); }
+.recurrencePreview { padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
+.recurrenceDates { margin: var(--space-1) 0; padding-inline-start: var(--space-5); }
+.deadline,
+.closedDeadline { display: block; }
+.closedDeadline { color: var(--color-text-muted); }
+.mutedHint { color: var(--color-text-muted); }
+.seriesDeadlineOption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.seriesDeadlineOffset { width: 6rem; }
+.seriesDeadlineAbsolute { max-width: 100%; }
+
+.stickyActionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: var(--space-5) calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+  padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.stickyActionBar > span { color: var(--color-text-muted); font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans); }
+.stickyActionButtons { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.stickyActionButtons > :global(button) { min-height: var(--touch-target); }
+
+/* The create page still owns an inline builder for backwards-compatible state handling. */
+.createEventForm :global(.form-builder) {
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+.createEventForm :global(.form-builder-heading),
+.createEventForm :global(.form-builder-field-header),
+.createEventForm :global(.form-builder-add-row),
+.createEventForm :global(.form-builder-option) { gap: var(--space-2); }
+.createEventForm :global(.form-builder-heading) p,
+.createEventForm :global(.form-builder-limit) {
+  color: var(--color-text-muted);
+  font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
+}
+.createEventForm :global(.form-builder-field) {
+  padding: var(--space-3);
+  border-color: var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+.createEventForm :global(.form-builder-field:hover),
+.createEventForm :global(.form-builder-field:focus-within) { border-color: var(--color-focus); }
+.createEventForm :global(.drag-handle),
+.createEventForm :global(.form-builder-actions button),
+.createEventForm :global(.danger-icon-button),
+.createEventForm :global(.text-button) {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  border-color: var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+.createEventForm :global(.drag-handle) { color: var(--color-text-muted); }
+.createEventForm :global(.form-builder-expand) { color: var(--color-text); }
+.createEventForm :global(.form-builder-expand span) {
+  color: var(--color-text-muted);
+  font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.createEventForm :global(.form-builder-field-editor) { gap: var(--space-3); border-color: var(--color-border); }
+.createEventForm :global(.form-builder-option button) { color: var(--color-danger); }
+.createEventForm :global(.form-builder-add-row select) {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.createEventForm :global(.form-builder-preview) {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-color: var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+.createEventForm :global(.form-builder-toast) {
+  padding: var(--space-3);
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-info-surface);
+  color: var(--color-text);
+}
+.createEventForm :global(.form-builder-toast button) { min-height: var(--touch-target); color: var(--color-info); }
+
+@media (max-width: 639px) {
+  .createEventForm { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
+  .assistTools,
+  .formSection { grid-template-columns: 1fr; }
+  .createEventHeader { align-items: flex-start; flex-direction: column; }
+  .assistToggle { width: 100%; }
+  .stickyActionBar { bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); align-items: stretch; flex-direction: column; }
+  .stickyActionBarHidden { transform: translateY(calc(100% + var(--space-4))); opacity: 0; pointer-events: none; }
+  .stickyActionButtons { width: 100%; }
+  .stickyActionButtons > :global(button) { flex: 1 1 10rem; }
+  .createEventForm :global(.form-builder-heading) { flex-direction: column; }
+  .createEventForm :global(.form-builder-heading > button) { width: 100%; }
+  .createEventForm :global(.form-builder-field-editor) { margin-inline-start: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stickyActionBar { transition: none; }
+}

@@ -2,121 +2,138 @@ name: Frontend PR CI
 
 on:
   push:
-    branches: [main, preview]
+    branches: [ main, preview ]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main, preview ]
+    # 'edited' re-runs the gate whenever the PR body changes, so a missing
+    # declaration can be fixed without a code push AND a passing declaration
+    # cannot be silently stripped or rewritten afterwards (evidence integrity).
+    types: [ opened, synchronize, reopened, edited ]
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  group: frontend-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Deterministic format gate for consumer-switch evidence binding
+  # (contract: akaaka-docs/docs/spec/platform/001-vercel-deployment-spec.md,
+  # breaking-change gate clause 3 / issue aka-aka-proj/akaaka-iac#64 item 6):
+  # every task PR must declare 'Consumes-Expand:' in its body — either 'none'
+  # or akaaka-iac task PR numbers; the orchestrator pairs these declarations
+  # against shipped expand steps before any contract-step release is allowed.
+  consumes-expand-gate:
+    name: Consumes-Expand declaration gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      # Intentionally no checkout: this job only reads github.event.pull_request.body.
+      - name: Validate Consumes-Expand declaration format
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          decl="$(printf '%s' "${PR_BODY:-}" | awk 'tolower($0) ~ /^consumes-expand:/ {gsub(/\r/,""); sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print; exit}')"
+
+          if [ -z "$decl" ]; then
+            fail "PR body is missing the required 'Consumes-Expand:' declaration. Add 'Consumes-Expand: none' or 'Consumes-Expand: <akaaka-iac task PR number(s)>' (comma/space separated). Contract: consumer-switch evidence binding in akaaka-docs/docs/spec/platform/001-vercel-deployment-spec.md."
+          fi
+
+          if [ "$(printf '%s' "$decl" | tr '[:upper:]' '[:lower:]')" = "none" ]; then
+            echo "Consumes-Expand: none — no expand consumption declared."
+            exit 0
+          fi
+
+          if ! printf '%s' "$decl" | grep -Eq '^[1-9][0-9]*([, ]+[1-9][0-9]*)*$'; then
+            fail "'Consumes-Expand: $decl' must be 'none' or akaaka-iac task PR numbers (comma/space separated positive integers)."
+          fi
+
+          echo "Consumes-Expand: $decl — format OK."
+
   frontend-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Lint
         run: npm run lint
+
       - name: Test
         run: npm run test
+
       - name: Build
         run: npm run build
 
-  browser-smoke:
-    name: Playwright Chromium smoke
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      VITE_SUPABASE_URL: http://127.0.0.1:54321
-      VITE_SUPABASE_ANON_KEY: ci-public-test-key
-      BROWSER_FILTER: chromium
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Run Chromium smoke tests
-        run: npx playwright test
-      - name: Materialize runtime manifest artifact
-        if: always()
-        run: |
-          mkdir -p playwright-report
-          cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
-      - name: Validate runtime manifest
-        if: always()
-        run: npm run test:manifest
-      - name: Upload Playwright artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-chromium-smoke-report
-          path: |
-            playwright-report/
-            test-results/**/*.zip
-          if-no-files-found: ignore
-          retention-days: 7
-
   browser-quality:
-    name: Playwright full browser quality (shard ${{ matrix.shard }}/3)
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    name: Playwright browser quality
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: ci-public-test-key
-      BROWSER_FILTER: ''
+      BROWSER_FILTER: ${{ github.event_name == 'pull_request' && 'chromium' || (github.ref_name == 'preview' && 'chromium,webkit-mobile' || '') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright browsers
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.event_name == 'pull_request' && 'chromium' || 'all' }}
+
+      - name: Install PR browser
+        if: github.event_name == 'pull_request'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install integration browsers
+        if: github.event_name != 'pull_request'
         run: npx playwright install --with-deps chromium firefox webkit
-      - name: Run browser matrix
-        run: npx playwright test --shard=${{ matrix.shard }}/3
+
+      - name: Run browser smoke matrix
+        run: npx playwright test
+
       - name: Materialize runtime manifest artifact
-        if: always()
+        if: failure()
         run: |
           mkdir -p playwright-report
-          cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
+          if [ -f .playwright-runtime-manifest.json ]; then
+            cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
+          fi
+
       - name: Validate runtime manifest
         if: always()
         run: npm run test:manifest
+
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-browser-quality-report-shard-${{ matrix.shard }}
+          name: playwright-browser-quality-report
           path: |
             playwright-report/
             test-results/**/*.zip
@@ -125,7 +142,7 @@ jobs:
 
   lighthouse-quality:
     name: Lighthouse anonymous quality
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -134,17 +151,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-chromium
+
       - name: Install dependencies
         run: npm ci
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
       - name: Run Lighthouse gate
         run: npm run test:lighthouse
+
       - name: Upload Lighthouse artifacts
         if: failure()
         uses: actions/upload-artifact@v4

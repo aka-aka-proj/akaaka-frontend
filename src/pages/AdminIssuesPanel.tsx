@@ -101,7 +101,7 @@ export function AdminIssuesPanel() {
               <div className="row">
                 <h4>{issue.title}</h4>
                 <span className={`status status-${issue.status}`}>
-                  {t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}` as any)}
+                  {t(`issues.status${issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}`)}
                 </span>
               </div>
               <p className="event-meta">
@@ -134,7 +134,7 @@ export function AdminIssuesPanel() {
                           disabled={isBusy}
                           onClick={() => void handleStatusChange(issue.id, status)}
                         >
-                          {isBusy ? t('common.loading') : t(`admin.issues.markAs${status.charAt(0).toUpperCase() + status.slice(1)}` as any)}
+                          {isBusy ? t('common.loading') : t(`admin.issues.markAs${status.charAt(0).toUpperCase() + status.slice(1)}`)}
                         </button>
                       )
                     }
@@ -146,7 +146,7 @@ export function AdminIssuesPanel() {
                         disabled={isBusy}
                         onClick={() => void handleStatusChange(issue.id, status)}
                       >
-                        {isBusy ? t('common.loading') : t(`admin.issues.markAs${status.charAt(0).toUpperCase() + status.slice(1)}` as any)}
+                        {isBusy ? t('common.loading') : t(`admin.issues.markAs${status.charAt(0).toUpperCase() + status.slice(1)}`)}
                       </button>
                     )
                   })}

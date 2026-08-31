@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -24,7 +24,7 @@ export function VirtualLoversPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const loadCharacters = async () => {
+  const loadCharacters = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const { data, error } = await supabase
@@ -39,11 +39,11 @@ export function VirtualLoversPage() {
       setCharacters(data ?? [])
     }
     setLoading(false)
-  }
+  }, [user, t])
 
   useEffect(() => {
     void loadCharacters()
-  }, [user?.id])
+  }, [loadCharacters])
 
   // Handle success message from create page
   useEffect(() => {

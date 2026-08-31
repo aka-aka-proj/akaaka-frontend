@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MarkdownEditor } from './MarkdownEditor'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { supabase } from '../supabaseClient'
@@ -9,6 +9,7 @@ interface EventAnnouncementsProps {
   eventId: string
   isHost: boolean
   nativeRegistration: boolean
+  isAuthenticated: boolean
 }
 
 type PublishMode = 'draft' | 'scheduled' | 'now'
@@ -28,7 +29,7 @@ function isoToLocalDateTime(value: string | null): string {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
 }
 
-export function EventAnnouncements({ eventId, isHost, nativeRegistration }: EventAnnouncementsProps) {
+export function EventAnnouncements({ eventId, isHost, nativeRegistration, isAuthenticated }: EventAnnouncementsProps) {
   const { t } = useT()
   const [announcements, setAnnouncements] = useState<EventAnnouncement[]>([])
   const [title, setTitle] = useState('')
@@ -39,15 +40,30 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
   const [openForm, setOpenForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [confirmPublish, setConfirmPublish] = useState(false)
+  const [pendingPublishAnnouncement, setPendingPublishAnnouncement] = useState<EventAnnouncement | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const loadSeq = useRef(0)
+  const confirmCancelRef = useRef<HTMLButtonElement>(null)
+  const confirmActionRef = useRef<HTMLButtonElement>(null)
+  const submitButtonRef = useRef<HTMLButtonElement>(null)
+  const confirmationReturnRef = useRef<HTMLElement | null>(null)
 
   const load = useCallback(async () => {
+    // Guard against overlapping retries: a stale request failing after a newer
+    // one succeeded must not clobber the good result, so only the latest
+    // invocation updates state.
+    const seq = ++loadSeq.current
+    setRetrying(true)
     const { data, error } = await supabase
       .from('event_announcements')
       .select('id, event_id, title, body_markdown, status, publish_at, published_at, created_at, updated_at')
       .eq('event_id', eventId)
       .order('published_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
+    if (seq !== loadSeq.current) return
+    setRetrying(false)
     if (error) {
       setLoadError(true)
       return
@@ -57,8 +73,14 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
   }, [eventId])
 
   useEffect(() => {
-    if (nativeRegistration) void load()
-  }, [load, nativeRegistration])
+    if (nativeRegistration && isAuthenticated) void load()
+  }, [load, nativeRegistration, isAuthenticated])
+
+  useEffect(() => {
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
+    confirmationReturnRef.current = null
+  }, [eventId])
 
   const resetForm = () => {
     setTitle('')
@@ -67,9 +89,15 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     setPublishAt('')
     setEditingId(null)
     setOpenForm(false)
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
   }
 
   const startNew = () => {
+    if (announcements.length >= 5) {
+      setMessage(t('eventAnnouncements.maxReached'))
+      return
+    }
     setTitle('')
     setBody('')
     setPublishMode('draft')
@@ -99,18 +127,71 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
     return null
   }
 
-  const save = async () => {
+  const getAnnouncementErrorMessage = (error: { message: string } | null): string => {
+    if (!error) return ''
+    const normalizedMessage = error.message.toLowerCase()
+    if (normalizedMessage.includes('rate_limited') || normalizedMessage.includes('frequency limit exceeded')) {
+      return t('eventAnnouncements.rateLimited')
+    }
+    if (normalizedMessage.includes('announcement limit exceeded')) {
+      return t('eventAnnouncements.maxReached')
+    }
+    return error.message
+  }
+
+  const publishConfirmationOpen = confirmPublish || Boolean(pendingPublishAnnouncement)
+
+  useEffect(() => {
+    if (publishConfirmationOpen) {
+      setTimeout(() => confirmCancelRef.current?.focus(), 0)
+    }
+  }, [publishConfirmationOpen])
+
+  const cancelPublishConfirmation = () => {
+    if (busy) return
+    setConfirmPublish(false)
+    setPendingPublishAnnouncement(null)
+    const returnTarget = confirmationReturnRef.current
+    confirmationReturnRef.current = null
+    setTimeout(() => {
+      if (returnTarget?.isConnected) {
+        returnTarget.focus()
+      } else {
+        submitButtonRef.current?.focus()
+      }
+    }, 0)
+  }
+
+  const openPublishConfirmation = () => {
+    confirmationReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setConfirmPublish(true)
+  }
+
+  const save = async (isConfirmed = false) => {
     if (!isHost || !nativeRegistration || busy) return
     const validationError = validate()
     if (validationError) {
       setMessage(validationError)
       return
     }
+    if (publishMode === 'now' && !isConfirmed) {
+      openPublishConfirmation()
+      return
+    }
     setBusy(true)
     setMessage('')
     const scheduledAt = publishMode === 'scheduled' ? localDateTimeToIso(publishAt) : null
     let error: { message: string } | null = null
-    if (editingId) {
+    if (editingId && publishMode === 'now') {
+      // Spec 007 forbids the two-call path here: edit + publish-now is one
+      // atomic RPC so a failure never downgrades a scheduled row to a draft.
+      const { error: atomicError } = await supabase.rpc('update_and_publish_announcement', {
+        p_announcement_id: editingId,
+        p_title: title.trim(),
+        p_body_markdown: body,
+      })
+      error = atomicError
+    } else if (editingId) {
       const { error: updateError } = await supabase.rpc('update_event_announcement', {
         p_announcement_id: editingId,
         p_title: title.trim(),
@@ -119,12 +200,6 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
         p_publish_at: scheduledAt,
       })
       error = updateError
-      if (!updateError && publishMode === 'now') {
-        const { error: publishError } = await supabase.rpc('publish_event_announcement', {
-          p_announcement_id: editingId,
-        })
-        error = publishError
-      }
     } else {
       const { error: createError } = await supabase.rpc('create_event_announcement', {
         p_event_id: eventId,
@@ -136,28 +211,38 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
       error = createError
     }
     setBusy(false)
+    setConfirmPublish(false)
     if (error) {
-      setMessage(error.message)
+      setMessage(getAnnouncementErrorMessage(error))
       return
     }
     resetForm()
     await load()
   }
 
-  const publish = async (announcement: EventAnnouncement) => {
+  const publish = async (announcement: EventAnnouncement, isConfirmed = false) => {
     if (!isHost || busy) return
+    if (!isConfirmed) {
+      confirmationReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      setPendingPublishAnnouncement(announcement)
+      return
+    }
     setBusy(true)
     setMessage('')
     const { error } = await supabase.rpc('publish_event_announcement', { p_announcement_id: announcement.id })
     setBusy(false)
+    setPendingPublishAnnouncement(null)
     if (error) {
-      setMessage(error.message)
+      setMessage(getAnnouncementErrorMessage(error))
       return
     }
     await load()
   }
 
-  if (!nativeRegistration) return null
+  // RLS limits `event_announcements` reads to authenticated users, so a logged-out
+  // visitor can never read them; hide the block instead of showing a misleading
+  // "load failed" error for a permission-based condition.
+  if (!nativeRegistration || !isAuthenticated) return null
 
   return (
     <section className="card event-announcements-section" aria-labelledby="event-announcements-title">
@@ -166,15 +251,21 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
           <p className="eyebrow">{t('eventAnnouncements.eyebrow')}</p>
           <h3 id="event-announcements-title">{t('eventAnnouncements.title')}</h3>
         </div>
-        {isHost && !loadError && announcements.length < 5 ? (
+        {isHost && !loadError ? (
           <button type="button" className="secondary-action" onClick={startNew}>
             {t('eventAnnouncements.newAnnouncement')}
           </button>
         ) : null}
       </div>
-      {isHost ? <p className="form-hint">{t('eventAnnouncements.limits')}</p> : null}
       {message ? <p className="error-message" role="alert">{message}</p> : null}
-      {loadError ? <p className="error-message" role="alert">{t('eventAnnouncements.loadError')}</p> : null}
+      {loadError ? (
+        <p className="error-message" role="alert">
+          {t('eventAnnouncements.loadError')}{' '}
+          <button type="button" className="secondary-action" disabled={retrying} onClick={() => void load()}>
+            {retrying ? t('common.loading') : t('eventAnnouncements.retry')}
+          </button>
+        </p>
+      ) : null}
       {isHost && openForm ? (
         <div className="event-announcement-editor card">
           <label className="form-field">
@@ -185,14 +276,30 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
             <span>{t('eventAnnouncements.body')} ({Array.from(body).length}/1000)</span>
             <MarkdownEditor key={editingId ?? 'new'} value={body} onChange={setBody} allowLinks={false} aria-label={t('eventAnnouncements.body')} />
           </div>
-          <label className="form-field">
-            <span>{t('eventAnnouncements.publishMode')}</span>
-            <select value={publishMode} onChange={(event) => setPublishMode(event.target.value as PublishMode)}>
-              <option value="draft">{t('eventAnnouncements.saveDraft')}</option>
-              <option value="scheduled">{t('eventAnnouncements.schedule')}</option>
-              <option value="now">{t('eventAnnouncements.publishNow')}</option>
-            </select>
-          </label>
+          <fieldset className="announcement-publish-options">
+            <legend>{t('eventAnnouncements.publishMode')}</legend>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="draft" checked={publishMode === 'draft'} onChange={() => setPublishMode('draft')} />
+              <span>
+                <strong>{t('eventAnnouncements.saveDraftOption')}</strong>
+                <small>{t('eventAnnouncements.saveDraftDescription')}</small>
+              </span>
+            </label>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="scheduled" checked={publishMode === 'scheduled'} onChange={() => setPublishMode('scheduled')} />
+              <span>
+                <strong>{t('eventAnnouncements.scheduleOption')}</strong>
+                <small>{t('eventAnnouncements.scheduleDescription')}</small>
+              </span>
+            </label>
+            <label className="announcement-publish-option">
+              <input type="radio" name="announcement-publish-mode" value="now" checked={publishMode === 'now'} onChange={() => setPublishMode('now')} />
+              <span>
+                <strong>{t('eventAnnouncements.publishNowOption')}</strong>
+                <small>{t('eventAnnouncements.publishNowDescription')}</small>
+              </span>
+            </label>
+          </fieldset>
           {publishMode === 'scheduled' ? (
             <label className="form-field">
               <span>{t('eventAnnouncements.publishAt')}</span>
@@ -201,9 +308,69 @@ export function EventAnnouncements({ eventId, isHost, nativeRegistration }: Even
           ) : null}
           <div className="discussion-form-actions">
             <button type="button" className="secondary-action" onClick={resetForm}>{t('common.cancelReply')}</button>
-            <button type="button" className="primary-cta" disabled={busy} onClick={() => void save()}>
-              {busy ? t('common.loading') : editingId ? t('eventAnnouncements.saveChanges') : t('eventAnnouncements.save')}
+            <button
+              type="button"
+              ref={submitButtonRef}
+              className="primary-cta"
+              disabled={busy}
+              onClick={() => void save()}
+            >
+              {busy ? t('common.loading') : publishMode === 'now'
+                ? editingId ? t('eventAnnouncements.saveAndPublishNow') : t('eventAnnouncements.confirmPublishNow')
+                : publishMode === 'scheduled'
+                  ? editingId ? t('eventAnnouncements.updateSchedule') : t('eventAnnouncements.confirmSchedule')
+                  : t('eventAnnouncements.saveDraftAction')}
             </button>
+          </div>
+        </div>
+      ) : null}
+      {isHost && publishConfirmationOpen ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) cancelPublishConfirmation()
+        }}>
+          <div
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-announcement-dialog-title"
+            aria-describedby="publish-announcement-dialog-description"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                cancelPublishConfirmation()
+              }
+              if (event.key === 'Tab') {
+                const first = confirmCancelRef.current
+                const last = confirmActionRef.current
+                if (!first || !last) return
+                if (event.shiftKey && document.activeElement === first) {
+                  event.preventDefault()
+                  last.focus()
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault()
+                  first.focus()
+                }
+              }
+            }}
+          >
+            <h3 id="publish-announcement-dialog-title">{t('eventAnnouncements.confirmPublishTitle')}</h3>
+            <p id="publish-announcement-dialog-description">{t('eventAnnouncements.confirmPublishDescription')}</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" ref={confirmCancelRef} className="secondary-action" onClick={cancelPublishConfirmation}>
+                {t('eventAnnouncements.backToEdit')}
+              </button>
+              <button
+                type="button"
+                ref={confirmActionRef}
+                className="danger-action"
+                disabled={busy}
+                onClick={() => pendingPublishAnnouncement
+                  ? void publish(pendingPublishAnnouncement, true)
+                  : void save(true)}
+              >
+                {busy ? t('common.loading') : t('eventAnnouncements.confirmPublishNow')}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

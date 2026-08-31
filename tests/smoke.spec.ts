@@ -50,11 +50,21 @@ test.describe('public event discovery', () => {
   test('does not create horizontal overflow on a mobile viewport', async ({ page }) => {
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
+
     const dimensions = await page.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }))
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth)
+
+    await page.setViewportSize({ width: 320, height: 800 })
+    await page.reload()
+    await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
+    const narrowDimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }))
+    expect(narrowDimensions.documentWidth).toBeLessThanOrEqual(narrowDimensions.viewportWidth)
   })
 
   test('supports keyboard focus and validation on the authentication form', async ({ page }) => {

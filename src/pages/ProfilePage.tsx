@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -32,9 +32,12 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [recommendComment, setRecommendComment] = useState('')
   const [isBlocked, setIsBlocked] = useState(false)
+  const [isBlockedByTarget, setIsBlockedByTarget] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [isFollowingBack, setIsFollowingBack] = useState(false)
   const [isEventNotificationSubscribed, setIsEventNotificationSubscribed] = useState(false)
   const [canMessage, setCanMessage] = useState(false)
+  const [isMutuallyFollowing, setIsMutuallyFollowing] = useState(false)
   const [reportCount, setReportCount] = useState(0)
   const [createdEventsCount, setCreatedEventsCount] = useState(0)
   const [completedEventsCount, setCompletedEventsCount] = useState(0)
@@ -113,6 +116,7 @@ export function ProfilePage() {
     const externalLink = profile?.external_social_links.find(l => l.platform === 'x')
     return externalLink?.url ?? null
   }, [isOwner, connectedIdentities, profile])
+  const hasXProfileLink = isOwner ? Boolean(xProfileUrl) : Boolean(profile?.x_link_provided)
 
   const linkSocialIdentity = async (platform: VerifiableSocialPlatform) => {
     if (isLinkingIdentity) return
@@ -133,15 +137,20 @@ export function ProfilePage() {
     ? canViewBio(user?.id, profile.id, bioVisibility)
     : false
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!targetProfileId) {
       return
     }
 
-    const isAdminViewer = Boolean(user?.app_metadata?.role === 'admin' && !isOwner)
-    const { data, error } = isAdminViewer
-      ? await supabase.rpc('get_public_profile', { target_profile_id: targetProfileId }).maybeSingle()
-      : await supabase.from('profiles').select('*').eq('id', targetProfileId).maybeSingle()
+    setCanMessage(false)
+    setIsMutuallyFollowing(false)
+    setIsFollowingBack(false)
+    setIsBlocked(false)
+    setIsBlockedByTarget(false)
+
+    const { data, error } = await supabase
+      .rpc('get_profile_for_viewer', { target_profile_id: targetProfileId })
+      .maybeSingle()
 
     if (error) {
       setMessage(error.message)
@@ -183,25 +192,38 @@ export function ProfilePage() {
     if (!joinedErr) setJoinedEventsCount(joinedCount ?? 0)
 
     if (user && targetProfileId) {
-      const { data: blockData, error: blockError } = await supabase
-        .from('blocks')
-        .select('blocked_id')
-        .eq('blocker_id', user.id)
-        .eq('blocked_id', targetProfileId)
-        .maybeSingle()
+      const [{ data: blockData, error: blockError }, { data: blockedByTarget, error: blockedByTargetError }] = await Promise.all([
+        supabase
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', user.id)
+          .eq('blocked_id', targetProfileId)
+          .maybeSingle(),
+        supabase
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', targetProfileId)
+          .eq('blocked_id', user.id)
+          .maybeSingle(),
+      ])
 
       if (blockError) {
         setMessage(blockError.message)
       } else {
         setIsBlocked(Boolean(blockData))
       }
+      setIsBlockedByTarget(Boolean(blockedByTarget))
+      if (blockedByTargetError) setMessage(blockedByTargetError.message)
 
       if (!isOwner) {
         const [{ data: outgoingConnection }, { data: incomingConnection }] = await Promise.all([
           supabase.from('user_follows').select('followed_id').eq('follower_id', user.id).eq('followed_id', targetProfileId).maybeSingle(),
           supabase.from('user_follows').select('follower_id').eq('follower_id', targetProfileId).eq('followed_id', user.id).maybeSingle(),
         ])
-        setCanMessage(Boolean(outgoingConnection && incomingConnection))
+        const mutualFollow = Boolean(outgoingConnection && incomingConnection)
+        setIsFollowingBack(Boolean(incomingConnection))
+        setIsMutuallyFollowing(mutualFollow)
+        setCanMessage(mutualFollow)
 
         const { data: followData, error: followError } = await supabase
           .from('user_follows')
@@ -224,11 +246,11 @@ export function ProfilePage() {
         setIsEventNotificationSubscribed(Boolean(subscription))
       }
     }
-  }
+  }, [targetProfileId, user, isOwner])
 
   useEffect(() => {
     void loadProfile()
-  }, [targetProfileId, user?.id])
+  }, [loadProfile])
 
   const recommend = async () => {
     if (!user || !targetProfileId) {
@@ -351,7 +373,11 @@ export function ProfilePage() {
       return
     }
 
-    setIsFollowing((current) => !current)
+    const nextFollowing = !isFollowing
+    const nextMutualFollow = nextFollowing && isFollowingBack && !isBlocked && !isBlockedByTarget
+    setIsFollowing(nextFollowing)
+    setIsMutuallyFollowing(nextMutualFollow)
+    setCanMessage(nextMutualFollow)
     setMessage(t(isFollowing ? 'profile.userUnfollowed' : 'profile.userFollowed'))
   }
 
@@ -475,17 +501,17 @@ export function ProfilePage() {
                     >
                       <Icon href="/action-icons.svg" name={isEventNotificationSubscribed ? 'action-bell' : 'action-bell-off'} size={20} />
                     </button>
-                    {canMessage && !isBlocked ? (
-                      <button
-                        type="button"
-                        className="profile-message-action"
-                        onClick={() => navigate(`/messages/new?user=${targetProfileId}`)}
-                        title={t('profile.sendMessage')}
-                      >
-                        <Icon href="/nav-icons.svg" name="nav-message" size={18} />
-                        {t('profile.sendMessage')}
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      className="profile-message-action"
+                      onClick={() => navigate(`/messages/new?user=${targetProfileId}`)}
+                      title={t('profile.sendMessage')}
+                      disabled={!canMessage || isBlocked || isBlockedByTarget}
+                      aria-describedby={!isOwner && (!canMessage || isBlocked || isBlockedByTarget) ? 'profile-message-availability' : undefined}
+                    >
+                      <Icon href="/nav-icons.svg" name="nav-message" size={18} />
+                      {t('profile.sendMessage')}
+                    </button>
                     <div className="profile-more-menu">
                       <button
                         type="button"
@@ -513,6 +539,11 @@ export function ProfilePage() {
                     </div>
                   </div>
                 )}
+                {!isOwner && (!canMessage || isBlocked || isBlockedByTarget) ? (
+                  <p id="profile-message-availability" className="profile-action-hint">
+                    {t('profile.messageRequiresMutualFollow')}
+                  </p>
+                ) : null}
                 <div className="profile-title-row">
                 <h2>
                   {profile.display_name || profile.id}
@@ -583,7 +614,7 @@ export function ProfilePage() {
                   <div className="profile-attribute">
                     <span className="attribute-label">{t('profile.genderIdentityLabel')}</span>
                     <span className="profile-chip">
-                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}` as any)}
+                      {t(`profile.genderIdentity${profile.metadata.gender_identity.charAt(0).toUpperCase() + profile.metadata.gender_identity.slice(1)}`)}
                     </span>
                   </div>
                 ) : null}
@@ -593,7 +624,7 @@ export function ProfilePage() {
                     <div className="profile-chip-list">
                       {profile.metadata.bdsm_roles.map((r) => (
                         <span className="profile-chip" key={r}>
-                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}` as any)}
+                          {t(`profile.bdsmRole${r.charAt(0).toUpperCase() + r.slice(1).replace(/\s+/g, '')}`)}
                         </span>
                       ))}
                     </div>
@@ -617,7 +648,7 @@ export function ProfilePage() {
               </p>
               <ul className="social-links-list">
                 {profile.external_social_links
-                  .filter((link) => link.platform !== 'x' || (!isOwner && !xProfileUrl))
+                  .filter((link) => link.platform !== 'x')
                   .map((link) => (
                   <li key={`${link.platform}-${link.url}`} className="social-link-item">
                     <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.platform}>
@@ -625,13 +656,20 @@ export function ProfilePage() {
                     </a>
                   </li>
                   ))}
-                {xProfileUrl && (
+                {xProfileUrl && (isOwner || (isMutuallyFollowing && !isBlocked && !isBlockedByTarget)) && (
                   <li className="social-link-item">
-                    <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label="X">
+                    <a href={xProfileUrl} target="_blank" rel="noopener noreferrer" aria-label={t('profile.xProfileLink')}>
                       <Icon href="/social-icons.svg" name="social-x" size={32} />
                     </a>
                   </li>
                 )}
+                {!isOwner && !isMutuallyFollowing ? (
+                  <li className="social-link-item social-link-item--restricted" role="status">
+                    <Icon href="/social-icons.svg" name="social-x" size={32} />
+                    <span>{hasXProfileLink ? t('profile.xProfileProvided') : t('profile.xProfileNotProvided')}</span>
+                    <small>{t('profile.socialLinksRequiresMutualFollow')}</small>
+                  </li>
+                ) : null}
               </ul>
             </div>
           </div>

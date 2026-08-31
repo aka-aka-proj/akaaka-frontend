@@ -76,13 +76,13 @@ self.addEventListener('push', (event) => {
       ? payload.notificationType
       : 'general'
   const titles = {
-    new_event: 'AkaAka 新活動通知',
-    new_follow: 'AkaAka 新追蹤通知',
-    event_invitation: 'AkaAka 活動邀請',
-    new_issue: 'AkaAka 系統通知',
-    venue_application: 'AkaAka 系統通知',
+    new_event: 'BDSM 圈內揪新活動通知',
+    new_follow: 'BDSM 圈內揪新追蹤通知',
+    event_invitation: 'BDSM 圈內揪活動邀請',
+    new_issue: 'BDSM 圈內揪系統通知',
+    venue_application: 'BDSM 圈內揪系統通知',
   }
-  const title = titles[notificationType] || 'AkaAka 通知'
+  const title = titles[notificationType] || 'BDSM 圈內揪通知'
   const targetId = typeof payload.target?.id === 'string' ? payload.target.id : ''
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : ''
@@ -100,7 +100,7 @@ self.addEventListener('push', (event) => {
             ? `/events/${eventId}`
             : '/notifications'
   const options = {
-    body: '你有一則新的通知，開啟 AkaAka 查看詳細內容。',
+    body: '你有一則新的通知，開啟 BDSM 圈內揪 查看詳細內容。',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     data: {

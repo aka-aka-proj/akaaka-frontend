@@ -108,7 +108,7 @@ export function OnboardingPage() {
     setPushPromptBusy(true)
     setPushPromptMessage('')
     try {
-      await enableWebPush(user.id)
+      await enableWebPush()
       await finishOnboarding()
     } catch (error) {
       setPushPromptMessage(error instanceof Error ? error.message : t('onboarding.pushEnableFailed'))
@@ -289,7 +289,7 @@ export function OnboardingPage() {
                         )
                       }}
                     />
-                    {t(`onboarding.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}` as any)}
+                    {t(`onboarding.bdsmRole${role.charAt(0).toUpperCase() + role.slice(1).replace(/\s+/g, '')}`)}
                   </label>
                 ))}
                   </div>

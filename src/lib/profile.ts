@@ -65,6 +65,9 @@ export function mapProfileRow(row: unknown): Profile {
     display_name: (source.display_name as string | null) ?? null,
     bio: (source.bio as string | null) ?? null,
     external_social_links: normalizeSocialLinks(source.external_social_links),
+    x_link_provided: typeof source.x_link_provided === 'boolean'
+      ? source.x_link_provided
+      : normalizeSocialLinks(source.external_social_links).some((link) => link.platform === 'x'),
     metadata: (source.metadata as Profile['metadata']) ?? null,
     reputation_score: Number(source.reputation_score ?? 0),
   }

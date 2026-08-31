@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { EventBookmarkButton } from '../components/EventBookmarkButton'
+import { SeriesCard } from '../components/SeriesCard'
+import { CreateEventMenu } from '../components/CreateEventMenu'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -10,10 +12,11 @@ import { canSeeEvent } from '../lib/event-visibility'
 import { getAttendanceFeeLabel, parseEventTypes } from '../lib/event-utils'
 import { hasPracticeTag, getEffectiveCategory, getEventTypeI18nKey } from '../lib/event-types'
 import type { EventItem, EventCategory, TaiwanRegion } from '../types'
+import type { EventSeriesMember, EventSeriesWithMembers } from '../hooks/useEventSeries'
 import { TAIWAN_REGIONS } from '../types'
 
 type TimeFilter = 'all' | 'upcoming' | 'past'
-type CategoryFilter = 'all' | EventCategory
+type CategoryFilter = 'all' | EventCategory | 'series'
 const DEFAULT_TIME_FILTER: TimeFilter = 'upcoming'
 const EVENT_PAGE_SIZE = 50
 
@@ -32,6 +35,9 @@ export function EventsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [bookmarkedEventIds, setBookmarkedEventIds] = useState<string[]>([])
+  const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
+  const [seriesError, setSeriesError] = useState('')
+  const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -74,6 +80,127 @@ export function EventsPage() {
 
     void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
+
+  useEffect(() => {
+    const loadSeries = async () => {
+      if (categoryFilter !== 'series') return
+      setSeriesError('')
+      const { data: seriesData, error: seriesError } = await supabase
+        .from('event_series')
+        .select('*')
+        .eq('lifecycle_status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (seriesError) {
+        setSeriesError(seriesError.message)
+        setSeriesList([])
+        return
+      }
+
+      if (!seriesData || seriesData.length === 0) {
+        setSeriesList([])
+        return
+      }
+
+      const results: Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }> = []
+      for (const s of seriesData as EventSeriesWithMembers[]) {
+        const { data: members, error: membersError } = await supabase
+          .from('event_series_membership')
+          .select('event_id, position')
+          .eq('series_id', s.id)
+          .order('position', { ascending: true })
+
+        if (membersError) {
+          setSeriesError(membersError.message)
+          setSeriesList([])
+          return
+        }
+
+        const memberList = (members as EventSeriesMember[] | null) ?? []
+        if (memberList.length === 0) continue
+
+        const memberIds = memberList.map((m) => m.event_id)
+        const { data: events, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', memberIds)
+          .eq('lifecycle_status', 'published')
+
+        if (eventsError) {
+          setSeriesError(eventsError.message)
+          setSeriesList([])
+          return
+        }
+
+        if (events && events.length > 0) {
+          results.push({
+            series: { ...s, members: memberList },
+            memberEvents: (events as EventItem[]).filter((e) => canSeeEvent(e, user?.id)),
+          })
+        }
+      }
+      setSeriesList(results)
+    }
+
+    void loadSeries()
+  }, [categoryFilter, user])
+
+  useEffect(() => {
+    let cancelled = false
+    setSeriesGroups([])
+    if (events.length === 0) {
+      return
+    }
+
+    const loadSeriesGroups = async () => {
+      try {
+        const { data: eventMemberships } = await supabase
+          .from('event_series_membership')
+          .select('series_id, event_id')
+          .in('event_id', events.map((event) => event.id))
+
+        if (cancelled) return
+        const selectedMemberships = (eventMemberships as { series_id: string; event_id: string }[] | null) ?? []
+        const seriesIds = [...new Set(selectedMemberships.map((membership) => membership.series_id))]
+        if (seriesIds.length === 0) return
+
+        const [{ data: seriesData }, { data: allMemberships }] = await Promise.all([
+          supabase.from('event_series').select('*').in('id', seriesIds),
+          supabase.from('event_series_membership').select('series_id, event_id, position').in('series_id', seriesIds),
+        ])
+        if (cancelled) return
+
+        const membersBySeries = new Map<string, EventSeriesMember[]>()
+        for (const membership of (allMemberships as (EventSeriesMember & { series_id: string })[] | null) ?? []) {
+          const members = membersBySeries.get(membership.series_id) ?? []
+          members.push({ event_id: membership.event_id, position: membership.position })
+          membersBySeries.set(membership.series_id, members)
+        }
+
+        const eventIdsBySeries = new Map<string, Set<string>>()
+        for (const membership of selectedMemberships) {
+          const eventIds = eventIdsBySeries.get(membership.series_id) ?? new Set<string>()
+          eventIds.add(membership.event_id)
+          eventIdsBySeries.set(membership.series_id, eventIds)
+        }
+
+        setSeriesGroups(
+          ((seriesData as EventSeriesWithMembers[] | null) ?? []).map((series) => ({
+            series: { ...series, members: membersBySeries.get(series.id) ?? [] },
+            memberEvents: events.filter((event) => eventIdsBySeries.get(series.id)?.has(event.id)),
+          })).filter((group) => group.memberEvents.length > 0),
+        )
+      } catch {
+        if (!cancelled) setSeriesGroups([])
+      }
+    }
+
+    void loadSeriesGroups()
+    return () => {
+      cancelled = true
+    }
+  }, [events])
 
   const loadMoreEvents = async () => {
     if (eventsLoading || !hasMoreEvents) return
@@ -154,21 +281,22 @@ export function EventsPage() {
     })
   }, [events, selectedType, selectedRegion, timeFilter, myEventsOnly, user, categoryFilter])
 
+  const filteredEventIds = new Set(filtered.map((event) => event.id))
+  const visibleSeriesGroups = seriesGroups
+    .map((group) => ({ ...group, memberEvents: group.memberEvents.filter((event) => filteredEventIds.has(event.id)) }))
+    .filter((group) => group.memberEvents.length > 0)
+
   return (
     <Layout>
-      {user ? (
-        <Link to="/events/new" className="fab" aria-label={t('events.createEvent')}>
-          <Icon href="/nav-icons.svg" name="nav-create" size={24} />
-        </Link>
-      ) : null}
-
       <section className="card">
         <div className="events-toolbar">
           <div>
             <p className="eyebrow">{t('events.title')}</p>
             <h1>{t('events.exploreTitle')}</h1>
           </div>
-          <Link to="/events/new" className="create-event-link desktop-only"><Icon href="/nav-icons.svg" name="nav-create" size={16} /> {t('events.createEvent')}</Link>
+          <div>
+            {user ? <CreateEventMenu /> : null}
+          </div>
         </div>
 
         <div className="category-tabs">
@@ -192,6 +320,13 @@ export function EventsPage() {
             onClick={() => setCategoryFilter('Practice')}
           >
             {t('events.categoryPractice')}
+          </button>
+          <button
+            type="button"
+            className={`category-tab${categoryFilter === 'series' ? ' category-tab-active' : ''}`}
+            onClick={() => setCategoryFilter('series')}
+          >
+            {t('eventSeries.navigationLabel')}
           </button>
         </div>
 
@@ -257,7 +392,7 @@ export function EventsPage() {
               className={`chip${selectedRegion === region ? ' chip-active' : ''}`}
               onClick={() => setSelectedRegion(selectedRegion === region ? null : region)}
             >
-              {t(`events.region${region}` as any)}
+              {t(`events.region${region}`)}
             </button>
           ))}
               </div>
@@ -307,7 +442,21 @@ export function EventsPage() {
 
         {message ? <p className="message">{message}</p> : null}
 
-        {eventsLoading && events.length === 0 ? (
+        {categoryFilter === 'series' ? (
+          seriesError ? (
+            <p className="empty-state" role="alert">{seriesError}</p>
+          ) : seriesList.length === 0 ? (
+            <p className="empty-state">{t('eventSeries.noEligibleEvents')}</p>
+          ) : (
+            <ul className="series-grid">
+              {seriesList.map((s) => (
+                <li key={s.series.id}>
+                  <SeriesCard series={s.series} memberEvents={s.memberEvents} />
+                </li>
+              ))}
+            </ul>
+          )
+        ) : eventsLoading && events.length === 0 ? (
           <p className="empty-state" role="status">{t('common.loading')}</p>
         ) : events.length === 0 ? (
           <div className="empty-state">
@@ -317,6 +466,14 @@ export function EventsPage() {
         ) : filtered.length === 0 ? (
           <p className="empty-state">{t('events.noResults')}</p>
         ) : (
+          <>
+          {visibleSeriesGroups.length > 0 ? (
+            <div className="series-card-grid" aria-label={t('eventSeries.listLabel')}>
+              {visibleSeriesGroups.map((group) => (
+                <SeriesCard key={group.series.id} series={group.series} memberEvents={group.memberEvents} />
+              ))}
+            </div>
+          ) : null}
           <ul className="event-grid">
             {filtered.map((event) => {
               const eventTypes = parseEventTypes(event.event_type)
@@ -349,13 +506,14 @@ export function EventsPage() {
                 <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-edit" size={16} /> <span>{t('events.attendanceFeeLabel')}: {getAttendanceFeeLabel(event.attendance_fee_type ?? 'free', event.attendance_fee_amount, locale)}</span></p>
                 <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-calendar" size={16} /> <span>{new Date(event.start_time).toLocaleString()}</span></p>
                 {event.location_region ? (
-                  <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}` as any)}{event.location_detail ? <> — <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_detail)}`} target="_blank" rel="noopener noreferrer">{event.location_detail}</a></> : ''}</span></p>
+                  <p className="event-card-meta"><Icon href="/form-icons.svg" name="form-location" size={16} /> <span>{t(`events.region${event.location_region}`)}{event.location_detail ? <> — <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_detail)}`} target="_blank" rel="noopener noreferrer">{event.location_detail}</a></> : ''}</span></p>
                 ) : null}
                 </article>
               </li>
               )
             })}
           </ul>
+          </>
         )}
         {hasMoreEvents ? (
           <button type="button" onClick={() => void loadMoreEvents()} disabled={eventsLoading}>

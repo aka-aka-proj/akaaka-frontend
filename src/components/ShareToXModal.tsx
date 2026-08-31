@@ -24,25 +24,25 @@ function generateTemplate(
     case 'host_broadcast': {
       const e = data.event
       if (!e) return ''
-      return `我在 AkaAka 舉辦了活動：【${e.title}】！時間：${e.startTime} 地區：${e.region ?? '線上'} 期待與大家見面！活動連結：${e.eventUrl} #AkaAka #BDSM`
+      return `我在 BDSM 圈內揪 舉辦了活動：【${e.title}】！時間：${e.startTime} 地區：${e.region ?? '線上'} 期待與大家見面！活動連結：${e.eventUrl} #BDSM圈內揪 #BDSM`
     }
     case 'attendee_announcement': {
       const e = data.event
       if (!e) return ''
-      return `我剛報名了 AkaAka 的活動：【${e.title}】！主辦人：${e.hostName ?? ''} 有興趣的夥伴也來看看吧：${e.eventUrl} #AkaAka #BDSM`
+      return `我剛報名了 BDSM 圈內揪 的活動：【${e.title}】！主辦人：${e.hostName ?? ''} 有興趣的夥伴也來看看吧：${e.eventUrl} #BDSM圈內揪 #BDSM`
     }
     case 'host_weekly': {
       const s = data.stats
       const count = s?.hostedEvents ?? 0
       const people = s?.totalApproved ?? 0
       const rep = s?.reputationGained ?? 0
-      return `過去這週我在 AkaAka 舉辦了 ${count} 場活動，共有 ${people} 位夥伴參與！感謝大家的支持，我的信譽積分提升了 ${rep} 分。我的主頁：${data.profileUrl ?? ''} #AkaAka`
+      return `過去這週我在 BDSM 圈內揪 舉辦了 ${count} 場活動，共有 ${people} 位夥伴參與！感謝大家的支持，我的信譽積分提升了 ${rep} 分。我的主頁：${data.profileUrl ?? ''} #BDSM圈內揪`
     }
     case 'participant_review': {
       const s = data.stats
       const count = s?.eventsParticipated ?? 0
       const tags = data.tags && data.tags.length > 0 ? data.tags.join('、') : '多種'
-      return `這段時間我在 AkaAka 參與了 ${count} 場精彩活動，探索了 ${tags} 等標籤。推薦大家這個安全透明的社群！我的主頁：${data.profileUrl ?? ''} #AkaAka`
+      return `這段時間我在 BDSM 圈內揪 參與了 ${count} 場精彩活動，探索了 ${tags} 等標籤。推薦大家這個安全透明的社群！我的主頁：${data.profileUrl ?? ''} #BDSM圈內揪`
     }
   }
 }

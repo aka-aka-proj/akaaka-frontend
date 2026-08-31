@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateEventPage } from './CreateEventPage'
 
+// CreateEventPage renders a large form; slower local runners can exceed Vitest's
+// default 5-second per-test timeout even though the interaction is deterministic.
+vi.setConfig({ testTimeout: 15000 })
+
 const mockUseAuth = vi.fn()
 const from = vi.fn()
 const insert = vi.fn()
@@ -33,14 +37,14 @@ describe('CreateEventPage', () => {
     functionsInvoke.mockResolvedValue({ data: null, error: null })
     rpc.mockResolvedValue({ data: null, error: null })
     single.mockResolvedValue({ data: { id: 'event-1' }, error: null })
-    select.mockReturnValue({ single })
+    select.mockReturnValue({ single, in: inFn })
     insert.mockReturnValue({ select })
     eq.mockResolvedValue({ error: null })
     inFn.mockResolvedValue({ error: null })
     update.mockReturnValue({ eq, in: inFn })
     from.mockImplementation((table: string) => {
       if (table === 'events') {
-        return { insert, update }
+        return { insert, update, select }
       }
       if (table === 'notifications') {
         const query = {
@@ -79,6 +83,62 @@ describe('CreateEventPage', () => {
         location_region: 'North',
       }),
     ])
+  })
+
+  it('shows series deadline modes only for recurring events', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('group', { name: '系列場次的報名截止方式' })).toBeNull()
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+
+    expect(screen.getByRole('group', { name: '系列場次的報名截止方式' })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: /每場開始前固定時間/ })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: /所有場次使用同一固定時間/ })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: '不設定報名截止' })).toBeTruthy()
+    expect(screen.queryByRole('radio', { name: /不變更/ })).toBeNull()
+  })
+
+  it('creates a recurring series with one fixed deadline for all occurrences', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Fixed Deadline Series')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: /所有場次使用同一固定時間/ }))
+    const deadlineInput = screen.getByRole('group', { name: '系列場次的報名截止方式' }).querySelector('input[type="datetime-local"]') as HTMLInputElement
+    fireEvent.change(deadlineInput, { target: { value: '2026-07-16T12:00' } })
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    const [payload] = insert.mock.calls[0][0] as [{
+      registration_deadline: string
+      recurrence_rule: Record<string, unknown>
+    }]
+
+    expect(new Date(payload.registration_deadline).toISOString()).toBe(
+      new Date('2026-07-16T12:00').toISOString(),
+    )
+    expect(payload.recurrence_rule).not.toHaveProperty('registration_deadline_offset_minutes')
   })
 
   it('creates venue-hosted event for venue approved user', async () => {
@@ -127,7 +187,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('活動發想'), '週末桌遊聚會\n台北北部一起認識新朋友')
     await user.click(screen.getByRole('button', { name: 'AI 整理' }))
 
-    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('週末桌遊聚會')
+    await waitFor(() => expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('週末桌遊聚會'))
     expect((screen.getByLabelText('活動地區') as HTMLSelectElement).value).toBe('North')
     expect(screen.getByRole('button', { name: '儲存草稿' })).toBeTruthy()
   })
@@ -223,8 +283,8 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://todo.smertw.com/events/6382')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
-    expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } })
-    expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動')
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledWith('import-event-source', { body: { source_url: 'https://todo.smertw.com/events/6382' } }))
+    await waitFor(() => expect((screen.getAllByRole('textbox', { name: '標題' })[0] as HTMLInputElement).value).toBe('來源活動'))
     expect(screen.getByRole('textbox', { name: '描述' }).textContent?.trim()).toBe('來源描述')
     expect(screen.getByRole('status').textContent).toContain('todo.smertw.com')
   })
@@ -254,7 +314,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('公開活動來源網址'), 'https://docs.google.com/forms/d/e/example/viewform')
     await user.click(screen.getByRole('button', { name: '預覽來源' }))
 
-    expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform')
+    await waitFor(() => expect((screen.getByLabelText('外部報名網址（選填）') as HTMLInputElement).value).toBe('https://docs.google.com/forms/d/e/example/viewform'))
     expect((screen.getByRole('radio', { name: /外部報名/ }) as HTMLInputElement).checked).toBe(true)
   })
 
@@ -330,6 +390,13 @@ describe('CreateEventPage', () => {
       if (args.p_event_id === 'inst-3') return { data: null, error: { message: 'publication denied' } }
       return { data: null, error: null }
     })
+    inFn.mockResolvedValueOnce({
+      data: [
+        { id: 'inst-2', start_time: '2026-07-24T12:00:00.000Z' },
+        { id: 'inst-3', start_time: '2026-07-31T12:00:00.000Z' },
+      ],
+      error: null,
+    })
     const user = userEvent.setup()
 
     render(
@@ -344,6 +411,7 @@ describe('CreateEventPage', () => {
     await user.click(screen.getByRole('radio', { name: '固定金額' }))
     await user.type(screen.getByLabelText('金額（新台幣）'), '500')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -355,10 +423,11 @@ describe('CreateEventPage', () => {
     await user.type(feeAmountInput, '300')
     await user.click(screen.getByRole('button', { name: '儲存草稿' }))
 
-    await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(3))
     expect(functionsInvoke).toHaveBeenCalledTimes(1)
     expect(eq).toHaveBeenCalledWith('id', 'event-1')
-    expect(inFn).toHaveBeenCalledWith('id', ['inst-2', 'inst-3'])
+    expect(eq).toHaveBeenCalledWith('id', 'inst-2')
+    expect(eq).toHaveBeenCalledWith('id', 'inst-3')
     const [parentPayload] = update.mock.calls[0]
     expect(parentPayload).toEqual(expect.objectContaining({
       title: 'Edited Title',
@@ -372,6 +441,9 @@ describe('CreateEventPage', () => {
       title: 'Edited Title',
       attendance_fee_type: 'fixed',
       attendance_fee_amount: 300,
+    }))
+    expect(update.mock.calls[2][0]).toEqual(expect.objectContaining({
+      registration_deadline: null,
     }))
     expect(Object.keys(childPayload)).not.toContain('start_time')
     expect(Object.keys(childPayload)).not.toContain('recurrence_rule')
@@ -402,6 +474,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -438,6 +511,7 @@ describe('CreateEventPage', () => {
     await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
     await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
     await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
     await user.click(screen.getByRole('button', { name: '儲存並發布' }))
     await waitFor(() => expect(screen.getByText('有 1 個場次發布失敗；已成功發布的場次不受影響，可稍後從各活動頁重試。')).toBeTruthy())
 
@@ -447,5 +521,116 @@ describe('CreateEventPage', () => {
     await waitFor(() => expect(screen.getByText('週期場次已建立，重試時無法變更開始時間或週期規則；請還原原始排程後再送出。')).toBeTruthy())
     expect(update).not.toHaveBeenCalled()
     expect(functionsInvoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces partial instance-creation failures instead of treating them as full success', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke.mockResolvedValue({
+      data: { success: false, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 1, instance_ids: ['event-1', 'inst-2'] },
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Partial Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('活動已建立，但已建立 2 個週期場次、1 個建立失敗。')).toBeTruthy(),
+    )
+    expect(rpc).not.toHaveBeenCalled()
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(update).toHaveBeenCalled())
+    expect(functionsInvoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a zero-created failure retryable so resubmit recreates the series', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke
+      .mockResolvedValueOnce({
+        data: { success: false, parent_id: 'event-1', instance_count: 3, created_instance_count: 0, failed_instance_count: 2, instance_ids: ['event-1'] },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+        error: null,
+      })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Zero Created Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('活動已建立，但週期場次建立失敗；請再按一次「儲存並發布」完成場次建立。')).toBeTruthy(),
+    )
+    expect(rpc).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '儲存並發布' }))
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledTimes(2))
+  })
+
+  it('keeps draft intent on zero-created retry instead of prompting to publish', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { role_status: 'general' },
+    })
+    functionsInvoke
+      .mockResolvedValueOnce({
+        data: { success: false, parent_id: 'event-1', instance_count: 3, created_instance_count: 0, failed_instance_count: 2, instance_ids: ['event-1'] },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, parent_id: 'event-1', instance_count: 3, created_instance_count: 2, failed_instance_count: 0, instance_ids: ['event-1', 'inst-2', 'inst-3'] },
+        error: null,
+      })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <CreateEventPage />
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getAllByRole('textbox', { name: '標題' })[0], 'Draft Intent Title')
+    await user.type(screen.getByLabelText('開始時間'), '2026-07-17T12:00')
+    await user.selectOptions(screen.getByLabelText('活動地區'), 'North')
+    await user.click(screen.getByRole('checkbox', { name: '設定重複舉辦' }))
+    await user.click(screen.getByRole('radio', { name: '不設定報名截止' }))
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('活動已建立，但週期場次建立失敗；請再按一次「儲存草稿」完成場次建立。')).toBeTruthy(),
+    )
+
+    await user.click(screen.getByRole('button', { name: '儲存草稿' }))
+    await waitFor(() => expect(functionsInvoke).toHaveBeenCalledTimes(2))
+    expect(rpc).not.toHaveBeenCalled()
   })
 })

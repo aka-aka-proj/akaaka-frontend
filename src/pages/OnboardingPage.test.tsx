@@ -32,12 +32,12 @@ describe('OnboardingPage', () => {
   const origClose = HTMLDialogElement.prototype.close
 
   beforeEach(() => {
-    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
       this.setAttribute('open', '')
-    } as any
-    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    }
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
       this.removeAttribute('open')
-    } as any
+    }
 
     upsert.mockReset()
     upsert.mockResolvedValue({ error: null })
@@ -109,12 +109,12 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: '我同意' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
-    expect(screen.getByRole('heading', { name: '要接收 AkaAka 通知嗎？' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '要接收 BDSM 圈內揪通知嗎？' })).toBeTruthy()
     expect(enableWebPush).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: '開啟通知' }))
 
-    expect(enableWebPush).toHaveBeenCalledWith('user-1')
+    expect(enableWebPush).toHaveBeenCalledWith()
     expect(refreshProfile).toHaveBeenCalled()
   })
 
