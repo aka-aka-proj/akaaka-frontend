@@ -108,6 +108,9 @@ export function CreateEventPage() {
   const [organizing, setOrganizing] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
   const [showAssistTools, setShowAssistTools] = useState(false)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const startTimeInputRef = useRef<HTMLInputElement>(null)
+  const locationRegionInputRef = useRef<HTMLSelectElement>(null)
   const preserveActionBar = useCallback(
     () => {
       const visualViewport = window.visualViewport
@@ -347,6 +350,13 @@ export function CreateEventPage() {
 
     if (!title.trim() || !startTime || !locationRegion) {
       setMessage(t('createEvent.titleRequired'))
+      const firstMissingField = !title.trim()
+        ? titleInputRef.current
+        : !startTime
+          ? startTimeInputRef.current
+          : locationRegionInputRef.current
+      firstMissingField?.focus()
+      firstMissingField?.scrollIntoView?.({ block: 'center' })
       return
     }
 
@@ -661,7 +671,7 @@ export function CreateEventPage() {
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-edit" size={16} /> {t('createEvent.titleLabel')}
           </span>
-          <input aria-label={t('createEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
+          <input ref={titleInputRef} aria-label={t('createEvent.titleLabel')} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label className="form-field">
           <span className="form-label-row">
@@ -696,6 +706,7 @@ export function CreateEventPage() {
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('createEvent.startTimeLabel')}
           </span>
           <input
+            ref={startTimeInputRef}
             aria-label={t('createEvent.startTimeLabel')}
             type="datetime-local"
             value={startTime}
@@ -806,6 +817,7 @@ export function CreateEventPage() {
             <Icon href="/form-icons.svg" name="form-location" size={16} /> {t('createEvent.locationRegionLabel')}
           </span>
           <select
+            ref={locationRegionInputRef}
             aria-label={t('createEvent.locationRegionLabel')}
             value={locationRegion}
             onChange={(event) => setLocationRegion(event.target.value as TaiwanRegion | '')}
@@ -1056,7 +1068,9 @@ export function CreateEventPage() {
         </fieldset> : null}
         </section>
         <div data-sticky-action-bar className={`${styles.stickyActionBar} ${layoutStyles.actionBar}${actionBarVisible ? '' : ` ${styles.stickyActionBarHidden}`}`}>
-          <span>{sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice')}</span>
+          <span className={message ? 'message' : undefined} role={message ? 'alert' : undefined} aria-live="assertive">
+            {message || (sourcePreview || importing ? t('createEvent.saveAndPublishImportHint') : t('createEvent.draftNotice'))}
+          </span>
           <div className={`${styles.stickyActionButtons} ${layoutStyles.actions}`}>
             <button type="submit" className={layoutStyles.secondaryAction} onClick={() => { publishIntentRef.current = false }} disabled={submitting}>
               {seriesId ? t('createEvent.saveSession') : t('createEvent.saveDraft')}
@@ -1066,7 +1080,6 @@ export function CreateEventPage() {
             </button>}
           </div>
         </div>
-        {message ? <p className="message">{message}</p> : null}
       </form>
     </Layout>
   )
