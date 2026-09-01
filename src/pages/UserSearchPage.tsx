@@ -53,7 +53,13 @@ export function UserSearchPage() {
         .filter((profile) => !trimmed
           || profile.display_name?.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase())
           || profile.id === trimmed)
-        .sort((a, b) => (a.display_name ?? '').localeCompare(b.display_name ?? '', undefined, { sensitivity: 'base' }))
+        .sort((a, b) => {
+          const aName = a.display_name?.trim() ?? ''
+          const bName = b.display_name?.trim() ?? ''
+          if (!aName && bName) return 1
+          if (aName && !bName) return -1
+          return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
+        })
         .slice(0, 50)
 
       if (cancelled) return
