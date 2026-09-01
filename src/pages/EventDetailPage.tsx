@@ -125,6 +125,7 @@ export function EventDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [externalGuests, setExternalGuests] = useState<ExternalGuest[]>([])
   const [showAddGuest, setShowAddGuest] = useState(false)
+  const loadRequestRef = useRef(0)
   const [newGuestName, setNewGuestName] = useState('')
   const [newGuestContact, setNewGuestContact] = useState('')
   const [newGuestCountsToCapacity, setNewGuestCountsToCapacity] = useState(true)
@@ -335,6 +336,8 @@ export function EventDetailPage() {
     if (!id) {
       return
     }
+    const requestId = ++loadRequestRef.current
+    const isCurrentRequest = () => requestId === loadRequestRef.current
 
     const bookmarkQuery = user
       ? supabase
@@ -364,6 +367,8 @@ export function EventDetailPage() {
         bookmarkQuery,
       ])
 
+    if (!isCurrentRequest()) return
+
     if (eventError || threadError) {
       showError(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'), eventError || threadError)
       return
@@ -389,6 +394,7 @@ export function EventDetailPage() {
         const { data: tokenData, error: tokenError } = await supabase
           .rpc('get_event_by_share_token', { p_token: shareToken })
           .maybeSingle()
+        if (!isCurrentRequest()) return
         if (tokenError) {
           showError(tokenError.message, tokenError)
           return
@@ -402,27 +408,28 @@ export function EventDetailPage() {
 
     let resolvedThreads = (threadData as EventThread[]) ?? []
     let creatorProfile: EventItem['creator'] = null
+    setEventItem(currentEvent ? { ...currentEvent, creator: null } : null)
+    setThreads(resolvedThreads)
     if (user && currentEvent) {
       const threadProfileIds = [...new Set(resolvedThreads.map((thread) => thread.profile_id))]
       const [creatorResult, threadProfilesResult] = await Promise.all([
         getProfileForViewer(currentEvent.creator_id),
         getProfilesForViewer(threadProfileIds),
       ])
+      if (!isCurrentRequest()) return
       const profileError = creatorResult.error ?? threadProfilesResult.error
-      if (profileError) {
-        showError(profileError.message, profileError)
-        return
-      }
+      if (profileError) showError(profileError.message, profileError)
       creatorProfile = creatorResult.data
       const threadProfileMap = new Map(threadProfilesResult.data.map((profile) => [profile.id, profile]))
       resolvedThreads = resolvedThreads.map((thread) => ({
         ...thread,
         profile: threadProfileMap.get(thread.profile_id) ?? null,
       }))
+      setEventItem({ ...currentEvent, creator: creatorProfile })
+      setThreads(resolvedThreads)
     }
 
-    setEventItem(currentEvent ? { ...currentEvent, creator: creatorProfile } : null)
-    setThreads(resolvedThreads)
+    if (!isCurrentRequest()) return
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
