@@ -23,6 +23,7 @@ import { downloadIcs, getGoogleCalendarUrl } from '../lib/ics'
 import { getAttendanceFeeLabel, parseEventTypes, isEventEditLocked } from '../lib/event-utils'
 import { hasPracticeTag, getEventTypeI18nKey } from '../lib/event-types'
 import { getAvatarPath } from '../lib/profile'
+import { getProfileForViewer, getProfilesForViewer } from '../lib/profile-access'
 import { isAllowedExternalRegistrationUrl } from '../lib/external-registration'
 import { getInitialHostConsoleView, shouldShowPublishShortcut } from '../lib/event-detail-view'
 import type { HostConsoleView } from '../lib/event-detail-view'
@@ -347,13 +348,13 @@ export function EventDetailPage() {
     const threadQuery = user
       ? supabase
         .from('event_threads')
-        .select('*, profile:profiles(display_name)')
+        .select('*')
         .eq('event_id', id)
         .order('created_at', { ascending: true })
       : Promise.resolve({ data: null, error: null })
 
     const eventsQuery = user
-      ? supabase.from('events').select('*, creator:profiles!events_creator_id_fkey(display_name, reputation_score, metadata)').eq('id', id).maybeSingle()
+      ? supabase.from('events').select('*').eq('id', id).maybeSingle()
       : supabase.from('events').select('*').eq('id', id).maybeSingle()
 
     const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
@@ -399,8 +400,29 @@ export function EventDetailPage() {
       }
     }
 
-    setEventItem(currentEvent)
-    setThreads((threadData as EventThread[]) ?? [])
+    let resolvedThreads = (threadData as EventThread[]) ?? []
+    let creatorProfile: EventItem['creator'] = null
+    if (user && currentEvent) {
+      const threadProfileIds = [...new Set(resolvedThreads.map((thread) => thread.profile_id))]
+      const [creatorResult, threadProfilesResult] = await Promise.all([
+        getProfileForViewer(currentEvent.creator_id),
+        getProfilesForViewer(threadProfileIds),
+      ])
+      const profileError = creatorResult.error ?? threadProfilesResult.error
+      if (profileError) {
+        showError(profileError.message, profileError)
+        return
+      }
+      creatorProfile = creatorResult.data
+      const threadProfileMap = new Map(threadProfilesResult.data.map((profile) => [profile.id, profile]))
+      resolvedThreads = resolvedThreads.map((thread) => ({
+        ...thread,
+        profile: threadProfileMap.get(thread.profile_id) ?? null,
+      }))
+    }
+
+    setEventItem(currentEvent ? { ...currentEvent, creator: creatorProfile } : null)
+    setThreads(resolvedThreads)
     setIsBookmarked(Boolean(bookmarkData))
     setPreviousFormData({})
 
