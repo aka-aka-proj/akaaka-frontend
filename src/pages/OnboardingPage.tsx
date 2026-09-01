@@ -62,7 +62,7 @@ export function OnboardingPage() {
     }
 
     setSubmitting(true)
-    const { error } = await supabase.from('profiles').upsert(
+    const { error } = await supabase.from('profiles').insert(
       {
         id: user.id,
         display_name: displayName.trim() || null,
@@ -78,7 +78,6 @@ export function OnboardingPage() {
           bdsm_roles: bdsmRoles.length > 0 ? bdsmRoles : undefined,
         },
       },
-      { onConflict: 'id' },
     )
     setSubmitting(false)
 

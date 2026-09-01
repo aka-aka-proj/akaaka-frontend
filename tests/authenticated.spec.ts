@@ -98,11 +98,16 @@ async function installAuthenticatedFixture(page: Page) {
 
   await page.route('**/rest/v1/**', async (route) => {
     const isProfilesRequest = route.request().url().includes('/rest/v1/profiles')
+    const isProfileResolverRequest = route.request().url().includes('/rest/v1/rpc/get_profile_for_viewer')
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      headers: { 'content-range': isProfilesRequest ? '0-0/1' : '0-0/*' },
-      body: isProfilesRequest ? JSON.stringify([syntheticProfile]) : '[]',
+      headers: { 'content-range': isProfilesRequest || isProfileResolverRequest ? '0-0/1' : '0-0/*' },
+      body: isProfileResolverRequest
+        ? JSON.stringify(syntheticProfile)
+        : isProfilesRequest
+          ? JSON.stringify([syntheticProfile])
+          : '[]',
     })
   })
 
@@ -117,7 +122,7 @@ async function installAuthenticatedFixture(page: Page) {
 
 async function gotoAuthenticatedRoute(page: Page, route: string) {
   const profileResponse = page.waitForResponse(
-    (response) => response.url().includes('/rest/v1/profiles') && response.status() === 200,
+    (response) => response.url().includes('/rest/v1/rpc/get_profile_for_viewer') && response.status() === 200,
     { timeout: authenticatedFixtureTimeout },
   )
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: authenticatedFixtureTimeout })
