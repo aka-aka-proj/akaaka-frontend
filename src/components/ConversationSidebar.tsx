@@ -5,6 +5,7 @@ import { useT } from '../hooks/useT'
 import { getAvatarPath } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { DirectConversation, DirectMessage, Profile } from '../types'
+import { getProfilesForViewer } from '../lib/profile-access'
 
 interface ConversationSidebarProps {
   activeConversationId?: string
@@ -34,10 +35,15 @@ export function ConversationSidebar({ activeConversationId }: ConversationSideba
       }
       const rows = (data ?? []) as DirectConversation[]
       const otherIds = rows.map((row) => row.participant_one_id === user.id ? row.participant_two_id : row.participant_one_id)
-      const [{ data: profiles }, { data: messages }] = await Promise.all([
-        otherIds.length ? supabase.from('profiles').select('id, display_name, metadata').in('id', otherIds) : Promise.resolve({ data: [], error: null }),
+      const [{ data: profiles, error: profilesError }, { data: messages }] = await Promise.all([
+        otherIds.length ? getProfilesForViewer(otherIds) : Promise.resolve({ data: [], error: null }),
         rows.length ? supabase.from('direct_messages').select('*').in('conversation_id', rows.map((row) => row.id)).order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
       ])
+      if (profilesError) {
+        if (!cancelled) setError(profilesError.message)
+        setLoading(false)
+        return
+      }
       const profileMap = new Map(((profiles ?? []) as Profile[]).map((profile) => [profile.id, profile]))
       const latestMap = new Map<string, DirectMessage>()
       for (const message of (messages ?? []) as DirectMessage[]) {

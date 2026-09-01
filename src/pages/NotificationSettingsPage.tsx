@@ -68,7 +68,7 @@ export function NotificationSettingsPage() {
       }
 
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id, display_name')
         .in('id', followedIds)
 
