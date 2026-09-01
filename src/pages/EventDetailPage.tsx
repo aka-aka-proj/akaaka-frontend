@@ -339,6 +339,26 @@ export function EventDetailPage() {
     const requestId = ++loadRequestRef.current
     const isCurrentRequest = () => requestId === loadRequestRef.current
 
+    // Clear event-scoped state before showing the next event so a route change
+    // cannot briefly expose registrations, guests, invitations, or capacity
+    // data that belong to the previous event.
+    setEventItem(null)
+    setThreads([])
+    setSeriesInstances([])
+    setSeriesIndex(0)
+    setMyRegistration(null)
+    setRegistrations([])
+    setAttendees([])
+    setExternalGuests([])
+    setInvitations([])
+    setBlockedUserIds([])
+    setCreatorReportCount(0)
+    setPublicCapacityOccupied(null)
+    setCapacityQueryFailed(false)
+    setProfileNameMap(new Map())
+    setPreviousFormData({})
+    setSeriesMembersEvents([])
+
     const bookmarkQuery = user
       ? supabase
         .from('event_bookmarks')
@@ -444,6 +464,7 @@ export function EventDetailPage() {
         supabase.from('events').select('id, start_time, registration_deadline').eq('id', seriesParentId).maybeSingle(),
         supabase.from('events').select('id, start_time, registration_deadline').eq('series_id', seriesParentId).order('start_time', { ascending: true }),
       ])
+      if (!isCurrentRequest()) return
       type SeriesInstance = { id: string; start_time: string; registration_deadline: string | null }
       const parentInstance = (seriesParentRes.data as SeriesInstance | null) ?? null
       const childInstances = ((seriesChildRes.data as SeriesInstance[] | null) ?? [])
@@ -461,6 +482,7 @@ export function EventDetailPage() {
       const capacityResponse = usedShareToken
         ? await supabase.rpc('get_event_capacity_by_share_token', { p_token: usedShareToken }).maybeSingle()
         : await supabase.rpc('get_event_capacity', { p_event_id: id }).maybeSingle()
+      if (!isCurrentRequest()) return
       const { data: capacityData, error: capacityError } = capacityResponse
 
       if (capacityError || !capacityData) {
@@ -485,6 +507,7 @@ export function EventDetailPage() {
         .select('report_count')
         .eq('profile_id', currentEvent.creator_id)
         .maybeSingle()
+      if (!isCurrentRequest()) return
       setCreatorReportCount(Number(reportStats?.report_count ?? 0))
     }
 
@@ -493,6 +516,8 @@ export function EventDetailPage() {
         .from('blocks')
         .select('blocked_id')
         .eq('blocker_id', user.id)
+
+      if (!isCurrentRequest()) return
 
       if (blocksError) {
         showError(blocksError.message, blocksError)
@@ -509,6 +534,7 @@ export function EventDetailPage() {
           .neq('status', 'cancelled')
           .maybeSingle()
 
+        if (!isCurrentRequest()) return
         setMyRegistration((myReg as Registration | null) ?? null)
       } else {
         setMyRegistration(null)
@@ -523,6 +549,7 @@ export function EventDetailPage() {
           .eq('status', 'cancelled')
           .order('created_at', { ascending: false })
 
+        if (!isCurrentRequest()) return
         const pastIds = ((pastRegistrations as { id: string }[] | null) ?? []).map((registration) => registration.id)
         if (pastIds.length > 0) {
           const { data: pastResponses } = await supabase
@@ -532,6 +559,7 @@ export function EventDetailPage() {
             .order('created_at', { ascending: false })
             .limit(1)
 
+          if (!isCurrentRequest()) return
           const latestResponses = (pastResponses?.[0] as { responses?: Record<string, unknown> } | undefined)?.responses
           if (latestResponses) {
             setPreviousFormData(getCompatibleFormData(currentEvent.registration_form_config, latestResponses))
@@ -541,16 +569,19 @@ export function EventDetailPage() {
     }
 
     // External events never expose native registration state or registrant profiles.
-    const allRegs = user
+    const allRegsResponse = user
       ? (currentEvent && currentEvent.external_registration_url
-          ? []
-          : (await supabase
+          ? { data: [] }
+          : await supabase
             .from('event_registrations')
             .select('*')
             .eq('event_id', id)
             .neq('status', 'cancelled')
-            .order('created_at', { ascending: true })).data ?? [])
-      : []
+            .order('created_at', { ascending: true }))
+      : { data: [] }
+
+    if (!isCurrentRequest()) return
+    const allRegs = allRegsResponse.data ?? []
 
     setRegistrations((allRegs as Registration[]) ?? [])
 
@@ -565,6 +596,7 @@ export function EventDetailPage() {
       .eq('event_id', id)
       .order('created_at', { ascending: true })
 
+    if (!isCurrentRequest()) return
     setExternalGuests((guestData as ExternalGuest[] | null) ?? [])
 
     // Load invitations (host sees all, target sees own)
@@ -574,6 +606,7 @@ export function EventDetailPage() {
       .eq('event_id', id)
       .order('created_at', { ascending: true })
 
+    if (!isCurrentRequest()) return
     setInvitations((inviteData as EventInvitation[] | null) ?? [])
 
     const inviteTargetIds = inviteData
@@ -585,6 +618,7 @@ export function EventDetailPage() {
         .from('public_profiles')
         .select('id, display_name')
         .in('id', allProfileIds)
+      if (!isCurrentRequest()) return
       tempMap = new Map(((allProfiles as { id: string; display_name: string | null }[]) ?? []).map((p) => [p.id, p.display_name]))
       setProfileNameMap(tempMap)
     } else {
@@ -614,6 +648,7 @@ export function EventDetailPage() {
         .eq('series_id', eventDataParsed.series_id)
         .order('position', { ascending: true })
 
+      if (!isCurrentRequest()) return
       const memberships = (seriesMembershipQuery.data as { event_id: string; position: number }[] | null) ?? []
       if (memberships.length > 0) {
         const memberIds = memberships.map((m) => m.event_id)
@@ -623,6 +658,7 @@ export function EventDetailPage() {
           .in('id', memberIds)
           .eq('lifecycle_status', 'published')
 
+        if (!isCurrentRequest()) return
         setSeriesMembersEvents((memberEventsData as EventItem[] | null) ?? [])
       }
     }
