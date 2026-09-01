@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnboardingPage } from './OnboardingPage'
 
 const mockUseAuth = vi.fn()
-const upsert = vi.fn()
+const insert = vi.fn()
 const from = vi.fn()
 const refreshProfile = vi.fn()
 const enableWebPush = vi.fn()
@@ -39,8 +39,8 @@ describe('OnboardingPage', () => {
       this.removeAttribute('open')
     }
 
-    upsert.mockReset()
-    upsert.mockResolvedValue({ error: null })
+    insert.mockReset()
+    insert.mockResolvedValue({ error: null })
     refreshProfile.mockReset()
     refreshProfile.mockResolvedValue(undefined)
     enableWebPush.mockReset()
@@ -50,7 +50,7 @@ describe('OnboardingPage', () => {
     from.mockReset()
     from.mockImplementation((table: string) => {
       if (table === 'profiles') {
-        return { upsert }
+        return { insert }
       }
       if (table === 'notifications') {
         const query = {
@@ -95,7 +95,7 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: '我同意' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
-    expect(upsert).toHaveBeenCalled()
+    expect(insert).toHaveBeenCalled()
   })
 
   it('offers Web Push after profile creation and enables it only after acceptance', async () => {
@@ -147,11 +147,10 @@ describe('OnboardingPage', () => {
     await user.click(avatar)
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
-    expect(upsert).toHaveBeenCalledWith(
+    expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({
         metadata: expect.objectContaining({ avatar_path: expect.stringContaining('/avatar/') }),
       }),
-      { onConflict: 'id' },
     )
   })
 
@@ -179,7 +178,7 @@ describe('OnboardingPage', () => {
 
     await user.click(screen.getByRole('button', { name: '不同意，離開' }))
 
-    expect(upsert).not.toHaveBeenCalled()
+    expect(insert).not.toHaveBeenCalled()
   })
 
   it('hides form until safety compact is agreed', () => {
