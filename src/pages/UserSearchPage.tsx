@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
@@ -14,17 +14,36 @@ export function UserSearchPage() {
   const { user } = useAuth()
   const { t } = useT()
   const [query, setQuery] = useState('')
-  const [profiles, setProfiles] = useState<SearchProfile[]>([])
+  const [candidateProfiles, setCandidateProfiles] = useState<SearchProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const profiles = useMemo(() => {
+    const trimmed = query.trim().toLocaleLowerCase()
+    return candidateProfiles
+      .filter((profile) => !trimmed
+        || profile.display_name?.toLocaleLowerCase().includes(trimmed)
+        || profile.id === query.trim())
+      .sort((a, b) => {
+        const aName = a.display_name?.trim() ?? ''
+        const bName = b.display_name?.trim() ?? ''
+        if (!aName && bName) return 1
+        if (aName && !bName) return -1
+        return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
+      })
+      .slice(0, 50)
+  }, [candidateProfiles, query])
+
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setCandidateProfiles([])
+      setLoading(false)
+      return
+    }
     let cancelled = false
     const load = async () => {
       setLoading(true)
       setError('')
-      const trimmed = query.trim()
       const [{ data: outgoingRows, error: outgoingError }, { data: incomingRows, error: incomingError }] = await Promise.all([
         supabase.from('user_follows').select('followed_id').eq('follower_id', user.id),
         supabase.from('user_follows').select('follower_id').eq('followed_id', user.id),
@@ -34,7 +53,7 @@ export function UserSearchPage() {
       const relationshipError = outgoingError ?? incomingError
       if (relationshipError) {
         setError(relationshipError.message)
-        setProfiles([])
+        setCandidateProfiles([])
         setLoading(false)
         return
       }
@@ -43,37 +62,25 @@ export function UserSearchPage() {
       const incoming = new Set((incomingRows ?? []).map((row) => String(row.follower_id)))
       const eligibleIds = [...outgoing].filter((id) => incoming.has(id))
       if (eligibleIds.length === 0) {
-        setProfiles([])
+        setCandidateProfiles([])
         setLoading(false)
         return
       }
 
       const { data, error: queryError } = await getProfilesForViewer(eligibleIds)
-      const filteredData = data
-        .filter((profile) => !trimmed
-          || profile.display_name?.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase())
-          || profile.id === trimmed)
-        .sort((a, b) => {
-          const aName = a.display_name?.trim() ?? ''
-          const bName = b.display_name?.trim() ?? ''
-          if (!aName && bName) return 1
-          if (aName && !bName) return -1
-          return aName.localeCompare(bName, undefined, { sensitivity: 'base' })
-        })
-        .slice(0, 50)
 
       if (cancelled) return
       if (queryError) {
         setError(queryError.message)
-        setProfiles([])
+        setCandidateProfiles([])
       } else {
-        setProfiles(filteredData.map(({ id, display_name, metadata }) => ({ id, display_name, metadata })))
+        setCandidateProfiles(data.map(({ id, display_name, metadata }) => ({ id, display_name, metadata })))
       }
       setLoading(false)
     }
     void load()
     return () => { cancelled = true }
-  }, [query, user])
+  }, [user])
 
   return <Layout>
     <section className="card user-search-page">

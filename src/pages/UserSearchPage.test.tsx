@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserSearchPage } from './UserSearchPage'
@@ -56,12 +57,17 @@ describe('UserSearchPage', () => {
         }))
   })
 
-  it('lists other profiles and filters by display name', async () => {
+  it('loads profiles once and filters locally by display name', async () => {
     render(<MemoryRouter><UserSearchPage /></MemoryRouter>)
 
     await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())
     expect(rpc).toHaveBeenCalledWith('get_profile_for_viewer', { target_profile_id: 'user-a' })
     expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/messages/new?user=user-a')
     expect(screen.getByRole('link', { name: 'View profile' }).getAttribute('href')).toBe('/profile/user-a')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByRole('searchbox'), 'Alice')
+    await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())
+    expect(rpc).toHaveBeenCalledTimes(1)
   })
 })
