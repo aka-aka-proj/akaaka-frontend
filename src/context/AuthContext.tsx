@@ -53,7 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setIsProfileLoading(true)
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+    const { data, error } = await supabase
+      .rpc('get_profile_for_viewer', { target_profile_id: userId })
+      .maybeSingle()
 
     setIsProfileLoading(false)
     setIsInitialProfileLoad(false)
