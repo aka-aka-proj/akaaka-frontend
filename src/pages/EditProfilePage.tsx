@@ -5,7 +5,8 @@ import { Layout } from '../components/Layout'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
-import { getAvatarPath, getBioVisibility, mapProfileRow, PRESET_AVATAR_PATHS } from '../lib/profile'
+import { getAvatarPath, getBioVisibility, PRESET_AVATAR_PATHS } from '../lib/profile'
+import { getProfileForViewer } from '../lib/profile-access'
 import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Visibility } from '../types'
 
@@ -61,11 +62,7 @@ export function EditProfilePage() {
     }
 
     void (async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle()
+      const { data, error } = await getProfileForViewer(user.id)
 
       if (error) {
         setMessage(error.message)
@@ -73,7 +70,7 @@ export function EditProfilePage() {
         return
       }
 
-      const profile = data ? mapProfileRow(data) : null
+      const profile = data
       setDisplayName(profile?.display_name ?? '')
       setBio(profile?.bio ?? '')
       setAvatarPath(getAvatarPath(profile))
@@ -95,11 +92,7 @@ export function EditProfilePage() {
     setSubmitting(true)
     setMessage('')
 
-    const { data: currentRow, error: currentError } = await supabase
-      .from('profiles')
-      .select('metadata')
-      .eq('id', user.id)
-      .maybeSingle()
+    const { data: currentRow, error: currentError } = await getProfileForViewer(user.id)
 
     if (currentError) {
       setMessage(currentError.message)

@@ -7,6 +7,7 @@ import { EditProfilePage } from './EditProfilePage'
 
 const mockUseAuth = vi.fn()
 const from = vi.fn()
+const rpc = vi.fn()
 const refreshProfile = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../context/AuthContext', () => ({
@@ -24,6 +25,7 @@ vi.mock('../components/Layout', () => ({
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (...args: unknown[]) => from(...args),
+    rpc: (...args: unknown[]) => rpc(...args),
   },
 }))
 
@@ -42,6 +44,21 @@ describe('EditProfilePage', () => {
   beforeEach(() => {
     refreshProfile.mockClear()
     from.mockReset()
+    rpc.mockReset()
+    rpc.mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: 'viewer-user',
+          role_status: 'general',
+          display_name: 'Self User',
+          bio: 'Own bio',
+          external_social_links: [],
+          metadata: {},
+          reputation_score: 0,
+        },
+        error: null,
+      }),
+    })
     mockUseAuth.mockReturnValue({
       user: { id: 'viewer-user' },
       refreshProfile,
@@ -67,7 +84,7 @@ describe('EditProfilePage', () => {
       error: null,
     })
 
-    from.mockReturnValue(loadQuery)
+    rpc.mockReturnValue({ maybeSingle: loadQuery.maybeSingle })
 
     render(
       <MemoryRouter initialEntries={['/profile/me/edit']}>
@@ -106,10 +123,10 @@ describe('EditProfilePage', () => {
     })
     const updateQuery = queryBuilder({ data: null, error: null })
 
-    from
-      .mockReturnValueOnce(loadQuery)
-      .mockReturnValueOnce(metadataQuery)
-      .mockReturnValueOnce(updateQuery)
+    rpc
+      .mockReturnValueOnce({ maybeSingle: loadQuery.maybeSingle })
+      .mockReturnValueOnce({ maybeSingle: metadataQuery.maybeSingle })
+    from.mockReturnValue(updateQuery)
 
     render(
       <MemoryRouter initialEntries={['/profile/me/edit']}>
@@ -165,7 +182,7 @@ describe('EditProfilePage', () => {
       },
       error: null,
     })
-    from.mockReturnValue(loadQuery)
+    rpc.mockReturnValue({ maybeSingle: loadQuery.maybeSingle })
 
     render(
       <MemoryRouter initialEntries={['/profile/me/edit']}>

@@ -8,6 +8,7 @@ import type { DirectMessage, Profile } from '../types'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import { ConversationSidebar } from '../components/ConversationSidebar'
 import { getAvatarPath } from '../lib/profile'
+import { getProfileForViewer } from '../lib/profile-access'
 
 export function DirectChatPage() {
   const { conversationId } = useParams()
@@ -51,14 +52,14 @@ export function DirectChatPage() {
         return
       }
       const otherId = conversation.participant_one_id === user.id ? conversation.participant_two_id : conversation.participant_one_id
-      const [{ data: profile }, { data: rows, error: messageError }] = await Promise.all([
-        supabase.from('profiles').select('id, display_name, metadata').eq('id', otherId).maybeSingle(),
+      const [{ data: profile, error: profileError }, { data: rows, error: messageError }] = await Promise.all([
+        getProfileForViewer(otherId),
         supabase.from('direct_messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }),
       ])
       if (!cancelled) {
         setOtherProfile((profile as Profile | null) ?? null)
         setMessages((rows ?? []) as DirectMessage[])
-        setError(messageError?.message ?? '')
+        setError(profileError?.message ?? messageError?.message ?? '')
         setLoading(false)
       }
       const unreadIds = ((rows ?? []) as DirectMessage[])

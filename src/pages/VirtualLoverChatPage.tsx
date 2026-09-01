@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
+import { getProfileForViewer } from '../lib/profile-access'
 import { PrivacyDisclosure } from '../components/PrivacyDisclosure'
 import {
   provisionBrowserProviderKey,
@@ -101,11 +102,7 @@ export function VirtualLoverChatPage() {
 
       // Load user's own profile for context
       if (user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name, bio, metadata')
-          .eq('id', user.id)
-          .maybeSingle()
+        const { data: profile } = await getProfileForViewer(user.id)
         if (profile) {
           setUserProfile(profile as unknown as UserProfile)
         }

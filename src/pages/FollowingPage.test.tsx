@@ -52,6 +52,19 @@ describe('FollowingPage', () => {
         error: null,
       })
     })
+    rpc.mockImplementation((_name: string, args: { target_profile_id?: string }) => ({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: args.target_profile_id,
+          display_name: args.target_profile_id === 'user-a' ? 'Alice' : 'Bob',
+          role_status: 'general',
+          external_social_links: [],
+          metadata: {},
+          reputation_score: 0,
+        },
+        error: null,
+      }),
+    }))
   })
 
   it('searches followed users and batch unfollows selected results', async () => {
@@ -66,7 +79,7 @@ describe('FollowingPage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Select Alice' }))
     await user.click(screen.getByRole('button', { name: 'Unfollow selected (1)' }))
     expect(screen.getByText('Are you sure you want to unfollow Alice?')).toBeTruthy()
-    expect(from).toHaveBeenCalledTimes(2)
+    expect(from).toHaveBeenCalledTimes(1)
     const dialog = screen.getByText('Confirm unfollow').closest('dialog')!
     await user.click(within(dialog).getByRole('button', { name: 'Unfollow', hidden: true }))
 
@@ -84,7 +97,7 @@ describe('FollowingPage', () => {
     expect(screen.getByText('Are you sure you want to unfollow Alice?')).toBeTruthy()
     await user.click(screen.getByText('取消'))
     expect(screen.queryByText('Are you sure you want to unfollow Alice?')).toBeNull()
-    expect(from).toHaveBeenCalledTimes(2)
+    expect(from).toHaveBeenCalledTimes(1)
   })
 
   it('resolves followed profiles for an admin through the public profile resolver', async () => {

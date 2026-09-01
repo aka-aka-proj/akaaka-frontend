@@ -6,16 +6,9 @@ import { useT } from '../hooks/useT'
 import { getAvatarPath, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
+import { getProfilesForViewer } from '../lib/profile-access'
 
 type SearchProfile = Pick<Profile, 'id' | 'display_name' | 'metadata'>
-
-function mapProfile(row: Record<string, unknown>): SearchProfile {
-  return {
-    id: String(row.id ?? ''),
-    display_name: (row.display_name as string | null) ?? null,
-    metadata: (row.metadata as Profile['metadata']) ?? null,
-  }
-}
 
 export function UserSearchPage() {
   const { user } = useAuth()
@@ -55,27 +48,20 @@ export function UserSearchPage() {
         return
       }
 
-      const createQuery = () => supabase
-        .from('profiles')
-        .select('id, display_name, metadata')
-        .in('id', eligibleIds)
-        .order('display_name', { ascending: true, nullsFirst: false })
-
-      const result = trimmed
-        ? await Promise.all([
-            createQuery().ilike('display_name', `%${trimmed}%`).limit(50),
-            createQuery().eq('id', trimmed).limit(50),
-          ])
-        : [await createQuery().limit(50)]
-      const queryError = result.find((item) => item.error)?.error ?? null
-      const data = [...new Map(result.flatMap((item) => item.data ?? []).map((row) => [String(row.id), row])).values()]
+      const { data, error: queryError } = await getProfilesForViewer(eligibleIds)
+      const filteredData = data
+        .filter((profile) => !trimmed
+          || profile.display_name?.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase())
+          || profile.id === trimmed)
+        .sort((a, b) => (a.display_name ?? '').localeCompare(b.display_name ?? '', undefined, { sensitivity: 'base' }))
+        .slice(0, 50)
 
       if (cancelled) return
       if (queryError) {
         setError(queryError.message)
         setProfiles([])
       } else {
-        setProfiles((data ?? []).map((row) => mapProfile(row as Record<string, unknown>)))
+        setProfiles(filteredData.map(({ id, display_name, metadata }) => ({ id, display_name, metadata })))
       }
       setLoading(false)
     }
