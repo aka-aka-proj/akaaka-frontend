@@ -103,7 +103,11 @@ async function installAuthenticatedFixture(page: Page) {
       status: 200,
       contentType: 'application/json',
       headers: { 'content-range': isProfilesRequest || isProfileResolverRequest ? '0-0/1' : '0-0/*' },
-      body: isProfilesRequest || isProfileResolverRequest ? JSON.stringify([syntheticProfile]) : '[]',
+      body: isProfileResolverRequest
+        ? JSON.stringify(syntheticProfile)
+        : isProfilesRequest
+          ? JSON.stringify([syntheticProfile])
+          : '[]',
     })
   })
 
