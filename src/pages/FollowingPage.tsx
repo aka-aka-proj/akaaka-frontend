@@ -7,6 +7,7 @@ import { useT } from '../hooks/useT'
 import { getAvatarPath, normalizeSocialLinks } from '../lib/profile'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
+import { getProfilesForViewer } from '../lib/profile-access'
 
 function mapProfile(row: Record<string, unknown>): Profile {
   return {
@@ -64,10 +65,7 @@ export function FollowingPage() {
       }))
       profileRows = resolvedProfiles.filter(Boolean)
     } else {
-      const { data, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, role_status, display_name, bio, external_social_links, metadata, reputation_score')
-        .in('id', followedIds)
+      const { data, error: profilesError } = await getProfilesForViewer(followedIds)
 
       if (profilesError) {
         setMessage(profilesError.message)

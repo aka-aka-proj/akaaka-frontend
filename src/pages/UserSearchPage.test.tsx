@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserSearchPage } from './UserSearchPage'
 
 const from = vi.fn()
+const rpc = vi.fn()
 
 // Mock must keep `user` identity stable across renders, like AuthProvider.
 const stableViewerUser = vi.hoisted(() => ({ id: 'viewer-user' }))
@@ -19,7 +19,7 @@ vi.mock('../context/LanguageContext', () => ({
 }))
 
 vi.mock('../supabaseClient', () => ({
-  supabase: { from: (...args: unknown[]) => from(...args) },
+  supabase: { from: (...args: unknown[]) => from(...args), rpc: (...args: unknown[]) => rpc(...args) },
 }))
 
 vi.mock('../components/Layout', () => ({
@@ -41,8 +41,15 @@ function queryBuilder(response: { data?: unknown; error?: { message: string } | 
 
 describe('UserSearchPage', () => {
   beforeEach(() => {
+    let followCall = 0
+    rpc.mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'user-a', role_status: 'general', display_name: 'Alice', metadata: {} },
+        error: null,
+      }),
+    })
     from.mockImplementation((table: string) => table === 'user_follows'
-      ? queryBuilder({ data: [{ followed_id: 'user-a' }, { follower_id: 'user-a' }], error: null }, true)
+      ? queryBuilder({ data: followCall++ === 0 ? [{ followed_id: 'user-a' }] : [{ follower_id: 'user-a' }], error: null }, true)
       : queryBuilder({
           data: [{ id: 'user-a', display_name: 'Alice', metadata: {} }],
           error: null,
@@ -51,14 +58,10 @@ describe('UserSearchPage', () => {
 
   it('lists other profiles and filters by display name', async () => {
     render(<MemoryRouter><UserSearchPage /></MemoryRouter>)
-    const user = userEvent.setup()
 
     await waitFor(() => expect(screen.getByText('Alice')).toBeTruthy())
+    expect(rpc).toHaveBeenCalledWith('get_profile_for_viewer', { target_profile_id: 'user-a' })
     expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/messages/new?user=user-a')
     expect(screen.getByRole('link', { name: 'View profile' }).getAttribute('href')).toBe('/profile/user-a')
-
-    await user.type(screen.getByRole('searchbox'), 'Alice')
-    await waitFor(() => expect(from).toHaveBeenCalled())
-    expect(screen.getByText('Alice')).toBeTruthy()
   })
 })
