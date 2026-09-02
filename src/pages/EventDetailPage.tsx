@@ -1083,6 +1083,11 @@ export function EventDetailPage() {
                 <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.editEvent')}
               </Link>
             ) : null}
+            {eventSeriesId ? (
+              <Link to={`/events/series/${eventSeriesId}/manage`} className="secondary-action">
+                <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventSeries.manageSeriesTitle')}
+              </Link>
+            ) : null}
             <button type="button" className="secondary-action" onClick={() => navigate(`/events/new?from_event_id=${eventItem.id}`)}>
               <Icon href="/form-icons.svg" name="form-edit" size={14} /> {t('eventDetail.copyEvent')}
             </button>

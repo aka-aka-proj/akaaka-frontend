@@ -1069,6 +1069,11 @@ const zhTW = {
   myRegistrations: {
     title: '我的報名',
     noRegistrations: '尚未報名任何活動。',
+    seriesProgressTitle: '活動系列進度',
+    seriesProgressSummary: '已報名 {registered}／{total} 場',
+    individualRegistrationsTitle: '單場報名記錄',
+    notRegistered: '尚未報名',
+    seriesLoadFailed: '活動系列進度載入失敗，請稍後再試。',
   },
   report: {
     title: '檢舉',

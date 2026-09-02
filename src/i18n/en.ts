@@ -1070,6 +1070,11 @@ availableSlots: 'Available',
   myRegistrations: {
     title: 'My Registrations',
     noRegistrations: 'No registrations yet.',
+    seriesProgressTitle: 'Activity series progress',
+    seriesProgressSummary: '{registered} of {total} sessions registered',
+    individualRegistrationsTitle: 'Individual session registrations',
+    notRegistered: 'Not registered',
+    seriesLoadFailed: 'Activity series progress could not be loaded. Please try again.',
   },
   report: {
     title: 'Report',
