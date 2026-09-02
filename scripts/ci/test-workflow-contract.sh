@@ -22,7 +22,13 @@ require_literal "$metadata" 'group: frontend-contract-${{ github.event.pull_requ
 require_literal "$heavy" 'types: [opened, synchronize, reopened]'
 require_literal "$heavy" 'group: frontend-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}'
 require_literal "$heavy" "node-version: '22'"
-require_literal "$template" 'Consumes-Expand: none'
+require_literal "$heavy" 'run: npm run test:ci-contract'
+require_literal "$template" 'Consumes-Expand: <none or IaC task PR number(s)>'
+
+if grep -Fxq 'Consumes-Expand: none' "$template"; then
+  printf 'PR template must not predeclare a fail-open Consumes-Expand value\n' >&2
+  exit 1
+fi
 require_literal "$repo_root/.githooks/pre-push" 'npm run test:ci-contract'
 
 if grep -Fq 'edited' "$heavy"; then
