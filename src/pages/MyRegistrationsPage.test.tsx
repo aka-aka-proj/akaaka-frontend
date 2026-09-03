@@ -82,7 +82,7 @@ describe('MyRegistrationsPage activity series progress', () => {
       data: [
         { series_id: 'series-1', event_id: 'event-1', position: 1, event: [{ id: 'event-1', title: '第一場', start_time: '2099-01-01T12:00:00.000Z' }] },
         { series_id: 'series-1', event_id: 'event-2', position: 2, event: [{ id: 'event-2', title: '第二場', start_time: '2099-02-01T12:00:00.000Z' }] },
-        { series_id: 'series-1', event_id: 'event-3', position: 3, event: [{ id: 'event-3', title: '第三場', start_time: '2099-03-01T12:00:00.000Z' }] },
+        { series_id: 'series-1', event_id: 'event-3', position: 3, event: { id: 'event-3', title: '第三場', start_time: '2099-03-01T12:00:00.000Z' } },
       ],
       error: null,
     })
@@ -117,5 +117,6 @@ describe('MyRegistrationsPage activity series progress', () => {
     render(<MemoryRouter><MyRegistrationsPage /></MemoryRouter>)
 
     await waitFor(() => expect(screen.getByText('permission denied')).toBeTruthy())
+    expect(screen.getByRole('link', { name: '第一場' })).toBeTruthy()
   })
 })

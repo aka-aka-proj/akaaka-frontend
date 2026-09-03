@@ -12,7 +12,11 @@ type SeriesMemberRow = {
   series_id: string
   event_id: string
   position: number
-  event: Array<{ id: string; title: string; start_time: string }> | null
+  event: { id: string; title: string; start_time: string } | Array<{ id: string; title: string; start_time: string }> | null
+}
+
+function normalizeEventRelation(event: SeriesMemberRow['event']) {
+  return Array.isArray(event) ? event[0] ?? null : event
 }
 
 export function MyRegistrationsPage() {
@@ -41,6 +45,7 @@ export function MyRegistrationsPage() {
     }
 
     const nextRegistrations = (data as Registration[]) ?? []
+    setRegistrations(nextRegistrations)
     const { data: seriesRegistrationData, error: seriesRegistrationError } = await supabase
       .from('event_series_registrations')
       .select('id, series_id, profile_id, status, whole_series_registration, created_at')
@@ -50,6 +55,7 @@ export function MyRegistrationsPage() {
       .order('created_at', { ascending: false })
 
     if (seriesRegistrationError) {
+      setSeriesProgress([])
       setMessage(seriesRegistrationError.message)
       return
     }
@@ -58,7 +64,6 @@ export function MyRegistrationsPage() {
     const seriesIds = [...new Set(nextSeriesRegistrations.map((registration) => registration.series_id))]
 
     if (seriesIds.length === 0) {
-      setRegistrations(nextRegistrations)
       setSeriesProgress([])
       return
     }
@@ -76,6 +81,7 @@ export function MyRegistrationsPage() {
     ])
 
     if (seriesError || memberError) {
+      setSeriesProgress([])
       setMessage((seriesError ?? memberError)?.message ?? t('myRegistrations.seriesLoadFailed'))
       return
     }
@@ -85,7 +91,6 @@ export function MyRegistrationsPage() {
     const members = (memberData as unknown as SeriesMemberRow[]) ?? []
     const series = (seriesData as SeriesRow[]) ?? []
 
-    setRegistrations(nextRegistrations)
     setSeriesProgress(series.map((item) => ({
       id: item.id,
       title: item.title,
@@ -93,13 +98,16 @@ export function MyRegistrationsPage() {
       members: members
         .filter((member) => member.series_id === item.id)
         .sort((a, b) => a.position - b.position)
-        .map((member) => ({
-          event_id: member.event_id,
-          position: member.position,
-          title: member.event?.[0]?.title ?? null,
-          start_time: member.event?.[0]?.start_time ?? null,
-          status: registrationsByEvent.get(member.event_id)?.status ?? null,
-        })),
+        .map((member) => {
+          const event = normalizeEventRelation(member.event)
+          return {
+            event_id: member.event_id,
+            position: member.position,
+            title: event?.title ?? null,
+            start_time: event?.start_time ?? null,
+            status: registrationsByEvent.get(member.event_id)?.status ?? null,
+          }
+        }),
     })))
   }, [t, user])
 
