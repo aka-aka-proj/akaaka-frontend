@@ -294,4 +294,60 @@ describe('EditEventPage edit lock', () => {
     expect(await screen.findByText('新的開始時間必須晚於目前時間。')).toBeTruthy()
     expect(eventUpdateMock).not.toHaveBeenCalled()
   })
+
+  it('allows an expired recurring draft to save content when start time is unchanged', async () => {
+    currentEvent = {
+      ...baseEvent,
+      id: 'instance-1',
+      series_id: 'parent-1',
+      lifecycle_status: 'draft',
+      publication_status: 'closed',
+      start_time: '2020-01-01T12:00:00.000Z',
+    }
+    seriesChildren = [
+      { id: 'instance-1', start_time: '2020-01-01T12:00:00.000Z', lifecycle_status: 'draft', title: '本場' },
+    ]
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/events/instance-1/edit"]}>
+        <Routes>
+          <Route path="/events/:id/edit" element={<EditEventPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await user.type(await screen.findByLabelText('標題'), '更新')
+    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+
+    await waitFor(() => expect(eventUpdateMock).toHaveBeenCalled())
+  })
+
+  it('rejects a recurring start time that is not after its retained registration deadline', async () => {
+    currentEvent = {
+      ...baseEvent,
+      id: 'instance-1',
+      series_id: 'parent-1',
+      start_time: '2099-01-08T12:00:00.000Z',
+      registration_deadline: '2099-01-07T12:00:00.000Z',
+    }
+    seriesChildren = [
+      { id: 'instance-1', start_time: '2099-01-08T12:00:00.000Z', lifecycle_status: 'published', title: '本場' },
+    ]
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/events/instance-1/edit"]}>
+        <Routes>
+          <Route path="/events/:id/edit" element={<EditEventPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const startInput = await screen.findByLabelText('開始時間')
+    await user.clear(startInput)
+    await user.type(startInput, '2099-01-06T12:00')
+    await user.click(screen.getByRole('button', { name: '儲存變更' }))
+
+    expect(await screen.findByText('報名截止必須早於新的開始時間，請明確調整截止時間。')).toBeTruthy()
+    expect(eventUpdateMock).not.toHaveBeenCalled()
+  })
 })

@@ -244,9 +244,19 @@ export function EditEventPage() {
       return
     }
 
-    if (isSeriesMember && editScope === 'single' && new Date(startTime).getTime() <= Date.now()) {
-      setMessage(t('editEvent.startTimeMustBeFuture'))
-      return
+    const seriesStartTimeChanged = isSeriesMember
+      && editScope === 'single'
+      && startTime !== loadedStartTimeRef.current
+    if (seriesStartTimeChanged) {
+      const nextStartTime = new Date(startTime).getTime()
+      if (nextStartTime <= Date.now()) {
+        setMessage(t('editEvent.startTimeMustBeFuture'))
+        return
+      }
+      if (registrationMode === 'native' && registrationDeadline && new Date(registrationDeadline).getTime() >= nextStartTime) {
+        setMessage(t('editEvent.registrationDeadlineBeforeStart'))
+        return
+      }
     }
 
     if (registrationMode === 'external' && (!externalRegistrationUrl.trim() || !isAllowedExternalRegistrationUrl(externalRegistrationUrl))) {

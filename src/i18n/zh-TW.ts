@@ -541,6 +541,7 @@ const zhTW = {
     startTimeBatchLockedHint: '開始時間只能在「僅此場」範圍中變更。',
     startTimeDeadlineReminder: '開始時間已變更；報名截止不會自動調整，請確認目前設定仍合理。',
     startTimeMustBeFuture: '新的開始時間必須晚於目前時間。',
+    registrationDeadlineBeforeStart: '報名截止必須早於新的開始時間，請明確調整截止時間。',
     descriptionLabel: '描述',
     eventTypeLabel: '活動類型',
     selectEventType: '請選擇活動類型',
