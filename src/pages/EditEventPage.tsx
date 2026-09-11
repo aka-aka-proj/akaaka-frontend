@@ -53,6 +53,7 @@ export function EditEventPage() {
   const [batchOffsetMinutes, setBatchOffsetMinutes] = useState('')
   const [batchAbsoluteDeadline, setBatchAbsoluteDeadline] = useState('')
   const loadedSnapshotRef = useRef<Record<string, unknown> | null>(null)
+  const loadedStartTimeRef = useRef('')
 
   const isDraft = eventLifecycle?.lifecycle_status === 'draft'
   const isSeriesMember = seriesMembers.length > 0
@@ -123,6 +124,7 @@ export function EditEventPage() {
       setEventType(parseEventTypes(event.event_type))
 
       setStartTime(event.start_time ? toLocalDatetime(event.start_time) : '')
+      loadedStartTimeRef.current = event.start_time ? toLocalDatetime(event.start_time) : ''
       setLocationRegion((event.location_region ?? '') as TaiwanRegion | '')
       setLocationDetail(event.location_detail ?? '')
       setExternalRegistrationUrl(event.external_registration_url ?? '')
@@ -169,9 +171,11 @@ export function EditEventPage() {
           .eq('id', parentId)
           .maybeSingle()
         const parentEntry = parentRow as { id: string; start_time: string; lifecycle_status: string; title?: string } | null
-        setSeriesMembers([...(parentEntry ? [parentEntry] : []), selfEntry, ...childList])
+        setSeriesMembers([...(parentEntry ? [parentEntry] : []), selfEntry, ...childList]
+          .sort((left, right) => left.start_time.localeCompare(right.start_time)))
       } else if (childList.length > 0) {
-        setSeriesMembers([selfEntry, ...childList])
+        setSeriesMembers([selfEntry, ...childList]
+          .sort((left, right) => left.start_time.localeCompare(right.start_time)))
       } else {
         setSeriesMembers([])
       }
@@ -238,6 +242,21 @@ export function EditEventPage() {
     if (!title.trim() || !startTime || !locationRegion) {
       setMessage(t('editEvent.titleRequired'))
       return
+    }
+
+    const seriesStartTimeChanged = isSeriesMember
+      && editScope === 'single'
+      && startTime !== loadedStartTimeRef.current
+    if (seriesStartTimeChanged) {
+      const nextStartTime = new Date(startTime).getTime()
+      if (nextStartTime <= Date.now()) {
+        setMessage(t('editEvent.startTimeMustBeFuture'))
+        return
+      }
+      if (registrationMode === 'native' && registrationDeadline && new Date(registrationDeadline).getTime() >= nextStartTime) {
+        setMessage(t('editEvent.registrationDeadlineBeforeStart'))
+        return
+      }
     }
 
     if (registrationMode === 'external' && (!externalRegistrationUrl.trim() || !isAllowedExternalRegistrationUrl(externalRegistrationUrl))) {
@@ -385,7 +404,7 @@ export function EditEventPage() {
         attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
         category,
         event_type: stringifyEventTypes(eventType),
-        ...(isSeriesMember ? {} : { start_time: new Date(startTime).toISOString() }),
+        start_time: new Date(startTime).toISOString(),
         location_region: locationRegion,
         location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,
@@ -526,10 +545,17 @@ export function EditEventPage() {
             aria-label={t('editEvent.startTimeLabel')}
             type="datetime-local"
             value={startTime}
-            disabled={isSeriesMember}
+            disabled={isSeriesMember && editScope !== 'single'}
             onChange={(event) => setStartTime(event.target.value)}
           />
-          {isSeriesMember ? <small style={{ color: 'var(--color-text-muted)' }}>{t('editEvent.startTimeSeriesLockedHint')}</small> : null}
+          {isSeriesMember ? (
+            <small style={{ color: 'var(--color-text-muted)' }}>
+              {t(editScope === 'single' ? 'editEvent.startTimeSingleScopeHint' : 'editEvent.startTimeBatchLockedHint')}
+            </small>
+          ) : null}
+          {isSeriesMember && editScope === 'single' && startTime !== loadedStartTimeRef.current ? (
+            <small className="message warning">{t('editEvent.startTimeDeadlineReminder')}</small>
+          ) : null}
         </label>
         <label className="form-field">
           <span className="form-label-row">
