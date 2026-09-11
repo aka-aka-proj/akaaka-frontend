@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
+import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { useEventSeries, type EventSeriesMember } from '../hooks/useEventSeries'
 import type { EventItem } from '../types'
@@ -20,6 +21,7 @@ export function SeriesNavigation({
   memberEvents,
   loading,
 }: SeriesNavigationProps) {
+  const { user } = useAuth()
   const { t } = useT()
   const navigate = useNavigate()
   const series = useEventSeries(seriesId)
@@ -40,43 +42,60 @@ export function SeriesNavigation({
   )
   const currentIndex = visibleMembers.findIndex((member) => member.event_id === currentEventId)
 
-  if (loading || !series || visibleMembers.length === 0) return null
-  if (currentIndex === -1) return null
+  if (loading || !series) return null
 
-  const hasPrev = currentIndex > 0
-  const hasNext = currentIndex < visibleMembers.length - 1
+  const isHost = Boolean(user && user.id === series.creator_id)
+  const hasCurrentEvent = currentIndex >= 0
+  const hasPrev = hasCurrentEvent && currentIndex > 0
+  const hasNext = hasCurrentEvent && currentIndex < visibleMembers.length - 1
 
   return (
     <section className="card event-detail-series-nav" aria-label={t('eventSeries.navigationLabel')}>
       <div className="series-nav-header">
-        <Icon href="/nav-icons.svg" name="nav-schedule" size={18} />
-        <span className="eyebrow">{t('eventSeries.navigationLabel')}</span>
+        <div className="series-nav-heading">
+          <Icon href="/nav-icons.svg" name="nav-schedule" size={18} />
+          <span className="eyebrow">{t('eventSeries.navigationLabel')}</span>
+        </div>
+        {isHost && seriesId ? (
+          <button
+            type="button"
+            className="secondary-action"
+            style={{ width: 'auto', flex: '0 0 auto' }}
+            onClick={() => navigate(`/events/series/${seriesId}/manage`)}
+          >
+            {t('eventSeries.manageSeriesTitle')}
+          </button>
+        ) : null}
       </div>
 
-      <div className="series-event-list">
-        {sortedMemberEvents.map((event, index) => {
-          const isActive = index === currentIndex
-          return (
-            <button
-              key={event.id}
-              type="button"
-              className={`series-event-item${isActive ? ' active' : ''}`}
-              onClick={() => navigate(`/events/${event.id}`)}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span className="series-event-index">{index + 1}</span>
-              <div className="series-event-info">
-                <span className="series-event-title">{event.title}</span>
-                <span className="series-event-time">
-                  {new Date(event.start_time).toLocaleString()}
+      {sortedMemberEvents.length > 0 ? (
+        <div className="series-event-list">
+          {sortedMemberEvents.map((event) => {
+            const isActive = event.id === currentEventId
+            return (
+              <button
+                key={event.id}
+                type="button"
+                className={`series-event-item${isActive ? ' active' : ''}`}
+                onClick={() => navigate(`/events/${event.id}`)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <span className="series-event-index">
+                  {(members.find((member) => member.event_id === event.id)?.position ?? 0) + 1}
                 </span>
-              </div>
-            </button>
-          )
-        })}
-      </div>
+                <div className="series-event-info">
+                  <span className="series-event-title">{event.title}</span>
+                  <span className="series-event-time">
+                    {new Date(event.start_time).toLocaleString()}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
 
-      {visibleMembers.length > 1 && (
+      {hasCurrentEvent && visibleMembers.length > 1 && (
         <div className="series-nav-arrows">
           {hasPrev && (
             <button
