@@ -196,6 +196,7 @@ const zhTW = {
     clearAll: '全部清除',
     updated: '設定已更新',
     noSearchResults: '找不到符合的活動類型。',
+    regionCategory: '地區',
     followedPeopleCategory: '我追蹤的人',
     noFollowedPeople: '目前沒有追蹤任何人。',
     push: {
