@@ -198,6 +198,7 @@ const en = {
     clearAll: 'Clear all',
     updated: 'Settings updated',
     noSearchResults: 'No matching event types.',
+    regionCategory: 'Regions',
     followedPeopleCategory: 'People I follow',
     noFollowedPeople: 'You are not following anyone yet.',
     push: {
