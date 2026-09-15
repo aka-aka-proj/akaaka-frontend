@@ -196,6 +196,7 @@ const zhTW = {
     clearAll: '全部清除',
     updated: '設定已更新',
     noSearchResults: '找不到符合的活動類型。',
+    regionCategory: '地區',
     followedPeopleCategory: '我追蹤的人',
     noFollowedPeople: '目前沒有追蹤任何人。',
     push: {
@@ -537,7 +538,11 @@ const zhTW = {
     batchPartialFailure: '批次更新部分失敗：已更新 {updated} 場、略過 {skipped} 場（已開始或已結束）、失敗 {failed} 場。',
     batchSuccessWithSkipped: '批次更新完成：已更新 {updated} 場、略過 {skipped} 場（已開始或已結束）。',
     batchVenueAutoDerived: '批次模式下「場地方主辦」將依你的場地方資格自動套用至受影響場次',
-    startTimeSeriesLockedHint: '定期活動場次的開始時間不可個別變更',
+    startTimeSingleScopeHint: '只會影響此場，不會變更其他定期場次。',
+    startTimeBatchLockedHint: '開始時間只能在「僅此場」範圍中變更。',
+    startTimeDeadlineReminder: '開始時間已變更；報名截止不會自動調整，請確認目前設定仍合理。',
+    startTimeMustBeFuture: '新的開始時間必須晚於目前時間。',
+    registrationDeadlineBeforeStart: '報名截止必須早於新的開始時間，請明確調整截止時間。',
     descriptionLabel: '描述',
     eventTypeLabel: '活動類型',
     selectEventType: '請選擇活動類型',
@@ -1069,6 +1074,11 @@ const zhTW = {
   myRegistrations: {
     title: '我的報名',
     noRegistrations: '尚未報名任何活動。',
+    seriesProgressTitle: '活動系列進度',
+    seriesProgressSummary: '已報名 {registered}／{total} 場',
+    individualRegistrationsTitle: '單場報名記錄',
+    notRegistered: '尚未報名',
+    seriesLoadFailed: '活動系列進度載入失敗，請稍後再試。',
   },
   report: {
     title: '檢舉',

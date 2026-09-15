@@ -148,6 +148,54 @@ test.describe('authenticated synthetic route boundary', () => {
     await expect(page.locator('section[aria-labelledby="privacy-data-flows-title"]')).toBeVisible({ timeout: authenticatedStateTimeout })
     await expect(page.getByText(/這不是端對端加密|not end-to-end encrypted/i)).toBeVisible({ timeout: authenticatedStateTimeout })
   })
+
+  test('enables start-time editing only for one recurring occurrence', async ({ page }) => {
+    const occurrence = {
+      id: 'synthetic-recurring-instance',
+      creator_id: syntheticUserId,
+      title: 'Synthetic recurring occurrence',
+      description: null,
+      category: 'Social',
+      lifecycle_status: 'published',
+      publication_status: 'published',
+      publish_at: null,
+      unpublish_at: null,
+      attendance_fee_type: 'free',
+      attendance_fee_amount: null,
+      event_type: ['Movie'],
+      is_venue_hosted: false,
+      visibility_settings: { type: 'public' },
+      registration_form_config: null,
+      recurrence_rule: { frequency: 'weekly', count: 3 },
+      series_id: 'synthetic-recurring-parent',
+      start_time: '2099-01-08T12:00:00.000Z',
+      location_region: 'Online',
+      location_detail: null,
+      max_capacity: null,
+      registration_deadline: '2099-01-07T12:00:00.000Z',
+      external_registration_url: null,
+      source_url: null,
+      created_at: '2098-12-01T00:00:00.000Z',
+    }
+    await page.route('**/rest/v1/events**', async (route) => {
+      const url = route.request().url()
+      const body = url.includes('series_id=eq.synthetic-recurring-parent')
+        ? [occurrence, { ...occurrence, id: 'synthetic-recurring-sibling', start_time: '2099-01-15T12:00:00.000Z' }]
+        : url.includes('id=eq.synthetic-recurring-parent')
+          ? [{ ...occurrence, id: 'synthetic-recurring-parent', series_id: null, start_time: '2099-01-01T12:00:00.000Z' }]
+          : [occurrence]
+      await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-0/1' }, body: JSON.stringify(body) })
+    })
+
+    await gotoAuthenticatedRoute(page, '/events/synthetic-recurring-instance/edit')
+    const startTime = page.getByLabel(/開始時間|start time/i)
+    await expect(startTime).toBeEnabled({ timeout: authenticatedStateTimeout })
+    await expect(page.getByText(/只會影響此場|affects only this occurrence/i)).toBeVisible()
+    await page.getByRole('radio', { name: /此場與後續場次|this and following occurrences/i }).check()
+    await expect(startTime).toBeDisabled()
+    await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll')
+  })
+
   for (const route of authenticatedRoutes) {
     test(`keeps protected route authenticated: ${route}`, async ({ page }) => {
         await gotoAuthenticatedRoute(page, route)
