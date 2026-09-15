@@ -19,6 +19,7 @@ export function NotificationSettingsPage() {
   const [subscribedTypes, setSubscribedTypes] = useState<string[]>([])
   const [subscribedCreators, setSubscribedCreators] = useState<string[]>([])
   const [subscribedRegions, setSubscribedRegions] = useState<TaiwanRegion[]>([])
+  const [pendingRegions, setPendingRegions] = useState<TaiwanRegion[]>([])
   const [followedProfiles, setFollowedProfiles] = useState<FollowedProfile[]>([])
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
@@ -172,7 +173,9 @@ export function NotificationSettingsPage() {
     if (!user) return
     setMessage('')
     setStatus('')
-    const targets = regions.filter((region) => subscribedRegions.includes(region) !== enabled)
+    const targets = regions.filter((region) => subscribedRegions.includes(region) !== enabled && !pendingRegions.includes(region))
+    if (targets.length === 0) return
+    setPendingRegions((current) => [...new Set([...current, ...targets])])
     const results = await Promise.all(targets.map(async (region) => {
       const query = supabase.from('event_notification_subscriptions')
       return enabled
@@ -182,11 +185,13 @@ export function NotificationSettingsPage() {
     const failed = results.find((result) => result.error)
     if (failed?.error) {
       setMessage(failed.error.message)
+      setPendingRegions((current) => current.filter((value) => !targets.includes(value)))
       return
     }
     setSubscribedRegions((current) => enabled
       ? [...new Set([...current, ...targets])]
       : current.filter((value) => !targets.includes(value)))
+    setPendingRegions((current) => current.filter((value) => !targets.includes(value)))
     setStatus(t('notifications.updated'))
   }
 
@@ -254,7 +259,7 @@ export function NotificationSettingsPage() {
                 return (
                   <label key={region} className={`notification-setting-row${enabled ? ' is-selected' : ''}`}>
                     <span>{label}</span>
-                    <input type="checkbox" checked={enabled} aria-label={label} onChange={() => void updateRegions([region], !enabled)} />
+                    <input type="checkbox" checked={enabled} disabled={pendingRegions.includes(region)} aria-label={label} onChange={() => void updateRegions([region], !enabled)} />
                   </label>
                 )
               })}
