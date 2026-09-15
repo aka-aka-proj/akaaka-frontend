@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { disableWebPush, enableWebPush, getWebPushState, type WebPushState } from '../lib/web-push'
+import { TAIWAN_REGIONS, type TaiwanRegion } from '../types'
 
 type FollowedProfile = {
   id: string
@@ -17,6 +18,7 @@ export function NotificationSettingsPage() {
   const userId = user?.id
   const [subscribedTypes, setSubscribedTypes] = useState<string[]>([])
   const [subscribedCreators, setSubscribedCreators] = useState<string[]>([])
+  const [subscribedRegions, setSubscribedRegions] = useState<TaiwanRegion[]>([])
   const [followedProfiles, setFollowedProfiles] = useState<FollowedProfile[]>([])
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
@@ -36,7 +38,7 @@ export function NotificationSettingsPage() {
       const [subscriptionsResult, followsResult] = await Promise.all([
         supabase
           .from('event_notification_subscriptions')
-          .select('event_type, creator_profile_id')
+          .select('event_type, creator_profile_id, location_region')
           .eq('profile_id', userId),
         supabase
           .from('user_follows')
@@ -60,6 +62,9 @@ export function NotificationSettingsPage() {
       setSubscribedCreators((subscriptionsResult.data ?? [])
         .map((row) => row.creator_profile_id)
         .filter((value): value is string => Boolean(value)))
+      setSubscribedRegions((subscriptionsResult.data ?? [])
+        .map((row) => row.location_region)
+        .filter((value): value is TaiwanRegion => TAIWAN_REGIONS.includes(value as TaiwanRegion)))
 
       const followedIds = [...new Set((followsResult.data ?? []).map((row) => String(row.followed_id)))]
       if (followedIds.length === 0) {
@@ -163,6 +168,28 @@ export function NotificationSettingsPage() {
     setStatus(t('notifications.updated'))
   }
 
+  const updateRegions = async (regions: readonly TaiwanRegion[], enabled: boolean) => {
+    if (!user) return
+    setMessage('')
+    setStatus('')
+    const targets = regions.filter((region) => subscribedRegions.includes(region) !== enabled)
+    const results = await Promise.all(targets.map(async (region) => {
+      const query = supabase.from('event_notification_subscriptions')
+      return enabled
+        ? query.insert({ profile_id: user.id, location_region: region })
+        : query.delete().eq('profile_id', user.id).eq('location_region', region)
+    }))
+    const failed = results.find((result) => result.error)
+    if (failed?.error) {
+      setMessage(failed.error.message)
+      return
+    }
+    setSubscribedRegions((current) => enabled
+      ? [...new Set([...current, ...targets])]
+      : current.filter((value) => !targets.includes(value)))
+    setStatus(t('notifications.updated'))
+  }
+
   const normalizedSearch = search.trim().toLocaleLowerCase()
 
   return (
@@ -216,6 +243,23 @@ export function NotificationSettingsPage() {
             </section>
           )
         })}
+        <section className="notification-category" aria-labelledby="region-notification-heading">
+          <h2 id="region-notification-heading">{t('notifications.regionCategory')}</h2>
+          <div className="notification-type-grid">
+            {TAIWAN_REGIONS
+              .filter((region) => !normalizedSearch || t(`events.region${region}`).toLocaleLowerCase().includes(normalizedSearch))
+              .map((region) => {
+                const enabled = subscribedRegions.includes(region)
+                const label = t(`events.region${region}`)
+                return (
+                  <label key={region} className={`notification-setting-row${enabled ? ' is-selected' : ''}`}>
+                    <span>{label}</span>
+                    <input type="checkbox" checked={enabled} aria-label={label} onChange={() => void updateRegions([region], !enabled)} />
+                  </label>
+                )
+              })}
+          </div>
+        </section>
         <section className="notification-category" aria-labelledby="followed-notification-heading">
           <h2 id="followed-notification-heading">{t('notifications.followedPeopleCategory')}</h2>
           {followedProfiles.length === 0 ? (
@@ -239,7 +283,7 @@ export function NotificationSettingsPage() {
             </div>
           )}
         </section>
-        {normalizedSearch && !categories.some(({ types }) => types.some((eventType) => eventType.toLocaleLowerCase().includes(normalizedSearch))) && !followedProfiles.some(({ id, displayName }) => displayName.toLocaleLowerCase().includes(normalizedSearch) || id.toLocaleLowerCase().includes(normalizedSearch)) ? (
+        {normalizedSearch && !categories.some(({ types }) => types.some((eventType) => eventType.toLocaleLowerCase().includes(normalizedSearch))) && !followedProfiles.some(({ id, displayName }) => displayName.toLocaleLowerCase().includes(normalizedSearch) || id.toLocaleLowerCase().includes(normalizedSearch)) && !TAIWAN_REGIONS.some((region) => t(`events.region${region}`).toLocaleLowerCase().includes(normalizedSearch)) ? (
           <p className="notification-empty-search">{t('notifications.noSearchResults')}</p>
         ) : null}
       </section>
