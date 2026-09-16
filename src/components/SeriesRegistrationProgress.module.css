@@ -51,12 +51,18 @@
 }
 
 .memberInfo a {
+  align-items: center;
+  display: inline-flex;
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
   overflow-wrap: anywhere;
 }
 
 .memberMeta {
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  font-size: var(--type-metadata-size);
+  font-weight: var(--type-metadata-weight);
+  line-height: var(--type-metadata-line-height);
 }
 
 .memberStatus {
