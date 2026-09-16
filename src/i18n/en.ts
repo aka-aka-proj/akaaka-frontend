@@ -193,7 +193,7 @@ const en = {
     socialCategory: 'Social gatherings',
     searchLabel: 'Search event types',
     searchAllLabel: 'Search event types, regions, or followed people',
-    searchPlaceholder: 'Try Movie, Taipei, or SM',
+    searchPlaceholder: 'Try Movie, North, or SM',
     selectAll: 'Select all',
     clearAll: 'Clear all',
     updated: 'Settings updated',
