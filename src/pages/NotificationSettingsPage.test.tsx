@@ -116,7 +116,7 @@ describe('NotificationSettingsPage', () => {
   it('searches regions by localized label', async () => {
     const user = userEvent.setup()
     render(<NotificationSettingsPage />)
-    const search = screen.getByRole('textbox', { name: '搜尋活動類型或追蹤的人' })
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型、地區或追蹤的人' })
     await user.type(search, '北部')
     expect(screen.getByRole('checkbox', { name: '北部' })).toBeTruthy()
     expect(screen.queryByRole('checkbox', { name: '南部' })).toBeNull()
@@ -126,7 +126,7 @@ describe('NotificationSettingsPage', () => {
     const user = userEvent.setup()
     render(<NotificationSettingsPage />)
 
-    const search = screen.getByRole('textbox', { name: '搜尋活動類型或追蹤的人' })
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型、地區或追蹤的人' })
     await user.type(search, 'Movie')
 
     expect(screen.getByRole('checkbox', { name: 'Movie' })).toBeTruthy()
