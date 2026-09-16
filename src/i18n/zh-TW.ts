@@ -191,7 +191,7 @@ const zhTW = {
     socialCategory: '休閒聚會',
     searchLabel: '搜尋活動類型',
     searchAllLabel: '搜尋活動類型、地區或追蹤的人',
-    searchPlaceholder: '輸入 Movie、台北、SM 等關鍵字',
+    searchPlaceholder: '輸入 Movie、北部、SM 等關鍵字',
     selectAll: '全部選取',
     clearAll: '全部清除',
     updated: '設定已更新',
