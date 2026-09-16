@@ -159,6 +159,15 @@ export interface Registration {
   profile?: Profile | null
 }
 
+export interface SeriesRegistration {
+  id: string
+  series_id: string
+  profile_id: string
+  status: RegistrationStatus
+  whole_series_registration: boolean
+  created_at: string
+}
+
 export interface UserStats {
   hostedEvents: number
   hostedTags: string[]

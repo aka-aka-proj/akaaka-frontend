@@ -3,6 +3,7 @@
 set -eu
 
 echo "Running frontend pre-push validation..."
+npm run test:ci-contract
 npm run lint
 npm test
 npm run build

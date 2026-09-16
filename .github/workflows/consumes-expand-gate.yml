@@ -1,0 +1,43 @@
+name: Frontend contract gate
+
+on:
+  pull_request:
+    branches: [main, preview]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  consumes-expand-gate:
+    name: Consumes-Expand declaration gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - name: Validate Consumes-Expand declaration format
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          decl="$(printf '%s' "${PR_BODY:-}" | awk 'tolower($0) ~ /^consumes-expand:/ {gsub(/\r/,""); sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print; exit}')"
+
+          if [ -z "$decl" ]; then
+            fail "PR body is missing the required 'Consumes-Expand:' declaration. Add 'Consumes-Expand: none' or 'Consumes-Expand: <akaaka-iac task PR number(s)>' (comma/space separated). Contract: consumer-switch evidence binding in akaaka-docs/docs/spec/platform/001-vercel-deployment-spec.md."
+          fi
+
+          if [ "$(printf '%s' "$decl" | tr '[:upper:]' '[:lower:]')" = "none" ]; then
+            echo "Consumes-Expand: none — no expand consumption declared."
+            exit 0
+          fi
+
+          if ! printf '%s' "$decl" | grep -Eq '^[1-9][0-9]*([, ]+[1-9][0-9]*)*$'; then
+            fail "'Consumes-Expand: $decl' must be 'none' or akaaka-iac task PR numbers (comma/space separated positive integers)."
+          fi
+
+          echo "Consumes-Expand: $decl — format OK."
