@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { supabase } from '../supabaseClient'
 import type { Profile } from '../types'
 import { normalizeSocialLinks } from '../lib/profile'
+import { clearSeriesDrafts } from '../lib/series-draft-storage'
 import { useWebPushSessionRefresh } from '../hooks/useWebPushSessionRefresh'
 
 interface AuthContextValue {
@@ -88,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     void initAuth()
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_OUT') clearSeriesDrafts()
       setSession(nextSession)
     })
 
