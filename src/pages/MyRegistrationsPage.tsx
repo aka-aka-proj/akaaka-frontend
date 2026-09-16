@@ -89,7 +89,9 @@ export function MyRegistrationsPage() {
     const registrationsByEvent = new Map(nextRegistrations.map((registration) => [registration.event_id, registration]))
     const seriesRegistrationById = new Map(nextSeriesRegistrations.map((registration) => [registration.series_id, registration]))
     const members = (memberData as unknown as SeriesMemberRow[]) ?? []
-    const series = (seriesData as SeriesRow[]) ?? []
+    const seriesOrder = new Map(seriesIds.map((seriesId, index) => [seriesId, index]))
+    const series = ((seriesData as SeriesRow[]) ?? [])
+      .sort((a, b) => (seriesOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (seriesOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER))
 
     setSeriesProgress(series.map((item) => ({
       id: item.id,

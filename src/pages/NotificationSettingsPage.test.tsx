@@ -36,7 +36,7 @@ describe('NotificationSettingsPage', () => {
       if (table === 'event_notification_subscriptions') {
         return {
           select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ data: [{ event_type: 'Dining', creator_profile_id: 'user-a' }], error: null }),
+            eq: vi.fn().mockResolvedValue({ data: [{ event_type: 'Dining', creator_profile_id: 'user-a', location_region: 'North' }], error: null }),
           }),
           insert,
           delete: deleteSubscription,
@@ -68,6 +68,8 @@ describe('NotificationSettingsPage', () => {
     await waitFor(() => expect((screen.getByRole('checkbox', { name: 'Dining' }) as HTMLInputElement).checked).toBe(true))
     expect((screen.getByRole('checkbox', { name: 'BBQ' }) as HTMLInputElement).checked).toBe(false)
     expect((screen.getByRole('checkbox', { name: 'Alice' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: '北部' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: '南部' }) as HTMLInputElement).checked).toBe(false)
   })
 
   it('creates and removes type subscriptions', async () => {
@@ -98,11 +100,33 @@ describe('NotificationSettingsPage', () => {
     expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', creator_profile_id: 'user-b' })
   })
 
+  it('creates and removes region subscriptions independently', async () => {
+    const user = userEvent.setup()
+    render(<NotificationSettingsPage />)
+
+    const north = await screen.findByRole('checkbox', { name: '北部' })
+    const south = screen.getByRole('checkbox', { name: '南部' })
+    await user.click(north)
+    await user.click(south)
+
+    expect(deleteSubscription).toHaveBeenCalled()
+    expect(insert).toHaveBeenCalledWith({ profile_id: 'user-1', location_region: 'South' })
+  })
+
+  it('searches regions by localized label', async () => {
+    const user = userEvent.setup()
+    render(<NotificationSettingsPage />)
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型、地區或追蹤的人' })
+    await user.type(search, '北部')
+    expect(screen.getByRole('checkbox', { name: '北部' })).toBeTruthy()
+    expect(screen.queryByRole('checkbox', { name: '南部' })).toBeNull()
+  })
+
   it('searches types and supports bulk selection feedback', async () => {
     const user = userEvent.setup()
     render(<NotificationSettingsPage />)
 
-    const search = screen.getByRole('textbox', { name: '搜尋活動類型或追蹤的人' })
+    const search = screen.getByRole('textbox', { name: '搜尋活動類型、地區或追蹤的人' })
     await user.type(search, 'Movie')
 
     expect(screen.getByRole('checkbox', { name: 'Movie' })).toBeTruthy()
