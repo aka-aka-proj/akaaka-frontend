@@ -404,7 +404,9 @@ export function EditEventPage() {
         attendance_fee_amount: attendanceFeeType === 'fixed' ? parsedFee : null,
         category,
         event_type: stringifyEventTypes(eventType),
-        start_time: new Date(startTime).toISOString(),
+        ...(!isSeriesMember || seriesStartTimeChanged
+          ? { start_time: new Date(startTime).toISOString() }
+          : {}),
         location_region: locationRegion,
         location_detail: locationRegion !== 'Online' ? (locationDetail.trim() || null) : null,
         is_venue_hosted: isVenueHosted,

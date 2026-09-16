@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { useEventSeries, type EventSeriesMember } from '../hooks/useEventSeries'
 import type { EventItem } from '../types'
+import styles from './SeriesNavigation.module.css'
 
 const EMPTY_MEMBERS: EventSeriesMember[] = []
 
@@ -59,8 +60,7 @@ export function SeriesNavigation({
         {isHost && seriesId ? (
           <button
             type="button"
-            className="secondary-action"
-            style={{ width: 'auto', flex: '0 0 auto' }}
+            className={`secondary-action ${styles.manageButton}`}
             onClick={() => navigate(`/events/series/${seriesId}/manage`)}
           >
             {t('eventSeries.manageSeriesTitle')}
@@ -70,7 +70,7 @@ export function SeriesNavigation({
 
       {sortedMemberEvents.length > 0 ? (
         <div className="series-event-list">
-          {sortedMemberEvents.map((event) => {
+          {sortedMemberEvents.map((event, index) => {
             const isActive = event.id === currentEventId
             return (
               <button
@@ -81,7 +81,7 @@ export function SeriesNavigation({
                 aria-current={isActive ? 'page' : undefined}
               >
                 <span className="series-event-index">
-                  {(members.find((member) => member.event_id === event.id)?.position ?? 0) + 1}
+                  {members.find((member) => member.event_id === event.id)?.position ?? index + 1}
                 </span>
                 <div className="series-event-info">
                   <span className="series-event-title">{event.title}</span>
