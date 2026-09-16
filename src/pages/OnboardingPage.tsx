@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
@@ -17,6 +17,7 @@ export function OnboardingPage() {
   const location = useLocation()
   
   const { t } = useT()
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const [agreed, setAgreed] = useState(false)
   const [compactOpen, setCompactOpen] = useState(true)
   const [displayName, setDisplayName] = useState('')
@@ -44,6 +45,10 @@ export function OnboardingPage() {
       navigate(from ?? '/events', { replace: true })
     }
   }, [profile, navigate, location.search, location.state])
+
+  useEffect(() => {
+    if (agreed) headingRef.current?.focus()
+  }, [agreed])
 
   if (profile) {
     return null
@@ -156,7 +161,7 @@ export function OnboardingPage() {
             <>
             <header className="onboarding-header">
               <p className="eyebrow">{t('onboarding.step')}</p>
-              <h1>{t('onboarding.title')}</h1>
+              <h1 ref={headingRef} tabIndex={-1}>{t('onboarding.title')}</h1>
               <p>{t('onboarding.intro')}</p>
               <div className="onboarding-progress" aria-label={t('onboarding.progressLabel')}>
                 <span className="onboarding-progress-bar" />
