@@ -11,7 +11,7 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => auth() }))
 vi.mock('../components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <>{children}</> }))
 vi.mock('../supabaseClient', () => ({ supabase: { from: (table: string) => {
   const request = { table, filters: {} as Record<string, unknown>, range: [] as number[] }; requests.push(request)
-  const q = { select: () => q, eq: (key: string, value: unknown) => { request.filters[key] = value; return q }, order: () => q,
+  const q = { select: () => q, eq: (key: string, value: unknown) => { request.filters[key] = value; return q }, in: (key: string, value: unknown[]) => { request.filters[key] = value; return q }, order: () => q,
     range: (start: number, end: number) => { request.range = [start,end]; return response(request) } }
   return q
 } } }))
@@ -42,7 +42,7 @@ describe('MyEventsPage', () => {
   await waitFor(()=>expect(requests.some(r=>r.range?.[1]===39)).toBe(true))
   await user.click(screen.getByRole('button',{name:'已發布'}))
   await user.click(screen.getByRole('button',{name:'活動'}))
-  await waitFor(()=>expect(requests.at(-1)).toMatchObject({table:'events',filters:{creator_id:'owner',lifecycle_status:'published'}}))
+  await waitFor(()=>expect(requests.at(-1)).toMatchObject({table:'events',filters:{creator_id:'owner',lifecycle_status:['published','registration_open','registration_closed','completed']}}))
  })
  it('does not show a stale response after changing accounts', async () => {
   let finish!: (value: unknown) => void
