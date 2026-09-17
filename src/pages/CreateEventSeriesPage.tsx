@@ -3,9 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { SeriesDraftNotice } from '../components/SeriesDraftNotice'
+import { useSeriesDraftRecovery } from '../hooks/useSeriesDraftRecovery'
+import type { SeriesDraftFields } from '../lib/series-draft-storage'
 import { supabase } from '../supabaseClient'
 
 export function CreateEventSeriesPage() {
+  const { user } = useAuth()
+  return user ? <CreateSeriesForm key={user.id} /> : null
+}
+function CreateSeriesForm() {
   const { user } = useAuth()
   const { t } = useT()
   const navigate = useNavigate()
@@ -14,6 +21,13 @@ export function CreateEventSeriesPage() {
   const [isWholeSeriesRequired, setIsWholeSeriesRequired] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const dirty = Boolean(title || description || isWholeSeriesRequired)
+  const recovery = useSeriesDraftRecovery(`${user!.id}:new`, dirty)
+  const changeFields = (fields: SeriesDraftFields) => {
+    setTitle(fields.title); setDescription(fields.description); setIsWholeSeriesRequired(fields.isWholeSeriesRequired)
+    recovery.persist(fields, Boolean(fields.title || fields.description || fields.isWholeSeriesRequired))
+  }
+
 
   const handleCreate = async () => {
     if (!user || !title.trim()) return
@@ -38,6 +52,7 @@ export function CreateEventSeriesPage() {
       return
     }
 
+    recovery.saved()
     navigate(`/events/series/${data.id}/manage`)
   }
 
@@ -51,6 +66,9 @@ export function CreateEventSeriesPage() {
           </div>
         </div>
 
+        <SeriesDraftNotice recovery={recovery} dirty={dirty} saving={submitting} onRestore={() => {
+          const fields = recovery.restore(); if (fields) changeFields(fields)
+        }} />
         <div className="form-section" aria-labelledby="series-basic-title">
           <h2 id="series-basic-title">{t('eventSeries.basicInfo')}</h2>
 
@@ -58,7 +76,8 @@ export function CreateEventSeriesPage() {
             <span>{t('eventSeries.seriesName')} *</span>
             <input
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              disabled={submitting || Boolean(recovery.pending)}
+              onChange={(event) => changeFields({ title: event.target.value, description, isWholeSeriesRequired })}
               placeholder={t('eventSeries.seriesNamePlaceholder')}
               required
             />
@@ -68,7 +87,8 @@ export function CreateEventSeriesPage() {
             <span>{t('eventSeries.seriesDescription')}</span>
             <textarea
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              disabled={submitting || Boolean(recovery.pending)}
+              onChange={(event) => changeFields({ title, description: event.target.value, isWholeSeriesRequired })}
               placeholder={t('eventSeries.seriesDescriptionPlaceholder')}
               rows={4}
             />
@@ -78,7 +98,8 @@ export function CreateEventSeriesPage() {
             <input
               type="checkbox"
               checked={isWholeSeriesRequired}
-              onChange={(event) => setIsWholeSeriesRequired(event.target.checked)}
+              disabled={submitting || Boolean(recovery.pending)}
+              onChange={(event) => changeFields({ title, description, isWholeSeriesRequired: event.target.checked })}
             />
             <div>
               <strong>{t('eventSeries.requiredBadge')}</strong>
@@ -98,7 +119,7 @@ export function CreateEventSeriesPage() {
           <button
             type="button"
             className="primary-cta"
-            disabled={!title.trim() || submitting}
+            disabled={!title.trim() || submitting || Boolean(recovery.pending)}
             onClick={() => void handleCreate()}
           >
             {submitting ? t('common.processing') : t('eventSeries.createSeries')}
