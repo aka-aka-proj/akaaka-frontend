@@ -13,7 +13,14 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   }, [dirty])
   return {
     pending, localCopy,
-    persist(fields: SeriesDraftFields) { setLocalCopy(writeSeriesDraft(key, fields)) },
+    persist(fields: SeriesDraftFields, isDirty: boolean) {
+      if (!isDirty) {
+        removeSeriesDraft(key)
+        setLocalCopy(null)
+        return
+      }
+      setLocalCopy(writeSeriesDraft(key, fields))
+    },
     restore() { setPending(null); setLocalCopy(true); return pending },
     discard() { setPending(null); setLocalCopy(removeSeriesDraft(key) ? null : false) },
     saved() { setPending(null); setLocalCopy(removeSeriesDraft(key) ? null : false) },
