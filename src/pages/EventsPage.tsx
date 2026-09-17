@@ -295,7 +295,7 @@ export function EventsPage() {
             <h1>{t('events.exploreTitle')}</h1>
           </div>
           <div>
-            {user ? <CreateEventMenu /> : null}
+            {user ? <><Link to="/events/mine" className="secondary-action">{t('ownedEvents.title')}</Link><CreateEventMenu /></> : null}
           </div>
         </div>
 

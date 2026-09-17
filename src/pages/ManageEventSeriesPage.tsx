@@ -4,6 +4,9 @@ import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
+import { SeriesDraftNotice } from '../components/SeriesDraftNotice'
+import { useSeriesDraftRecovery } from '../hooks/useSeriesDraftRecovery'
+import type { SeriesDraftFields } from '../lib/series-draft-storage'
 import { supabase } from '../supabaseClient'
 import type { EventItem } from '../types'
 
@@ -41,7 +44,13 @@ function normalizeMemberRows(data: unknown): SeriesMemberRow[] {
 export function ManageEventSeriesPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  return user && id ? <ManageSeriesForm key={`${user.id}:${id}`} /> : null
+}
+function ManageSeriesForm() {
+  const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
   const { t } = useT()
+  const userId = user?.id
 
   const [series, setSeries] = useState<SeriesDetail | null>(null)
   const [title, setTitle] = useState('')
@@ -53,6 +62,13 @@ export function ManageEventSeriesPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [showAddPicker, setShowAddPicker] = useState(false)
+  const dirty = Boolean(series && (title !== series.title || description !== (series.description ?? '') || isWholeSeriesRequired !== series.is_whole_series_required))
+  const recovery = useSeriesDraftRecovery(`${user!.id}:${id}`, dirty)
+  const changeFields = (fields: SeriesDraftFields) => {
+    setTitle(fields.title); setDescription(fields.description); setIsWholeSeriesRequired(fields.isWholeSeriesRequired)
+    recovery.persist(fields)
+  }
+
 
   const filterUnassignedDraftEvents = async (events: EventItem[]) => {
     const { data: memberships } = await supabase
@@ -63,7 +79,7 @@ export function ManageEventSeriesPage() {
   }
 
   useEffect(() => {
-    if (!user || !id) return
+    if (!userId || !id) return
     let cancelled = false
 
     const load = async () => {
@@ -81,7 +97,7 @@ export function ManageEventSeriesPage() {
         return
       }
 
-      if ((seriesData as SeriesDetail).creator_id !== user.id) {
+      if ((seriesData as SeriesDetail).creator_id !== userId) {
         setMessage('Only the series host can manage this series')
         setLoading(false)
         return
@@ -107,7 +123,7 @@ export function ManageEventSeriesPage() {
       let myEventsQuery = supabase
         .from('events')
         .select('*')
-        .eq('creator_id', user.id)
+        .eq('creator_id', userId)
         .eq('lifecycle_status', 'draft')
         .order('start_time', { ascending: false })
       if (existingIds.length > 0) {
@@ -116,13 +132,15 @@ export function ManageEventSeriesPage() {
       const { data: myEventsData } = await myEventsQuery
 
       if (cancelled) return
-      setAllMyEvents(await filterUnassignedDraftEvents((myEventsData as EventItem[] | null) ?? []))
+      const eligibleEvents = await filterUnassignedDraftEvents((myEventsData as EventItem[] | null) ?? [])
+      if (cancelled) return
+      setAllMyEvents(eligibleEvents)
       setLoading(false)
     }
 
     void load()
     return () => { cancelled = true }
-  }, [user, id])
+  }, [userId, id])
 
   const canAdd = useMemo(() => series?.lifecycle_status === 'draft' && allMyEvents.length > 0, [series, allMyEvents])
 
@@ -135,7 +153,7 @@ export function ManageEventSeriesPage() {
     setSaving(true)
     setMessage('')
 
-    const { error } = await supabase
+    const { data: savedRow, error } = await supabase
       .from('event_series')
       .update({
         title: title.trim(),
@@ -143,12 +161,17 @@ export function ManageEventSeriesPage() {
         is_whole_series_required: isWholeSeriesRequired,
       })
       .eq('id', id)
+      .eq('creator_id', user.id)
+      .select('id')
+      .maybeSingle()
 
-    if (error) {
+    if (error || !savedRow) {
       setSaving(false)
-      setMessage(error.message)
+      setMessage(t('seriesDraft.saveFailed'))
       return false
     }
+    recovery.saved()
+    setSeries(current => current ? { ...current, title, description, is_whole_series_required: isWholeSeriesRequired } : current)
     if (!keepSaving) setSaving(false)
     setMessage(t('eventSeries.manageSaved'))
     return true
@@ -314,13 +337,16 @@ export function ManageEventSeriesPage() {
       <div className="card">
         <div className="create-event-header">
           <h1>{t('eventSeries.manageSeriesTitle')}</h1>
-          <Link to={`/events/${members[0]?.event_id ?? ''}`} className="link-button">
+          <Link to={`/events/mine?type=series&status=${series.lifecycle_status === 'draft' ? 'draft' : 'published'}`} className="link-button">
             <Icon href="/action-icons.svg" name="action-chevron-left" size={14} />
-            {t('eventSeries.backToSeries')}
+            {t('ownedEvents.back')}
           </Link>
         </div>
 
-        {message && <p className="message">{message}</p>}
+        {message && <p className="message" role="status">{message}</p>}
+        <SeriesDraftNotice recovery={recovery} dirty={dirty} saving={saving} onRestore={() => {
+          const fields = recovery.restore(); if (fields) changeFields(fields)
+        }} />
 
         <p className="form-field-hint">
           {series.lifecycle_status === 'draft' ? t('eventSeries.draftVisibility') : t('eventSeries.publishedVisibility')}
@@ -331,19 +357,19 @@ export function ManageEventSeriesPage() {
 
           <label className="form-field">
             <span>{t('eventSeries.seriesName')} *</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input value={title} disabled={saving || Boolean(recovery.pending)} onChange={(e) => changeFields({ title: e.target.value, description, isWholeSeriesRequired })} />
           </label>
 
           <label className="form-field">
             <span>{t('eventSeries.seriesDescription')}</span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <textarea value={description} disabled={saving || Boolean(recovery.pending)} onChange={(e) => changeFields({ title, description: e.target.value, isWholeSeriesRequired })} rows={3} />
           </label>
 
           <label className="checkbox" style={{ marginTop: '1rem' }}>
             <input
               type="checkbox"
               checked={isWholeSeriesRequired}
-              onChange={(e) => setIsWholeSeriesRequired(e.target.checked)}
+              disabled={saving || Boolean(recovery.pending)} onChange={(e) => changeFields({ title, description, isWholeSeriesRequired: e.target.checked })}
             />
             <div>
               <strong>{t('eventSeries.requiredBadge')}</strong>
@@ -352,7 +378,7 @@ export function ManageEventSeriesPage() {
           </label>
 
           <div style={{ marginTop: '1rem' }}>
-            <button type="button" className="primary-cta primary-cta--small" disabled={saving || !title.trim()} onClick={() => void handleSave()}>
+            <button type="button" className="primary-cta primary-cta--small" disabled={saving || !title.trim() || Boolean(recovery.pending)} onClick={() => void handleSave()}>
               {saving ? t('common.processing') : t('eventSeries.saveSeries')}
             </button>
             {series.lifecycle_status === 'draft' && (
@@ -360,7 +386,7 @@ export function ManageEventSeriesPage() {
                 type="button"
                 className="primary-cta primary-cta--small"
                 style={{ marginLeft: '0.5rem' }}
-                disabled={saving || members.length < 2 || !title.trim()}
+                disabled={saving || members.length < 2 || !title.trim() || Boolean(recovery.pending)}
                 onClick={() => void handlePublish()}
               >
                 {t('eventSeries.publishSeries')}
@@ -391,7 +417,7 @@ export function ManageEventSeriesPage() {
               <li key={member.id} className="series-manage-item">
                 <span className="series-manage-position">{index + 1}</span>
                 <div className="series-manage-info">
-                  <span className="series-manage-title">{member.event?.title ?? '?'}</span>
+                  <Link className="series-manage-title secondary-action" to={`/events/${member.event_id}/edit`}>{member.event?.title ?? t('ownedEvents.resume')}</Link>
                   <span className="series-manage-time">
                     {member.event ? new Date(member.event.start_time).toLocaleString() : ''}
                   </span>

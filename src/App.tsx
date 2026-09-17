@@ -15,6 +15,7 @@ import { DirectChatPage } from './pages/DirectChatPage'
 import { EditProfilePage } from './pages/EditProfilePage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
+import { MyEventsPage } from './pages/MyEventsPage'
 import { EventsPage } from './pages/EventsPage'
 import { BookmarksPage } from './pages/BookmarksPage'
 import { CreateEventSeriesPage } from './pages/CreateEventSeriesPage'
@@ -81,6 +82,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/events/mine" element={<ProtectedRoute><MyEventsPage /></ProtectedRoute>} />
       <Route
         path="/events/new"
         element={
