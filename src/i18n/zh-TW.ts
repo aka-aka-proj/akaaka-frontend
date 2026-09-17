@@ -1062,7 +1062,8 @@ const zhTW = {
     compactZeroToleranceTitle: '五、零容忍政策',
     compactZeroToleranceBody: '本社群對以下行為採取零容忍立場：騷擾、威脅、暴力、偷拍、下藥、未經同意的資訊公開（outting）、以及任何形式的歧視。違反者將受到警告、停權或永久封禁處分。如遇緊急情況，請立即報警並聯繫我們。',
     compactDisagree: '不同意，離開',
-    compactAgree: '我同意',
+    compactAgree: '同意並繼續',
+    compactNextStep: '閱讀並同意後，繼續填寫個人資料。',
 
     compactPrivacyTitle: '六、資料安全承諾',
     compactPrivacyNoImages: '平台不儲存任何個人敏感原始照片，所有多媒體內容來自外部社交連結（FB、IG、X.com）。',

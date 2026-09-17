@@ -1,0 +1,77 @@
+.dialog {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0;
+  margin: auto;
+  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  width: min(35rem, calc(100% - var(--space-4) * 2 - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  max-height: calc(100dvh - var(--space-4) * 2 - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-modal);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog::backdrop { background: var(--color-overlay); }
+
+.title {
+  flex: none;
+  margin: 0;
+  padding: var(--space-4);
+  font-size: var(--type-section-title-size);
+  line-height: var(--type-section-title-line-height);
+  font-weight: var(--type-section-title-weight);
+  overflow-wrap: anywhere;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-body-weight);
+  overflow-wrap: anywhere;
+}
+
+.body:focus-visible { outline-offset: calc(-1 * var(--space-1)); }
+.body p { margin: 0 0 var(--space-4); }
+.body h3 {
+  margin: var(--space-4) 0 var(--space-3);
+  font-size: var(--type-section-title-size);
+  line-height: var(--type-section-title-line-height);
+  font-weight: var(--type-section-title-weight);
+}
+
+.actions {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.actions button {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: var(--type-label-weight);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.cancel { background: var(--color-surface); color: var(--color-danger); }
+.agree { background: var(--color-primary); color: var(--color-text-on-primary); }
+.agree:hover { background: var(--color-primary-hover); }
