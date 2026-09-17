@@ -9,9 +9,9 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
 
   useEffect(() => {
     if (wasDirty.current && !dirty) {
-      removeSeriesDraft(key)
+      const removed = removeSeriesDraft(key)
       setPending(null)
-      setLocalCopy(null)
+      setLocalCopy(removed ? null : false)
     }
     wasDirty.current = dirty
   }, [key, dirty])
@@ -28,9 +28,9 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
     persist(fields: SeriesDraftFields, isDirty = true) {
       if (!isDirty) {
         if (wasDirty.current) {
-          removeSeriesDraft(key)
+          const removed = removeSeriesDraft(key)
           setPending(null)
-          setLocalCopy(null)
+          setLocalCopy(removed ? null : false)
         }
         return
       }

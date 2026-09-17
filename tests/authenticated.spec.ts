@@ -197,6 +197,38 @@ test.describe('authenticated synthetic route boundary', () => {
     await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll')
   })
 
+  test('clearing a new series removes its stale draft across reloads', async ({ page }) => {
+    await gotoAuthenticatedRoute(page, '/events/series/new')
+    const name = page.getByLabel(/系列名稱|series name/i)
+    await name.fill('Draft that will be cleared')
+    await name.fill('')
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('akaaka:series-draft:')).length)).toBe(0)
+    await page.reload()
+    await expect(name).toBeEnabled()
+    await expect(name).toHaveValue('')
+    await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toHaveCount(0)
+  })
+
+  test('reverting series edits clears the snapshot without writing to the server', async ({ page }) => {
+    const series = { id: 'reset-series', creator_id: syntheticUserId, title: 'Server title', description: '', is_whole_series_required: false, lifecycle_status: 'draft' }
+    let writes = 0
+    await page.route('**/rest/v1/event_series?**', route => {
+      if (route.request().method() !== 'GET') writes++
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(series) })
+    })
+    await gotoAuthenticatedRoute(page, '/events/series/reset-series/manage')
+    const name = page.getByLabel(/系列名稱|series name/i)
+    await expect(name).toHaveValue(series.title)
+    await name.fill('Temporary edit')
+    await name.fill(series.title)
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('akaaka:series-draft:')).length)).toBe(0)
+    await page.reload()
+    await expect(name).toHaveValue(series.title)
+    await expect(name).toBeEnabled()
+    await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toHaveCount(0)
+    expect(writes).toBe(0)
+  })
+
   test('recovers a new series form and clears local drafts on sign out', async ({ page }) => {
     await page.route('**/auth/v1/logout**', route => route.fulfill({ status: 204 }))
     await gotoAuthenticatedRoute(page, '/events/series/new')
@@ -243,6 +275,8 @@ test.describe('authenticated synthetic route boundary', () => {
     page.on('dialog', dialog => void dialog.accept())
     await page.reload()
     await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toBeVisible()
+    await expect(name).toBeDisabled()
+    await page.reload()
     await expect(name).toBeDisabled()
     await page.getByRole('button', { name: /恢復內容|restore content/i }).click()
     await expect(name).toHaveValue('關閉後仍可恢復的修改')
