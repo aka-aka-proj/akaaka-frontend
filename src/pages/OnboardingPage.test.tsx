@@ -92,7 +92,7 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
     expect(insert).toHaveBeenCalled()
@@ -106,7 +106,7 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
 
     expect(screen.getByRole('heading', { name: '要接收 BDSM 圈內揪通知嗎？' })).toBeTruthy()
@@ -126,7 +126,7 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
     await user.click(screen.getByRole('button', { name: '稍後到通知設定' }))
 
@@ -142,7 +142,7 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     const avatar = screen.getByRole('radio', { name: '內建頭像 1' })
     await user.click(avatar)
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
@@ -154,6 +154,19 @@ describe('OnboardingPage', () => {
     )
   })
 
+  it('keeps the agreed form available when profile saving fails', async () => {
+    insert.mockResolvedValueOnce({ error: { message: 'Profile save failed' } })
+    const user = userEvent.setup()
+    render(<MemoryRouter><OnboardingPage /></MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    expect(screen.getByRole('alert').textContent).toBe('Profile save failed')
+    expect(screen.getByRole('button', { name: '完成導覽' }).hasAttribute('disabled')).toBe(false)
+    expect(refreshProfile).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    expect(insert).toHaveBeenCalledTimes(2)
+  })
+
   it('does not show social URL inputs during onboarding', async () => {
     const user = userEvent.setup()
     render(
@@ -162,7 +175,7 @@ describe('OnboardingPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: '我同意' }))
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
 
     expect(screen.queryByLabelText('社群網址 1')).toBeNull()
     expect(screen.getByText(/外部社群連結可稍後/)).toBeTruthy()
