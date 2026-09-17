@@ -6,6 +6,11 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   const [pending, setPending] = useState(() => readSeriesDraft(key))
   const [localCopy, setLocalCopy] = useState<boolean | null>(null)
   useEffect(() => {
+    if (dirty) return
+    removeSeriesDraft(key)
+    setLocalCopy(null)
+  }, [key, dirty])
+  useEffect(() => {
     if (!dirty) return
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
     window.addEventListener('beforeunload', warn)
@@ -13,7 +18,7 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   }, [dirty])
   return {
     pending, localCopy,
-    persist(fields: SeriesDraftFields, isDirty: boolean) {
+    persist(fields: SeriesDraftFields, isDirty = dirty) {
       if (!isDirty) {
         removeSeriesDraft(key)
         setLocalCopy(null)
