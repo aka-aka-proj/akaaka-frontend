@@ -16,6 +16,7 @@ interface OwnedItem {
 }
 const pageSize = 20
 const publishedEventLifecycleStatuses = ['published', 'registration_open', 'registration_closed', 'completed']
+const publishedSeriesLifecycleStatuses = ['published', 'archived', 'cancelled']
 export function MyEventsPage() {
   const { user } = useAuth()
   const { t } = useT()
@@ -51,8 +52,8 @@ function OwnedList({ userId, kind, status }: { userId: string; kind: 'events' | 
         let query = supabase.from(kind === 'series' ? 'event_series' : 'events')
           .select(kind === 'series' ? 'id,creator_id,title,updated_at,event_series_membership(count)' : 'id,creator_id,title,updated_at')
           .eq('creator_id', userId)
-        query = kind === 'events' && status === 'published'
-          ? query.in('lifecycle_status', publishedEventLifecycleStatuses)
+        query = status === 'published'
+          ? query.in('lifecycle_status', kind === 'series' ? publishedSeriesLifecycleStatuses : publishedEventLifecycleStatuses)
           : query.eq('lifecycle_status', status)
         const { data, error: queryError } = await query
           .order('updated_at', { ascending: false }).order('id', { ascending: false })
