@@ -25,7 +25,7 @@ function CreateSeriesForm() {
   const recovery = useSeriesDraftRecovery(`${user!.id}:new`, dirty)
   const changeFields = (fields: SeriesDraftFields) => {
     setTitle(fields.title); setDescription(fields.description); setIsWholeSeriesRequired(fields.isWholeSeriesRequired)
-    recovery.persist(fields)
+    recovery.persist(fields, Boolean(fields.title || fields.description || fields.isWholeSeriesRequired))
   }
 
 
