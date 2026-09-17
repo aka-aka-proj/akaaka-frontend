@@ -6,10 +6,11 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   const [pending, setPending] = useState(() => readSeriesDraft(key))
   const [localCopy, setLocalCopy] = useState<boolean | null>(null)
   useEffect(() => {
-    if (dirty) return
+    // Initial server/default fields are clean while a saved snapshot awaits a decision.
+    if (dirty || pending) return
     removeSeriesDraft(key)
     setLocalCopy(null)
-  }, [key, dirty])
+  }, [key, dirty, pending])
   useEffect(() => {
     if (!dirty) return
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }

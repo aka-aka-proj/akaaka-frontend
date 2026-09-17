@@ -205,6 +205,9 @@ test.describe('authenticated synthetic route boundary', () => {
     await expect(page.getByText(/已在此裝置暫存|saved on this device/i)).toBeVisible()
     page.on('dialog', dialog => void dialog.accept())
     await page.reload()
+    await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toBeVisible()
+    // Leaving before choosing restore/discard must not consume the stored snapshot.
+    await page.reload()
     await page.getByRole('button', { name: /恢復內容|restore content/i }).click()
     await expect(name).toHaveValue('尚未建立的系列')
     await page.getByRole('button', { name: /^更多$|^more$/i }).click()
@@ -244,6 +247,8 @@ test.describe('authenticated synthetic route boundary', () => {
     await page.reload()
     await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toBeVisible()
     await expect(name).toBeDisabled()
+    await page.reload()
+    await expect(page.getByRole('button', { name: /恢復內容|restore content/i })).toBeVisible()
     await page.getByRole('button', { name: /恢復內容|restore content/i }).click()
     await expect(name).toHaveValue('關閉後仍可恢復的修改')
     await page.getByRole('button', { name: /^儲存變更$|^save changes$/i }).click()
