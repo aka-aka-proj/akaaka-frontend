@@ -8,6 +8,8 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   const wasDirty = useRef(false)
 
   useEffect(() => {
+    // Initial server/default fields are clean while a saved snapshot awaits a decision.
+    if (pending) return
     if (wasDirty.current && !dirty) {
       removeSeriesDraft(key)
       setPending(null)
@@ -15,7 +17,6 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
     }
     wasDirty.current = dirty
   }, [key, dirty])
-
   useEffect(() => {
     if (!dirty) return
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }

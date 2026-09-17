@@ -5,6 +5,23 @@ import { readSeriesDraft, writeSeriesDraft } from '../lib/series-draft-storage'
 const fields = { title: 'local title', description: 'local description', isWholeSeriesRequired: true }
 describe('series recovery actions', () => {
  beforeEach(() => localStorage.clear())
+ it('keeps a pending snapshot across repeated visits before the user chooses', () => {
+   writeSeriesDraft('owner:series', fields)
+   const first = renderHook(() => useSeriesDraftRecovery('owner:series', false))
+   expect(first.result.current.pending).toEqual(fields)
+   expect(readSeriesDraft('owner:series')).toEqual(fields)
+   first.unmount()
+   const next = renderHook(() => useSeriesDraftRecovery('owner:series', false))
+   expect(next.result.current.pending).toEqual(fields)
+ })
+ it('clears a snapshot after edited fields return to the clean baseline', () => {
+   const view = renderHook(({ dirty }) => useSeriesDraftRecovery('owner:series', dirty), { initialProps: { dirty: false } })
+   view.rerender({ dirty: true })
+   act(() => view.result.current.persist(fields))
+   expect(readSeriesDraft('owner:series')).toEqual(fields)
+   view.rerender({ dirty: false })
+   expect(readSeriesDraft('owner:series')).toBeNull()
+ })
  it('requires explicit restore and keeps the snapshot until a successful save', () => {
    writeSeriesDraft('owner:series', fields)
    const { result } = renderHook(() => useSeriesDraftRecovery('owner:series', true))
