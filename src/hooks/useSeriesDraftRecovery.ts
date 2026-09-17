@@ -18,7 +18,7 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   }, [dirty])
   return {
     pending, localCopy,
-    persist(fields: SeriesDraftFields, isDirty = dirty) {
+    persist(fields: SeriesDraftFields, isDirty = true) {
       if (!isDirty) {
         removeSeriesDraft(key)
         setLocalCopy(null)
