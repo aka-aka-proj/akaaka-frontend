@@ -1346,7 +1346,7 @@ availableSlots: 'Available',
     urgentOne: 'Urgent One',
   },
   schedulingPoll: {
-    title: 'Date and location poll', openManager: 'Manage date and location poll', permissionDenied: 'You do not have permission to view this poll.',
+    title: 'Date and location poll', open: 'Open date and location poll', openManager: 'Manage date and location poll', permissionDenied: 'You do not have permission to view this poll.',
     loadError: 'The poll could not be loaded. Please try again.', mutationError: 'Your change was not saved. Please try again.', voteRollback: 'Your vote was not saved and the previous selection was restored.',
     created: 'Poll created.', optionAdded: 'Candidate added.', voterAdded: 'Eligible voter added.', finalized: 'The result was applied to the event draft. The event is not published.',
     closed: 'Closed', emptyOwner: 'No poll exists yet. Create one to add candidates and eligible voters.', empty: 'No poll is available.', create: 'Create poll',
