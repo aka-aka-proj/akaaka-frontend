@@ -95,6 +95,7 @@ export function EventDetailPage() {
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
+  const [hasSchedulingPoll, setHasSchedulingPoll] = useState(false)
   const [seriesInstances, setSeriesInstances] = useState<{ id: string; start_time: string; registration_deadline: string | null }[]>([])
   const [seriesIndex, setSeriesIndex] = useState(0)
   const [threads, setThreads] = useState<EventThread[]>([])
@@ -343,6 +344,7 @@ export function EventDetailPage() {
     // cannot briefly expose registrations, guests, invitations, or capacity
     // data that belong to the previous event.
     setEventItem(null)
+    setHasSchedulingPoll(false)
     setThreads([])
     setSeriesInstances([])
     setSeriesIndex(0)
@@ -380,14 +382,20 @@ export function EventDetailPage() {
       ? supabase.from('events').select('*').eq('id', id).maybeSingle()
       : supabase.from('events').select('*').eq('id', id).maybeSingle()
 
-    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
+    const schedulingPollQuery = user
+      ? supabase.from('event_scheduling_polls').select('id').eq('event_id', id).maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+
+    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }, { data: schedulingPollData }] =
       await Promise.all([
         eventsQuery,
         threadQuery,
         bookmarkQuery,
+        schedulingPollQuery,
       ])
 
     if (!isCurrentRequest()) return
+    setHasSchedulingPoll(Boolean(schedulingPollData))
 
     if (eventError || threadError) {
       showError(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'), eventError || threadError)
@@ -1151,6 +1159,9 @@ export function EventDetailPage() {
               </div>
             ) : null}
             <h2>{eventItem.title}</h2>
+            {hasSchedulingPoll ? (
+              <p><Link className="secondary-action" to={`/events/${eventItem.id}/scheduling-poll`}>{t('schedulingPoll.open')}</Link></p>
+            ) : null}
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>
             ) : null}
