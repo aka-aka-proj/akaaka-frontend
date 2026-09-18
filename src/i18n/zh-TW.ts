@@ -1345,7 +1345,7 @@ const zhTW = {
     urgentOne: '急一個',
   },
   schedulingPoll: {
-    title: '日期／地點投票', openManager: '管理日期／地點投票', permissionDenied: '你沒有權限查看這個投票。',
+    title: '日期／地點投票', open: '前往日期／地點投票', openManager: '管理日期／地點投票', permissionDenied: '你沒有權限查看這個投票。',
     loadError: '目前無法載入投票，請稍後再試。', mutationError: '變更未儲存，請重試。', voteRollback: '投票未儲存，已還原原本選擇。',
     created: '投票已建立。', optionAdded: '候選項目已加入。', voterAdded: '投票者已加入。', finalized: '結果已套用至活動草稿；活動尚未發布。',
     closed: '已關閉', emptyOwner: '尚未建立投票。建立後即可加入候選日期、地點與投票者。', empty: '目前沒有可用的投票。', create: '建立投票',
