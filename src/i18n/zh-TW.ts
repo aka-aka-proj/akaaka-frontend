@@ -1344,6 +1344,17 @@ const zhTW = {
     hangOut: '閒聚',
     urgentOne: '急一個',
   },
+  schedulingPoll: {
+    title: '日期／地點投票', openManager: '管理日期／地點投票', permissionDenied: '你沒有權限查看這個投票。',
+    loadError: '目前無法載入投票，請稍後再試。', mutationError: '變更未儲存，請重試。', voteRollback: '投票未儲存，已還原原本選擇。',
+    created: '投票已建立。', optionAdded: '候選項目已加入。', voterAdded: '投票者已加入。', finalized: '結果已套用至活動草稿；活動尚未發布。',
+    closed: '已關閉', emptyOwner: '尚未建立投票。建立後即可加入候選日期、地點與投票者。', empty: '目前沒有可用的投票。', create: '建立投票',
+    manage: '管理候選項目與投票者', dateCandidate: '候選日期與時間', locationCandidate: '候選地點', add: '加入', findVoter: '依顯示名稱尋找投票者',
+    search: '搜尋', addVoter: '加入 {name}', unnamed: '未命名使用者', eligibleCount: '目前有 {count} 位 eligible voter。', dates: '候選日期', locations: '候選地點',
+    noCandidates: '尚無候選項目。', finalize: '選定結果', finalDate: '最終日期與時間', finalLocation: '最終地點', choose: '請選擇',
+    chooseFinal: '請選擇每一類候選項目的最終結果。', aggregateOnly: '此處只顯示聚合票數，不會揭露個別投票者的選擇。', noVotes: '尚無人投票；你仍可選擇候選項目。',
+    confirmFinalize: '確定將選定結果套用至活動草稿並關閉投票嗎？這不會發布活動。', confirmAndFinalize: '確認並套用結果',
+  },
 } as const
 
 export default zhTW
