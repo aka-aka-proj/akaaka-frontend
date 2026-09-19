@@ -8,14 +8,15 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
   const wasDirty = useRef(false)
 
   useEffect(() => {
+    // Initial server/default fields are clean while a saved snapshot awaits a decision.
+    if (pending) return
     if (wasDirty.current && !dirty) {
-      const removed = removeSeriesDraft(key)
+      removeSeriesDraft(key)
       setPending(null)
-      setLocalCopy(removed ? null : false)
+      setLocalCopy(null)
     }
     wasDirty.current = dirty
   }, [key, dirty])
-
   useEffect(() => {
     if (!dirty) return
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -28,9 +29,9 @@ export function useSeriesDraftRecovery(key: string, dirty: boolean) {
     persist(fields: SeriesDraftFields, isDirty = true) {
       if (!isDirty) {
         if (wasDirty.current) {
-          const removed = removeSeriesDraft(key)
+          removeSeriesDraft(key)
           setPending(null)
-          setLocalCopy(removed ? null : false)
+          setLocalCopy(null)
         }
         return
       }

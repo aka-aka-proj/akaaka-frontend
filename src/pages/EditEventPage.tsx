@@ -539,6 +539,13 @@ export function EditEventPage() {
         </section>
         <section className={layoutStyles.section} aria-labelledby="edit-time-location-title">
           <div className={layoutStyles.sectionHeading}><h2 id="edit-time-location-title">{t('createEvent.timeLocationSection')}</h2><span>2</span></div>
+        {isDraft ? (
+          <p>
+            <Link to={`/events/${id}/scheduling-poll`} className={layoutStyles.secondaryAction}>
+              {t('schedulingPoll.openManager')}
+            </Link>
+          </p>
+        ) : null}
         <label className="form-field">
           <span className="form-label-row">
             <Icon href="/form-icons.svg" name="form-calendar" size={16} /> {t('editEvent.startTimeLabel')}

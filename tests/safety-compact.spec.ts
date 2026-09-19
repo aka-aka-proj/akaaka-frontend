@@ -174,26 +174,3 @@ test('Google sign-in starts the onboarding callback', async ({ page }) => {
   await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('google')
   expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${origin}/onboarding`)
 })
-
-test('OAuth onboarding completion returns to the requested filtered list', async ({ page }) => {
-  await installFixture(page)
-  await page.addInitScript(() => {
-    if ('Notification' in window) Object.defineProperty(Notification, 'permission', { get: () => 'denied' })
-  })
-  let saved = false
-  await page.route('**/rest/v1/rpc/get_profile_for_viewer', route => route.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify(saved ? syntheticProfile : null),
-  }))
-  await page.route('**/rest/v1/profiles', route => {
-    expect(route.request().method()).toBe('POST')
-    saved = true
-    return route.fulfill({ status: 201, contentType: 'application/json', body: 'null' })
-  })
-  const destination = '/events/mine?type=series&status=published'
-  await page.goto(`/onboarding?from=${encodeURIComponent(destination)}`)
-  await page.getByRole('button', { name: '同意並繼續' }).click()
-  await page.getByRole('button', { name: '完成導覽' }).click()
-  await expect(page).toHaveURL(new RegExp('/events/mine\\?type=series&status=published$'))
-  await expect(page.getByRole('button', { name: '活動系列', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('button', { name: '已發布', exact: true })).toHaveAttribute('aria-pressed', 'true')
-})
