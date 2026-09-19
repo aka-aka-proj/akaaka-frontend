@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnboardingPage } from './OnboardingPage'
+
+function LocationProbe() {
+  const location = useLocation()
+  return <output data-testid="location">{location.pathname}{location.search}</output>
+}
 
 const mockUseAuth = vi.fn()
 const insert = vi.fn()
@@ -204,4 +209,33 @@ describe('OnboardingPage', () => {
     expect(screen.queryByRole('button', { name: '完成導覽' })).toBeNull()
     expect(screen.queryByLabelText('顯示名稱')).toBeNull()
   })
+  it.each(['unsupported', 'skip', 'accept'])('preserves OAuth query source after %s Push completion without navigation state', async (mode) => {
+    getWebPushState.mockResolvedValue(mode === 'unsupported' ? 'unsupported' : 'unsubscribed')
+    const destination = '/events/mine?type=series&status=published'
+    const user = userEvent.setup()
+    render(<MemoryRouter initialEntries={[`/onboarding?from=${encodeURIComponent(destination)}`]}>
+      <OnboardingPage /><LocationProbe />
+    </MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    if (mode !== 'unsupported') await user.click(screen.getByRole('button', { name: mode === 'skip' ? '稍後到通知設定' : '開啟通知' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(destination))
+    expect(refreshProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { query: '/events/mine?type=series&status=published', state: '/events?category=old', expected: '/events/mine?type=series&status=published' },
+    { query: null, state: '/events/mine?type=events&status=draft', expected: '/events/mine?type=events&status=draft' },
+    { query: null, state: null, expected: '/events' },
+  ])('uses consistent return-source precedence: $expected', async ({ query, state, expected }) => {
+    getWebPushState.mockResolvedValue('unsupported')
+    const user = userEvent.setup()
+    render(<MemoryRouter initialEntries={[{ pathname: '/onboarding', search: query ? `?from=${encodeURIComponent(query)}` : '', state: state ? { from: state } : null }]}>
+      <OnboardingPage /><LocationProbe />
+    </MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(expected))
+  })
+
 })
