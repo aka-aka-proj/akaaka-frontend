@@ -1345,6 +1345,17 @@ availableSlots: 'Available',
     hangOut: 'Hang Out',
     urgentOne: 'Urgent One',
   },
+  schedulingPoll: {
+    title: 'Date and location poll', open: 'Open date and location poll', openManager: 'Manage date and location poll', permissionDenied: 'You do not have permission to view this poll.',
+    loadError: 'The poll could not be loaded. Please try again.', mutationError: 'Your change was not saved. Please try again.', voteRollback: 'Your vote was not saved and the previous selection was restored.',
+    created: 'Poll created.', optionAdded: 'Candidate added.', voterAdded: 'Eligible voter added.', finalized: 'The result was applied to the event draft. The event is not published.',
+    closed: 'Closed', emptyOwner: 'No poll exists yet. Create one to add candidates and eligible voters.', empty: 'No poll is available.', create: 'Create poll',
+    manage: 'Manage candidates and voters', dateCandidate: 'Candidate date and time', locationCandidate: 'Candidate location', add: 'Add', findVoter: 'Find a voter by display name',
+    search: 'Search', addVoter: 'Add {name}', unnamed: 'Unnamed user', eligibleCount: '{count} eligible voters.', dates: 'Candidate dates', locations: 'Candidate locations',
+    noCandidates: 'No candidates yet.', finalize: 'Choose the result', finalDate: 'Final date and time', finalLocation: 'Final location', choose: 'Choose',
+    chooseFinal: 'Choose a final result for each candidate type.', aggregateOnly: 'Only aggregate counts are shown; individual ballots stay private.', noVotes: 'No one has voted yet. You can still choose a candidate.',
+    confirmFinalize: 'Apply these results to the event draft and close the poll? This will not publish the event.', confirmAndFinalize: 'Confirm and apply results',
+  },
 } as const
 
 export default en
