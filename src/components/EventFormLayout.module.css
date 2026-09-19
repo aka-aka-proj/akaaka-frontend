@@ -2,7 +2,7 @@
   width: 100%;
   align-self: center;
   margin-inline: auto;
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--touch-target) + (var(--space-5) * 2) + env(safe-area-inset-bottom, 0px));
 }
 
 .header {
@@ -94,7 +94,10 @@
   color: var(--color-text-muted);
   font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
 }
-.actionBar > span:global(.message) { color: var(--color-danger); }
+.actionBar > span:global(.message),
+.actionBar > span[role='alert'] {
+  color: var(--color-danger);
+}
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .actions > :global(button), .actions > :global(a) {
   box-sizing: border-box;
@@ -168,11 +171,13 @@
 }
 
 @media (max-width: 639px) {
-  .form { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  .form {
+    padding-bottom: calc(var(--touch-target) + (var(--space-4) * 2) + env(safe-area-inset-bottom, 0px));
+  }
   .header { flex-direction: column; }
   .section { padding: var(--space-4); }
   .actionBar {
-    bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc((var(--touch-target) + var(--space-3)) + env(safe-area-inset-bottom, 0px));
     flex-direction: row;
     align-items: center;
     gap: var(--space-2);
@@ -181,23 +186,10 @@
     padding: var(--space-2) var(--space-4);
   }
   .actionBar > span { flex: 1 1 auto; }
-  .actions { flex: 0 0 auto; flex-wrap: nowrap; }
+  .actions { flex: 0 1 auto; flex-wrap: nowrap; }
   .actions > :global(button), .actions > :global(a) {
     min-width: 0;
     padding-inline: var(--space-3);
-  }
-}
-
-@media (max-width: 420px) {
-  .actionBar > span:not(:global(.message)) { display: none; }
-  .actions { width: 100%; }
-  .actions > :global(button), .actions > :global(a) { flex: 1 1 0; }
-}
-
-@media (max-height: 560px) and (max-width: 639px) {
-  .actionBar {
-    position: static;
-    margin-top: var(--space-4);
   }
 }
 
