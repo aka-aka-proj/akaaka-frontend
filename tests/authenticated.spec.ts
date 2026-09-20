@@ -264,6 +264,68 @@ test.describe('authenticated synthetic route boundary', () => {
     await page.screenshot({ path: testInfo.outputPath('draft-resumed.png'), fullPage: true })
   })
 
+  for (const locale of ['en', 'zh-TW']) {
+    test(`explains blocking before and after profile actions (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
+      const mutations: string[] = []
+      await page.route('**/rest/v1/blocks*', async (route) => {
+        const method = route.request().method()
+        if (method !== 'GET') mutations.push(method)
+        await route.fulfill({
+          status: method === 'GET' ? 200 : 204,
+          contentType: 'application/json',
+          body: method === 'GET' ? 'null' : '',
+        })
+      })
+      await gotoAuthenticatedRoute(page, '/profile/synthetic-profile')
+      const summary = page.locator('summary').filter({ hasText: /How blocking works|封鎖功能說明/ })
+      const help = page.locator('details').filter({ has: summary })
+      await expect(summary).toBeVisible()
+      const summaryBox = await summary.boundingBox()
+      expect(summaryBox!.height).toBeGreaterThanOrEqual(44)
+      await expect(help).not.toHaveAttribute('open', '')
+      await summary.focus()
+      await page.keyboard.press('Enter')
+      await expect(help).toHaveAttribute('open', '')
+      await expect(help.getByRole('listitem')).toHaveCount(5)
+      await expect(help).toContainText(locale === 'en'
+        ? 'Existing registrations and follows are not cancelled automatically.'
+        : '既有報名與追蹤不會自動取消。')
+      expect(mutations).toEqual([])
+      // Check the changed content itself; the shared English header has a
+      // separately tracked WebKit overflow independent of this disclosure.
+      const helpBounds = await help.evaluate((element) => ({
+        left: element.getBoundingClientRect().left,
+        right: element.getBoundingClientRect().right,
+        width: element.clientWidth,
+        contentWidth: element.scrollWidth,
+        viewport: window.innerWidth,
+      }))
+      expect(helpBounds.left).toBeGreaterThanOrEqual(0)
+      expect(helpBounds.right).toBeLessThanOrEqual(helpBounds.viewport)
+      expect(helpBounds.contentWidth).toBeLessThanOrEqual(helpBounds.width)
+      const results = await new AxeBuilder({ page }).include('details').analyze()
+      expect(results.violations).toEqual([])
+      await testInfo.attach(`block-help-${locale}`, {
+        body: await page.screenshot({ path: testInfo.outputPath(`block-help-${locale}.png`), fullPage: true }), contentType: 'image/png',
+      })
+
+      const more = page.getByRole('button', { name: /More options|更多選項/ })
+      await more.click()
+      await page.getByRole('menuitem', { name: /^Block user$|^封鎖用戶$/ }).click()
+      await expect(page.getByText(/User blocked\.|已封鎖用戶。/)).toBeVisible()
+      await expect(summary).toBeVisible()
+      await more.click()
+      await page.getByRole('menuitem', { name: /^Unblock user$|^取消封鎖用戶$/ }).click()
+      await expect(page.getByText(/User unblocked\.|已取消封鎖用戶。/)).toBeVisible()
+      expect(mutations).toEqual(['POST', 'DELETE'])
+      await summary.focus()
+      await page.keyboard.press('Space')
+      await expect(help).not.toHaveAttribute('open', '')
+      await expect(summary).toBeFocused()
+    })
+  }
+
   for (const route of authenticatedRoutes) {
     test(`keeps protected route authenticated: ${route}`, async ({ page }) => {
         await gotoAuthenticatedRoute(page, route)

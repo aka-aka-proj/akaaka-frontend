@@ -1,0 +1,33 @@
+.blockHelp {
+  margin-block: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-body-weight);
+  overflow-wrap: anywhere;
+}
+
+.blockHelp summary {
+  box-sizing: border-box;
+  min-height: var(--touch-target);
+  padding-block: var(--space-2);
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: var(--type-label-weight);
+}
+
+.blockHelp summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.blockHelp ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.blockHelp li + li {
+  margin-block-start: var(--space-2);
+}
