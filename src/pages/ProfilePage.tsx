@@ -12,6 +12,7 @@ import { supabase } from '../supabaseClient'
 import { getSocialIdentityRedirect, getSocialVerificationPlatform, type VerifiableSocialPlatform } from '../lib/social-identity'
 import type { Profile } from '../types'
 import type { UserIdentity } from '@supabase/supabase-js'
+import styles from './ProfilePage.module.css'
 
 function maskEmail(email: string | undefined) {
   if (!email) return ''
@@ -572,6 +573,18 @@ export function ProfilePage() {
                 <Icon href="/badge-icons.svg" name={`badge-${profile.role_status}`} size={20} />
                 <span className="role-badge">{t('profile.role')}: {profile.role_status}</span>
               </p>
+              {!isOwner && (
+                <details className={styles.blockHelp}>
+                  <summary>{t('profile.blockHelpTitle')}</summary>
+                  <ul>
+                    <li>{t('profile.blockHelpEvents')}</li>
+                    <li>{t('profile.blockHelpMessages')}</li>
+                    <li>{t('profile.blockHelpExisting')}</li>
+                    <li>{t('profile.blockHelpUnblock')}</li>
+                    <li>{t('profile.blockHelpVisibility')}</li>
+                  </ul>
+                </details>
+              )}
               {isOwner && profile.role_status !== 'venue_approved' ? (
                 <section className="venue-application-card" aria-labelledby="venue-application-heading">
                   <h3 id="venue-application-heading">{t('profile.venueApplicationHeading')}</h3>
