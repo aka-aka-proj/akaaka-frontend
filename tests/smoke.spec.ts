@@ -92,6 +92,11 @@ test.describe('public event discovery', () => {
   test('matches the reviewed anonymous authentication-boundary visual baseline', async ({ page }, testInfo) => {
     test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name), 'Visual baseline is intentionally limited to reviewed Chromium states')
     test.skip(Boolean(process.env.PLAYWRIGHT_BASE_URL), 'External CAPTCHA widgets are excluded from deterministic visual baselines; production runs keep functional and axe coverage')
+    // Keep the reviewed mobile baseline independent of Playwright device descriptor changes.
+    // The committed baseline is 396px wide; newer Pixel 5 descriptors report 393px.
+    if (testInfo.project.name === 'chromium-mobile') {
+      await page.setViewportSize({ width: 396, height: 851 })
+    }
     await page.addInitScript(() => localStorage.setItem('akaaka-locale', 'en'))
     await page.goto('/events')
     await expect(page.getByRole('heading', { name: /登入|sign in/i })).toBeVisible()
