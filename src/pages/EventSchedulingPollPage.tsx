@@ -108,6 +108,17 @@ export function EventSchedulingPollPage() {
     if (!result.error) setProfileResults(((result.data ?? []) as ProfileResult[]).filter((profile) => profile.id !== user?.id))
   }
   const addVoter = (profile: ProfileResult) => poll && run(() => supabase.from('event_scheduling_poll_voters').insert({ poll_id: poll.id, profile_id: profile.id }), t('schedulingPoll.voterAdded'))
+  const resetVotes = async () => {
+    if (!poll || busy) return
+    const prompt = locale === 'zh-TW'
+      ? '確定要清空所有既有投票嗎？此操作無法復原，所有符合資格的投票者都需要重新投票。'
+      : 'Clear all existing votes? This cannot be undone, and every eligible voter will need to vote again.'
+    if (!window.confirm(prompt)) return
+    await run(
+      () => supabase.rpc('reset_event_scheduling_poll_votes', { p_poll_id: poll.id }),
+      locale === 'zh-TW' ? '所有投票已清空，投票仍保持開放。' : 'All votes were cleared. Voting remains open.',
+    )
+  }
   const finalize = async () => {
     if (!poll || (dates.length > 0 && !chosenDate) || (locations.length > 0 && !chosenLocation)) { setError(t('schedulingPoll.chooseFinal')); return }
     if (!window.confirm(t('schedulingPoll.confirmFinalize'))) return
@@ -122,7 +133,7 @@ export function EventSchedulingPollPage() {
     {!poll && isOwner && event?.lifecycle_status === 'draft' ? <section className={styles.section}><p>{t('schedulingPoll.emptyOwner')}</p><button className={styles.button} disabled={busy} onClick={createPoll}>{t('schedulingPoll.create')}</button></section> : null}
     {!poll && !isOwner ? <section className={styles.section}><p>{t('schedulingPoll.empty')}</p></section> : null}
     {poll ? <>
-      {isOwner && poll.status === 'open' ? <section className={styles.section}><h2>{t('schedulingPoll.manage')}</h2><div className={styles.row}><label>{t('schedulingPoll.dateCandidate')}<input type="datetime-local" value={candidateDate} onChange={(e) => setCandidateDate(e.target.value)} /></label><button className={styles.button} disabled={busy || !candidateDate} onClick={addDate}>{t('schedulingPoll.add')}</button></div><div className={styles.row}><label>{t('schedulingPoll.locationCandidate')}<input maxLength={200} value={candidateLocation} onChange={(e) => setCandidateLocation(e.target.value)} /></label><button className={styles.button} disabled={busy || !candidateLocation.trim()} onClick={addLocation}>{t('schedulingPoll.add')}</button></div><div className={styles.row}><label>{t('schedulingPoll.findVoter')}<input value={profileQuery} onChange={(e) => setProfileQuery(e.target.value)} /></label><button className={styles.button} onClick={searchProfiles}>{t('schedulingPoll.search')}</button></div>{profileResults.map((profile) => <button className={styles.button} key={profile.id} onClick={() => addVoter(profile)}>{t('schedulingPoll.addVoter', { name: profile.display_name || t('schedulingPoll.unnamed') })}</button>)}<p className={styles.message}>{t('schedulingPoll.eligibleCount', { count: voters.length })}</p></section> : null}
+      {isOwner && poll.status === 'open' ? <section className={styles.section}><h2>{t('schedulingPoll.manage')}</h2><div className={styles.row}><label>{t('schedulingPoll.dateCandidate')}<input type="datetime-local" value={candidateDate} onChange={(e) => setCandidateDate(e.target.value)} /></label><button className={styles.button} disabled={busy || !candidateDate} onClick={addDate}>{t('schedulingPoll.add')}</button></div><div className={styles.row}><label>{t('schedulingPoll.locationCandidate')}<input maxLength={200} value={candidateLocation} onChange={(e) => setCandidateLocation(e.target.value)} /></label><button className={styles.button} disabled={busy || !candidateLocation.trim()} onClick={addLocation}>{t('schedulingPoll.add')}</button></div><div className={styles.row}><label>{t('schedulingPoll.findVoter')}<input value={profileQuery} onChange={(e) => setProfileQuery(e.target.value)} /></label><button className={styles.button} onClick={searchProfiles}>{t('schedulingPoll.search')}</button></div>{profileResults.map((profile) => <button className={styles.button} key={profile.id} onClick={() => addVoter(profile)}>{t('schedulingPoll.addVoter', { name: profile.display_name || t('schedulingPoll.unnamed') })}</button>)}<p className={styles.message}>{t('schedulingPoll.eligibleCount', { count: voters.length })}</p><div className={styles.actions}><button className={styles.button} disabled={busy} onClick={resetVotes}>{locale === 'zh-TW' ? '清空所有投票' : 'Clear all votes'}</button></div></section> : null}
       <PollOptions title={t('schedulingPoll.dates')} options={dates} counts={counts} votes={myVotes} pendingVotes={pendingVotes} readOnly={poll.status === 'closed' || isOwner} formatDate={formatDate} onToggle={toggleVote} />
       <PollOptions title={t('schedulingPoll.locations')} options={locations} counts={counts} votes={myVotes} pendingVotes={pendingVotes} readOnly={poll.status === 'closed' || isOwner} formatDate={formatDate} onToggle={toggleVote} />
       {options.length === 0 ? <section className={styles.section}><p>{t('schedulingPoll.noCandidates')}</p></section> : null}
