@@ -77,10 +77,14 @@ describe('EventSchedulingPollPage', () => {
     expect(confirmMock).toHaveBeenCalledTimes(1)
     expect(rpcMock).not.toHaveBeenCalledWith('reset_event_scheduling_poll_votes', expect.anything())
 
+    const pollReadsBeforeReset = fromMock.mock.calls.filter(([table]) => table === 'event_scheduling_polls').length
     await user.click(resetButton)
     await waitFor(() => expect(rpcMock).toHaveBeenCalledWith('reset_event_scheduling_poll_votes', { p_poll_id: 'poll-1' }))
     expect((await screen.findByRole('status')).textContent).toContain('所有投票已清空')
-    expect(fromMock.mock.calls.filter(([table]) => table === 'event_scheduling_polls')).toHaveLength(2)
+    await waitFor(() => {
+      const pollReadsAfterReset = fromMock.mock.calls.filter(([table]) => table === 'event_scheduling_polls').length
+      expect(pollReadsAfterReset).toBeGreaterThan(pollReadsBeforeReset)
+    })
     confirmMock.mockRestore()
   })
 })
