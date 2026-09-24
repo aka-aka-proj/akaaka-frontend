@@ -61,13 +61,7 @@ type VoteRow = { option_id: string }
 type ResultRow = { option_id: string; vote_count: number | string }
 
 function mapPoll(row: PollRow): SchedulingPoll {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    creatorId: row.creator_id,
-    status: row.status,
-    closedAt: row.closed_at,
-  }
+  return { id: row.id, eventId: row.event_id, creatorId: row.creator_id, status: row.status, closedAt: row.closed_at }
 }
 
 function mapOption(row: OptionRow): SchedulingPollOption {
@@ -89,8 +83,12 @@ export function validateSchedulingPollCandidates(candidates: SchedulingPollCandi
       if (!candidate.startsAt || candidate.locationLabel) {
         throw new Error('Datetime candidates require startsAt and cannot include locationLabel.')
       }
-    } else if (!candidate.locationLabel?.trim() || candidate.startsAt) {
-      throw new Error('Location candidates require locationLabel and cannot include startsAt.')
+      continue
+    }
+
+    const locationLabel = candidate.locationLabel?.trim() ?? ''
+    if (!locationLabel || locationLabel.length > 200 || candidate.startsAt) {
+      throw new Error('Location candidates require a 1-200 character locationLabel and cannot include startsAt.')
     }
   }
 }
@@ -104,7 +102,6 @@ export async function loadSchedulingPollForEvent(
     .select('id,event_id,creator_id,status,closed_at')
     .eq('event_id', eventId)
     .maybeSingle()
-
   if (pollError) throw pollError
   if (!pollData) return null
 
@@ -115,22 +112,19 @@ export async function loadSchedulingPollForEvent(
     supabase.from('event_scheduling_poll_votes').select('option_id').eq('poll_id', poll.id),
     supabase.rpc('get_event_scheduling_poll_results', { p_poll_id: poll.id }),
   ])
-
   if (optionsResponse.error) throw optionsResponse.error
   if (votersResponse.error) throw votersResponse.error
   if (votesResponse.error) throw votesResponse.error
   if (resultsResponse.error) throw resultsResponse.error
-
-  const voteCounts = Object.fromEntries(
-    ((resultsResponse.data ?? []) as ResultRow[]).map((row) => [row.option_id, Number(row.vote_count)]),
-  )
 
   return {
     poll,
     options: ((optionsResponse.data ?? []) as OptionRow[]).map(mapOption),
     eligibleVoterIds: ((votersResponse.data ?? []) as VoterRow[]).map((row) => row.profile_id),
     selectedOptionIds: ((votesResponse.data ?? []) as VoteRow[]).map((row) => row.option_id),
-    voteCounts,
+    voteCounts: Object.fromEntries(
+      ((resultsResponse.data ?? []) as ResultRow[]).map((row) => [row.option_id, Number(row.vote_count)]),
+    ),
   }
 }
 
@@ -170,7 +164,6 @@ export async function createSchedulingPoll(
     )
     if (voterError) throw voterError
   }
-
   return pollId
 }
 
@@ -180,16 +173,11 @@ export async function replaceMySchedulingPollVotes(
   profileId: string,
   optionIds: string[],
 ) {
-  const { error: deleteError } = await supabase
-    .from('event_scheduling_poll_votes')
-    .delete()
-    .eq('poll_id', pollId)
-    .eq('profile_id', profileId)
+  const { error: deleteError } = await supabase.from('event_scheduling_poll_votes').delete().eq('poll_id', pollId).eq('profile_id', profileId)
   if (deleteError) throw deleteError
 
   const uniqueOptionIds = [...new Set(optionIds)]
   if (uniqueOptionIds.length === 0) return
-
   const { error: insertError } = await supabase.from('event_scheduling_poll_votes').insert(
     uniqueOptionIds.map((optionId) => ({ poll_id: pollId, option_id: optionId, profile_id: profileId })),
   )
