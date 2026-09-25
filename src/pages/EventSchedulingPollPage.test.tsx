@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventSchedulingPollPage } from './EventSchedulingPollPage'
 
 const fromMock = vi.fn()
@@ -33,6 +33,11 @@ function renderPage() {
 }
 
 describe('EventSchedulingPollPage', () => {
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
   beforeEach(() => {
     insertMock.mockClear()
     rpcMock.mockReset()
@@ -87,7 +92,6 @@ describe('EventSchedulingPollPage', () => {
     await user.click(addLocationButton)
     await waitFor(() => expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ poll_id: 'poll-1', kind: 'location', location_label: '台北車站' })))
     expect(confirmMock).toHaveBeenCalledTimes(2)
-    confirmMock.mockRestore()
   })
 
   it('refreshes vote counts before configuration mutation to catch votes added by another session', async () => {
@@ -112,7 +116,6 @@ describe('EventSchedulingPollPage', () => {
     await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
     expect(resultReads).toBeGreaterThanOrEqual(2)
     expect(insertMock).not.toHaveBeenCalled()
-    confirmMock.mockRestore()
   })
 
   it('requires confirmation before an organizer resets all votes and reloads after success', async () => {
@@ -134,6 +137,5 @@ describe('EventSchedulingPollPage', () => {
       const pollReadsAfterReset = fromMock.mock.calls.filter(([table]) => table === 'event_scheduling_polls').length
       expect(pollReadsAfterReset).toBeGreaterThan(pollReadsBeforeReset)
     })
-    confirmMock.mockRestore()
   })
 })
