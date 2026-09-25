@@ -45,7 +45,7 @@ describe('EventSchedulingPollPage', () => {
         select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve(pollResult) }) }),
         insert: insertMock,
       }
-      if (table === 'event_scheduling_poll_options') return { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) }
+      if (table === 'event_scheduling_poll_options') return { select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }), insert: insertMock }
       if (table === 'event_scheduling_poll_votes') return { select: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) }) }
       if (table === 'event_scheduling_poll_voters') return { select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) }
       throw new Error(`Unexpected table ${table}`)
@@ -64,6 +64,30 @@ describe('EventSchedulingPollPage', () => {
     await user.click(await screen.findByRole('button', { name: '建立投票' }))
     await waitFor(() => expect(insertMock).toHaveBeenCalledWith({ event_id: 'event-1', creator_id: 'owner-1' }))
     expect((await screen.findByRole('status')).textContent).toContain('投票已建立。')
+  })
+
+  it('warns before a configuration change that would clear existing votes', async () => {
+    pollResult = { data: { id: 'poll-1', event_id: 'event-1', creator_id: 'owner-1', status: 'open', closed_at: null }, error: null }
+    rpcMock.mockImplementation((name: string) => Promise.resolve(name === 'get_event_scheduling_poll_results'
+      ? { data: [{ option_id: 'existing-option', vote_count: 2 }], error: null }
+      : { data: [], error: null }))
+    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    const user = userEvent.setup()
+    renderPage()
+
+    const locationInput = await screen.findByLabelText('候選地點')
+    await user.type(locationInput, '台北車站')
+    const addButtons = screen.getAllByRole('button', { name: '新增' })
+    const addLocationButton = addButtons[1]
+
+    await user.click(addLocationButton)
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(insertMock).not.toHaveBeenCalled()
+
+    await user.click(addLocationButton)
+    await waitFor(() => expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ poll_id: 'poll-1', kind: 'location', location_label: '台北車站' })))
+    expect(confirmMock).toHaveBeenCalledTimes(2)
+    confirmMock.mockRestore()
   })
 
   it('requires confirmation before an organizer resets all votes and reloads after success', async () => {
