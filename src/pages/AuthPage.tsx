@@ -21,6 +21,9 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 
 type SocialProvider = 'google' | 'facebook' | 'x'
 
+const safeReturnPath = (value: string | null | undefined) => value?.startsWith('/') && !value.startsWith('//') ? value : null
+const isAndroidStandalone = () => /Android/i.test(navigator.userAgent) && window.matchMedia?.('(display-mode: standalone)').matches === true
+
 export function AuthPage() {
   const { user } = useAuth()
   const location = useLocation()
@@ -90,11 +93,12 @@ export function AuthPage() {
     const params = new URLSearchParams(location.search)
     const fromQuery = params.get('from')
     const fromState = (location.state as { from?: string } | null)?.from
-    const from = fromQuery ?? fromState
-
-    const redirectTo = from
-      ? `${window.location.origin}/onboarding?from=${encodeURIComponent(from)}`
-      : `${window.location.origin}/onboarding`
+    const from = safeReturnPath(fromQuery ?? fromState)
+    const callbackParams = new URLSearchParams()
+    if (from) callbackParams.set('from', from)
+    if (provider === 'x' && isAndroidStandalone()) callbackParams.set('oauth_return', 'x_android_pwa')
+    const query = callbackParams.toString()
+    const redirectTo = `${window.location.origin}/onboarding${query ? `?${query}` : ''}`
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
