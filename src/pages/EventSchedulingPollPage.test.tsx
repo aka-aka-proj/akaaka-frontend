@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -76,7 +76,7 @@ describe('EventSchedulingPollPage', () => {
     renderPage()
 
     const locationInput = await screen.findByLabelText('候選地點')
-    await user.type(locationInput, '台北車站')
+    fireEvent.change(locationInput, { target: { value: '台北車站' } })
     const addButtons = screen.getAllByRole('button', { name: '新增' })
     const addLocationButton = addButtons[1]
 
