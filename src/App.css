@@ -444,26 +444,30 @@ button {
   font-weight: 700;
 }
 
-.onboarding-push-prompt {
+.onboarding-push-prompt,
+.onboarding-pwa-return {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   padding: 1.5rem;
 }
 
-.onboarding-push-prompt h1 {
+.onboarding-push-prompt h1,
+.onboarding-pwa-return h1 {
   margin: 0;
   color: var(--color-text-strong);
   letter-spacing: -0.02em;
 }
 
-.onboarding-push-prompt > p:not(.eyebrow):not(.message) {
+.onboarding-push-prompt > p:not(.eyebrow):not(.message),
+.onboarding-pwa-return > p:not(.eyebrow):not(.message) {
   margin: 0;
   color: var(--color-text-muted);
   line-height: 1.55;
 }
 
-.onboarding-push-actions {
+.onboarding-push-actions,
+.onboarding-pwa-return-actions {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -4553,4 +4557,14 @@ dd {
   display: flex;
   justify-content: flex-end;
   padding: 0.5rem 0 0;
+}
+
+.onboarding-pwa-return {
+  max-width: 36rem;
+  margin-inline: auto;
+}
+
+.onboarding-pwa-return-actions button {
+  min-height: 2.75rem;
+  width: 100%;
 }
