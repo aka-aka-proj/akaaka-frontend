@@ -12,7 +12,7 @@ let eventResult: { data: Record<string, unknown> | null; error: { message: strin
 let pollResult: { data: Record<string, unknown> | null; error: { message: string } | null }
 
 vi.mock('../components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <>{children}</> }))
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'owner-1' } }) }))
+vi.mock('../context/AuthContext', () => { const user = { id: 'owner-1' }; return { useAuth: () => ({ user }) } })
 vi.mock('../hooks/useT', () => {
   const t = (key: string) => ({
     'common.back': '返回上一頁', 'common.loading': '載入中...', 'schedulingPoll.title': '日期／地點投票',
