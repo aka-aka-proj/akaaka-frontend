@@ -9,6 +9,7 @@ const signInWithPassword = vi.fn()
 const signUp = vi.fn()
 const resend = vi.fn()
 const resetPasswordForEmail = vi.fn()
+const signInWithOAuth = vi.fn()
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -21,6 +22,7 @@ vi.mock('../supabaseClient', () => ({
       signUp: (...args: unknown[]) => signUp(...args),
       resend: (...args: unknown[]) => resend(...args),
       resetPasswordForEmail: (...args: unknown[]) => resetPasswordForEmail(...args),
+      signInWithOAuth: (...args: unknown[]) => signInWithOAuth(...args),
     },
   },
 }))
@@ -38,6 +40,8 @@ describe('AuthPage', () => {
     signUp.mockResolvedValue({ error: null })
     resend.mockResolvedValue({ error: null })
     resetPasswordForEmail.mockResolvedValue({ error: null })
+    signInWithOAuth.mockReset()
+    signInWithOAuth.mockResolvedValue({ error: null })
     vi.useRealTimers()
   })
 
@@ -64,6 +68,34 @@ describe('AuthPage', () => {
       email: 'test@example.com',
       password: 'password123',
       options: { captchaToken: 'test-turnstile-token' },
+    })
+  })
+
+  it('marks X OAuth callbacks only for Android standalone PWA', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
+    render(<MemoryRouter initialEntries={['/auth?from=%2Fevents%2Fmine']}><AuthPage /></MemoryRouter>)
+
+    await user.click(screen.getByRole('button', { name: '使用 X 繼續' }))
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'x',
+      options: { redirectTo: expect.stringMatching(/\/onboarding\?.*from=%2Fevents%2Fmine.*oauth_return=x_android_pwa/) },
+    })
+  })
+
+  it('does not mark Google OAuth callbacks in Android standalone PWA', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    await user.click(screen.getByRole('button', { name: '使用 Google 繼續' }))
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: expect.not.stringContaining('oauth_return=') },
     })
   })
 
