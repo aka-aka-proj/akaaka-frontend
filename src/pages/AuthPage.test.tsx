@@ -47,6 +47,7 @@ describe('AuthPage', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     vi.unstubAllEnvs()
   })
 
@@ -74,7 +75,7 @@ describe('AuthPage', () => {
 
   it('marks X OAuth callbacks only for Android standalone PWA', async () => {
     const user = userEvent.setup()
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true } as MediaQueryList))
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
     render(<MemoryRouter initialEntries={['/auth?from=%2Fevents%2Fmine']}><AuthPage /></MemoryRouter>)
 
@@ -88,7 +89,7 @@ describe('AuthPage', () => {
 
   it('does not mark Google OAuth callbacks in Android standalone PWA', async () => {
     const user = userEvent.setup()
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true } as MediaQueryList))
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
