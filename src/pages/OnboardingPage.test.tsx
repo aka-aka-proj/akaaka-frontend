@@ -77,6 +77,26 @@ describe('OnboardingPage', () => {
     HTMLDialogElement.prototype.close = origClose
   })
 
+  it('shows X OAuth return guidance for an existing profile outside standalone mode', async () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: false } as MediaQueryList)
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
+    render(<MemoryRouter initialEntries={['/onboarding?oauth_return=x_android_pwa&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
+
+    expect(screen.getByRole('heading', { name: '返回已安裝的 AkaAka' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '開啟 AkaAka App' })).toBeTruthy()
+    await userEvent.setup().click(screen.getByRole('button', { name: '繼續目前視窗' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+  })
+
+  it('skips X OAuth return guidance when callback already opens in standalone mode', async () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
+    render(<MemoryRouter initialEntries={['/onboarding?oauth_return=x_android_pwa&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+    expect(screen.queryByRole('heading', { name: '返回已安裝的 AkaAka' })).toBeNull()
+  })
+
   it('shows safety compact modal automatically on mount', () => {
     render(
       <MemoryRouter>
