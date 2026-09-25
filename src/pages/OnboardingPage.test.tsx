@@ -74,12 +74,13 @@ describe('OnboardingPage', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     HTMLDialogElement.prototype.showModal = origShowModal
     HTMLDialogElement.prototype.close = origClose
   })
 
   it('shows X OAuth return guidance for an existing profile outside standalone mode', async () => {
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: false } as MediaQueryList)
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false } as MediaQueryList))
     mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
     render(<MemoryRouter initialEntries={['/onboarding?oauth_return=x_android_pwa&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
 
@@ -90,7 +91,7 @@ describe('OnboardingPage', () => {
   })
 
   it('skips X OAuth return guidance when callback already opens in standalone mode', async () => {
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true } as MediaQueryList))
     mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
     render(<MemoryRouter initialEntries={['/onboarding?oauth_return=x_android_pwa&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
 
