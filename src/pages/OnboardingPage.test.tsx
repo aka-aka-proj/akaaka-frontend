@@ -105,6 +105,17 @@ describe('OnboardingPage', () => {
     expect(insert).not.toHaveBeenCalled()
   })
 
+  it.each([
+    '?pwa_return=1&error=access_denied',
+    '?pwa_return=1&error_code=oauth_state_mismatch',
+    '?pwa_return=1&error_description=PKCE%20verification%20failed',
+  ])('does not show success for a failed callback even with an existing session: %s', (search) => {
+    androidMode()
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
+    render(<MemoryRouter initialEntries={[`/onboarding${search}`]}><OnboardingPage /></MemoryRouter>)
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
+  })
+
   it('skips the handoff when already inside the standalone PWA', () => {
     androidMode(true)
     render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1']}><OnboardingPage /></MemoryRouter>)
