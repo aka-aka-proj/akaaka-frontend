@@ -11,6 +11,9 @@ import { enableWebPush, getWebPushState } from '../lib/web-push'
 import { supabase } from '../supabaseClient'
 import type { BdsmRole, GenderIdentity, Visibility } from '../types'
 
+const safeReturnPath = (value: string | null | undefined) => value?.startsWith('/') && !value.startsWith('//') ? value : null
+const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches === true
+
 export function OnboardingPage() {
   const { user, profile, refreshProfile } = useAuth()
   const navigate = useNavigate()
@@ -33,20 +36,39 @@ export function OnboardingPage() {
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
+  const params = new URLSearchParams(location.search)
+  const showXReturnPanel = profile && params.get('oauth_return') === 'x_android_pwa' && !isStandalone()
 
   const getReturnPath = () => {
-    const fromQuery = new URLSearchParams(location.search).get('from')
-    const fromState = (location.state as { from?: string } | null)?.from
+    const fromQuery = safeReturnPath(new URLSearchParams(location.search).get('from'))
+    const fromState = safeReturnPath((location.state as { from?: string } | null)?.from)
     return fromQuery ?? fromState ?? '/events'
   }
 
   useEffect(() => {
-    if (profile) navigate(getReturnPath(), { replace: true })
-  }, [profile, navigate, location.search, location.state])
+    if (profile && !showXReturnPanel) navigate(getReturnPath(), { replace: true })
+  }, [profile, showXReturnPanel, navigate, location.search, location.state])
 
   useEffect(() => {
     if (agreed) headingRef.current?.focus()
   }, [agreed])
+
+  if (showXReturnPanel) {
+    const returnPath = getReturnPath()
+    const callback = new URL('/onboarding', window.location.origin)
+    callback.searchParams.set('from', returnPath)
+    const intentUrl = `intent://${callback.host}${callback.pathname}${callback.search}#Intent;scheme=${callback.protocol.replace(':', '')};end`
+    return <Layout><section className="card onboarding-pwa-return" aria-labelledby="pwa-return-title">
+      <p className="eyebrow">{t('onboarding.pwaReturnEyebrow')}</p>
+      <h1 id="pwa-return-title">{t('onboarding.pwaReturnTitle')}</h1>
+      <p>{t('onboarding.pwaReturnDescription')}</p>
+      <div className="onboarding-pwa-return-actions">
+        <button type="button" className="primary" onClick={() => { window.location.href = intentUrl }}>{t('onboarding.pwaReturnOpenApp')}</button>
+        <button type="button" className="secondary" onClick={() => navigate(returnPath, { replace: true })}>{t('onboarding.pwaReturnContinueBrowser')}</button>
+      </div>
+      <p className="form-help">{t('onboarding.pwaReturnManual')}</p>
+    </section></Layout>
+  }
 
   if (profile) return null
 
