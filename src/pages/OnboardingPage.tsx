@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { SafetyCompactModal } from '../components/SafetyCompactModal'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
+import { PwaOAuthReturn } from '../components/PwaOAuthReturn'
+import { buildPwaReturnLinks, isStandaloneDisplay } from '../lib/pwa-oauth-return'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { PRESET_AVATAR_PATHS } from '../lib/profile'
@@ -33,20 +35,27 @@ export function OnboardingPage() {
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
+  const showPwaReturn = Boolean(user) && /Android/i.test(navigator.userAgent) &&
+    !isStandaloneDisplay() && new URLSearchParams(location.search).get('pwa_return') === '1'
 
-  const getReturnPath = () => {
-    const fromQuery = new URLSearchParams(location.search).get('from')
-    const fromState = (location.state as { from?: string } | null)?.from
-    return fromQuery ?? fromState ?? '/events'
-  }
+  const fromQuery = new URLSearchParams(location.search).get('from')
+  const fromState = (location.state as { from?: string } | null)?.from
+  const returnPath = fromQuery ?? fromState ?? '/events'
 
   useEffect(() => {
-    if (profile) navigate(getReturnPath(), { replace: true })
-  }, [profile, navigate, location.search, location.state])
+    if (profile && !showPwaReturn) navigate(returnPath, { replace: true })
+  }, [profile, showPwaReturn, navigate, returnPath])
 
   useEffect(() => {
     if (agreed) headingRef.current?.focus()
   }, [agreed])
+
+  if (showPwaReturn) {
+    const links = buildPwaReturnLinks(window.location.origin, location.search)
+    return <Layout showPageBack={false}>
+      <PwaOAuthReturn intent={links.intent} onContinue={() => navigate(links.continuePath, { replace: true })} />
+    </Layout>
+  }
 
   if (profile) return null
 
@@ -75,7 +84,6 @@ export function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
-    const returnPath = getReturnPath()
     await refreshProfile()
     navigate(returnPath, { replace: true })
   }

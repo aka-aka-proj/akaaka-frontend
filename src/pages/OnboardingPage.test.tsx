@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnboardingPage } from './OnboardingPage'
 
@@ -73,8 +73,52 @@ describe('OnboardingPage', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     HTMLDialogElement.prototype.showModal = origShowModal
     HTMLDialogElement.prototype.close = origClose
+  })
+
+  function androidMode(standalone = false) {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Android Chrome')
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: standalone && query === '(display-mode: standalone)', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+  }
+
+  it('holds existing-profile navigation until the user chooses to continue', async () => {
+    androidMode()
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: '登入成功' })).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('location').textContent).toContain('pwa_return=1')
+    await userEvent.setup().click(screen.getByRole('button', { name: '繼續使用此視窗' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('returns a new user to the safety compact without creating a profile', async () => {
+    androidMode()
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: '登入成功' })).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await userEvent.setup().click(screen.getByRole('button', { name: '繼續使用此視窗' }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByTestId('location').textContent).toBe('/onboarding?from=%2Fevents%2Fmine')
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('skips the handoff when already inside the standalone PWA', () => {
+    androidMode(true)
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1']}><OnboardingPage /></MemoryRouter>)
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('does not treat the marker as proof of authentication', () => {
+    androidMode()
+    mockUseAuth.mockReturnValue({ user: null, refreshProfile })
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1']}><OnboardingPage /></MemoryRouter>)
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
   })
 
   it('shows safety compact modal automatically on mount', () => {
