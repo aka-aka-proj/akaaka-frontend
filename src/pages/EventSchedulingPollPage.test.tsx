@@ -13,19 +13,22 @@ let pollResult: { data: Record<string, unknown> | null; error: { message: string
 
 vi.mock('../components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <>{children}</> }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'owner-1' } }) }))
-vi.mock('../hooks/useT', () => ({ useT: () => ({ t: (key: string) => ({
-  'common.back': '返回上一頁', 'common.loading': '載入中...', 'schedulingPoll.title': '日期／地點投票',
-  'schedulingPoll.permissionDenied': '你沒有權限查看這個投票。',
-  'schedulingPoll.emptyOwner': '尚未建立投票。建立後即可加入候選日期、地點與投票者。',
-  'schedulingPoll.create': '建立投票', 'schedulingPoll.created': '投票已建立。',
-  'schedulingPoll.manage': '管理投票', 'schedulingPoll.dateCandidate': '候選日期',
-  'schedulingPoll.locationCandidate': '候選地點', 'schedulingPoll.findVoter': '尋找投票者',
-  'schedulingPoll.add': '新增', 'schedulingPoll.search': '搜尋', 'schedulingPoll.eligibleCount': '0 位符合資格的投票者',
-  'schedulingPoll.finalize': '確認結果', 'schedulingPoll.noVotes': '目前沒有投票',
-  'schedulingPoll.confirmAndFinalize': '確認並完成', 'schedulingPoll.choose': '請選擇',
-  'schedulingPoll.dates': '日期', 'schedulingPoll.locations': '地點', 'schedulingPoll.noCandidates': '尚無候選項目',
-  'schedulingPoll.mutationError': '操作失敗',
-}[key] ?? key), locale: 'zh-TW' }) }))
+vi.mock('../hooks/useT', () => {
+  const t = (key: string) => ({
+    'common.back': '返回上一頁', 'common.loading': '載入中...', 'schedulingPoll.title': '日期／地點投票',
+    'schedulingPoll.permissionDenied': '你沒有權限查看這個投票。',
+    'schedulingPoll.emptyOwner': '尚未建立投票。建立後即可加入候選日期、地點與投票者。',
+    'schedulingPoll.create': '建立投票', 'schedulingPoll.created': '投票已建立。',
+    'schedulingPoll.manage': '管理投票', 'schedulingPoll.dateCandidate': '候選日期',
+    'schedulingPoll.locationCandidate': '候選地點', 'schedulingPoll.findVoter': '尋找投票者',
+    'schedulingPoll.add': '新增', 'schedulingPoll.search': '搜尋', 'schedulingPoll.eligibleCount': '0 位符合資格的投票者',
+    'schedulingPoll.finalize': '確認結果', 'schedulingPoll.noVotes': '目前沒有投票',
+    'schedulingPoll.confirmAndFinalize': '確認並完成', 'schedulingPoll.choose': '請選擇',
+    'schedulingPoll.dates': '日期', 'schedulingPoll.locations': '地點', 'schedulingPoll.noCandidates': '尚無候選項目',
+    'schedulingPoll.mutationError': '操作失敗',
+  }[key] ?? key)
+  return { useT: () => ({ t, locale: 'zh-TW' }) }
+})
 vi.mock('../supabaseClient', () => ({ supabase: { from: (table: string) => fromMock(table), rpc: (...args: unknown[]) => rpcMock(...args) } }))
 
 function renderPage() {
