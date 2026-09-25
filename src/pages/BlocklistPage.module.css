@@ -1,0 +1,23 @@
+.page {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.page :global(.user-directory-item) {
+  flex-wrap: wrap;
+}
+
+.page :global(.user-directory-profile-copy) {
+  flex: 1 1 8rem;
+  overflow-wrap: anywhere;
+}
+
+.page a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+}
+
+.page button {
+  min-height: var(--touch-target);
+}

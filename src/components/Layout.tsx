@@ -28,6 +28,7 @@ const DESKTOP_MORE_ITEMS = [
   { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
   { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
   { to: '/settings/notifications', icon: 'nav-bell', labelKey: 'nav.notificationSettings' },
+  { to: '/settings/blocklist', icon: 'nav-shield', labelKey: 'blocklist.title' },
   { to: '/settings/security-privacy', icon: 'nav-lock', labelKey: 'nav.securityPrivacy' },
   { to: '/issues', icon: 'nav-flag', labelKey: 'nav.myIssues' },
   { to: '/reports/me', icon: 'nav-shield', labelKey: 'nav.myReports' },
@@ -36,8 +37,8 @@ const DESKTOP_MORE_ITEMS = [
 const DESKTOP_MORE_SECTIONS = [
   { labelKey: 'nav.activityGroup', items: DESKTOP_MORE_ITEMS.slice(0, 6) },
   { labelKey: 'nav.notificationsGroup', items: DESKTOP_MORE_ITEMS.slice(6, 8) },
-  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(8, 9) },
-  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(9, 11) },
+  { labelKey: 'nav.accountGroup', items: DESKTOP_MORE_ITEMS.slice(8, 10) },
+  { labelKey: 'nav.supportGroup', items: DESKTOP_MORE_ITEMS.slice(10, 12) },
 ] as const
 
 export function Layout({ children, showPageBack = true }: { children: ReactNode; showPageBack?: boolean }) {

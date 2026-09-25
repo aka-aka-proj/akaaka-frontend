@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useState } from 'react'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -181,6 +182,7 @@ export function SecurityPrivacyPage() {
 
   return (
     <Layout>
+      <section className="card"><h2>{t('blocklist.title')}</h2><p>{t('blocklist.description')}</p><Link to="/settings/blocklist">{t('blocklist.title')}</Link></section>
       <section className="card">
         <h2 style={{ fontSize: 20, marginBottom: 8 }}>
           <Icon href="/form-icons.svg" name="form-lock" size={20} /> {t('securityPrivacy.storageTitle')}

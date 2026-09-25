@@ -1,3 +1,4 @@
+import { BlocklistPage } from './pages/BlocklistPage'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { AdminRoute } from './components/AdminRoute'
@@ -300,6 +301,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/settings/blocklist" element={<ProtectedRoute><BlocklistPage /></ProtectedRoute>} />
       <Route
         path="/settings/security-privacy"
         element={

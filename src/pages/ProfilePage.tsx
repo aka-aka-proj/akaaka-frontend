@@ -583,7 +583,9 @@ export function ProfilePage() {
                     <li>{t('profile.blockHelpUnblock')}</li>
                     <li>{t('profile.blockHelpVisibility')}</li>
                   </ul>
-                </details>
+                <p>{t('blocklist.conflictHelp')}</p>
+                  <p><Link to="/settings/blocklist">{t('blocklist.title')}</Link></p>
+                  </details>
               )}
               {isOwner && profile.role_status !== 'venue_approved' ? (
                 <section className="venue-application-card" aria-labelledby="venue-application-heading">
