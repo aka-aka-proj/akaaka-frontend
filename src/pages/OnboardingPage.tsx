@@ -20,6 +20,7 @@ export function OnboardingPage() {
   const location = useLocation()
   const { t } = useT()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const returnNavigationStarted = useRef(false)
   const [agreed, setAgreed] = useState(false)
   const [compactOpen, setCompactOpen] = useState(true)
   const [displayName, setDisplayName] = useState('')
@@ -46,7 +47,10 @@ export function OnboardingPage() {
   }
 
   useEffect(() => {
-    if (profile && !showXReturnPanel) navigate(getReturnPath(), { replace: true })
+    if (profile && !showXReturnPanel && !returnNavigationStarted.current) {
+      returnNavigationStarted.current = true
+      navigate(getReturnPath(), { replace: true })
+    }
   }, [profile, showXReturnPanel, navigate, location.search, location.state])
 
   useEffect(() => {
@@ -64,7 +68,7 @@ export function OnboardingPage() {
       <p>{t('onboarding.pwaReturnDescription')}</p>
       <div className="onboarding-pwa-return-actions">
         <button type="button" className="primary" onClick={() => { window.location.href = intentUrl }}>{t('onboarding.pwaReturnOpenApp')}</button>
-        <button type="button" className="secondary" onClick={() => navigate(returnPath, { replace: true })}>{t('onboarding.pwaReturnContinueBrowser')}</button>
+        <button type="button" className="secondary" onClick={() => { returnNavigationStarted.current = true; navigate(returnPath, { replace: true }) }}>{t('onboarding.pwaReturnContinueBrowser')}</button>
       </div>
       <p className="form-help">{t('onboarding.pwaReturnManual')}</p>
     </section></Layout>
