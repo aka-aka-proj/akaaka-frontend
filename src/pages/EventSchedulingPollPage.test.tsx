@@ -76,12 +76,12 @@ describe('EventSchedulingPollPage', () => {
     renderPage()
 
     const locationInput = await screen.findByLabelText('候選地點')
-    fireEvent.change(locationInput, { target: { value: '台北車站' } })
+    await user.type(locationInput, '台北車站')
     const addButtons = await screen.findAllByRole('button', { name: '新增' })
     const addLocationButton = addButtons[1]
 
     await user.click(addLocationButton)
-    expect(confirmMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
     expect(insertMock).not.toHaveBeenCalled()
 
     await user.click(addLocationButton)
@@ -105,7 +105,7 @@ describe('EventSchedulingPollPage', () => {
     renderPage()
 
     const locationInput = await screen.findByLabelText('候選地點')
-    fireEvent.change(locationInput, { target: { value: '台北車站' } })
+    await user.type(locationInput, '台北車站')
     const addLocationButton = (await screen.findAllByRole('button', { name: '新增' }))[1]
 
     await user.click(addLocationButton)
