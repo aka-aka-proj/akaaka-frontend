@@ -46,6 +46,7 @@ describe('AuthPage', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllEnvs()
   })
 
