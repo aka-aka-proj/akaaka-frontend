@@ -80,13 +80,20 @@ export function EventSchedulingPollPage() {
   }
 
   const createPoll = () => run(() => supabase.from('event_scheduling_polls').insert({ event_id: eventId, creator_id: user?.id }), t('schedulingPoll.created'))
+  const confirmVoteInvalidation = () => {
+    if (!Object.values(counts).some((count) => count > 0)) return true
+    const prompt = locale === 'zh-TW'
+      ? '修改投票候選項目或符合資格的投票者會永久清空所有既有投票，所有投票者都需要重新投票。確定要繼續嗎？'
+      : 'Changing poll candidates or eligible voters will permanently clear all existing votes. Every voter will need to vote again. Continue?'
+    return window.confirm(prompt)
+  }
   const addDate = async () => {
-    if (!poll || !candidateDate) return
+    if (!poll || !candidateDate || !confirmVoteInvalidation()) return
     const ok = await run(() => supabase.from('event_scheduling_poll_options').insert({ poll_id: poll.id, kind: 'datetime', starts_at: new Date(candidateDate).toISOString(), sort_order: options.length }), t('schedulingPoll.optionAdded'))
     if (ok) setCandidateDate('')
   }
   const addLocation = async () => {
-    if (!poll || !candidateLocation.trim()) return
+    if (!poll || !candidateLocation.trim() || !confirmVoteInvalidation()) return
     const ok = await run(() => supabase.from('event_scheduling_poll_options').insert({ poll_id: poll.id, kind: 'location', location_label: candidateLocation.trim(), sort_order: options.length }), t('schedulingPoll.optionAdded'))
     if (ok) setCandidateLocation('')
   }
@@ -107,7 +114,7 @@ export function EventSchedulingPollPage() {
     const result = await supabase.from('public_profiles').select('id, display_name').ilike('display_name', `%${profileQuery.trim()}%`).limit(8)
     if (!result.error) setProfileResults(((result.data ?? []) as ProfileResult[]).filter((profile) => profile.id !== user?.id))
   }
-  const addVoter = (profile: ProfileResult) => poll && run(() => supabase.from('event_scheduling_poll_voters').insert({ poll_id: poll.id, profile_id: profile.id }), t('schedulingPoll.voterAdded'))
+  const addVoter = (profile: ProfileResult) => poll && confirmVoteInvalidation() && run(() => supabase.from('event_scheduling_poll_voters').insert({ poll_id: poll.id, profile_id: profile.id }), t('schedulingPoll.voterAdded'))
   const resetVotes = async () => {
     if (!poll || busy) return
     const prompt = locale === 'zh-TW'
