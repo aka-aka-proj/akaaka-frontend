@@ -90,6 +90,31 @@ describe('EventSchedulingPollPage', () => {
     confirmMock.mockRestore()
   })
 
+  it('refreshes vote counts before configuration mutation to catch votes added by another session', async () => {
+    pollResult = { data: { id: 'poll-1', event_id: 'event-1', creator_id: 'owner-1', status: 'open', closed_at: null }, error: null }
+    let resultReads = 0
+    rpcMock.mockImplementation((name: string) => {
+      if (name !== 'get_event_scheduling_poll_results') return Promise.resolve({ data: [], error: null })
+      resultReads += 1
+      return Promise.resolve(resultReads === 1
+        ? { data: [], error: null }
+        : { data: [{ option_id: 'new-vote', vote_count: 1 }], error: null })
+    })
+    const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+    renderPage()
+
+    const locationInput = await screen.findByLabelText('候選地點')
+    fireEvent.change(locationInput, { target: { value: '台北車站' } })
+    const addLocationButton = screen.getAllByRole('button', { name: '新增' })[1]
+
+    await user.click(addLocationButton)
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+    expect(resultReads).toBeGreaterThanOrEqual(2)
+    expect(insertMock).not.toHaveBeenCalled()
+    confirmMock.mockRestore()
+  })
+
   it('requires confirmation before an organizer resets all votes and reloads after success', async () => {
     pollResult = { data: { id: 'poll-1', event_id: 'event-1', creator_id: 'owner-1', status: 'open', closed_at: null }, error: null }
     const confirmMock = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
