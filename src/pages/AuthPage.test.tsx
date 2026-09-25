@@ -77,7 +77,7 @@ describe('AuthPage', () => {
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
     render(<MemoryRouter initialEntries={['/auth?from=%2Fevents%2Fmine']}><AuthPage /></MemoryRouter>)
 
-    await user.click(screen.getByRole('button', { name: '使用 X 繼續' }))
+    await user.click(screen.getByRole('button', { name: '使用 X 登入' }))
 
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'x',
@@ -91,7 +91,7 @@ describe('AuthPage', () => {
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15)')
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
-    await user.click(screen.getByRole('button', { name: '使用 Google 繼續' }))
+    await user.click(screen.getByRole('button', { name: '使用 Google 登入' }))
 
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
