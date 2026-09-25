@@ -1015,6 +1015,12 @@ const zhTW = {
     pushLater: '稍後到通知設定',
     pushWorking: '正在設定…',
     pushEnableFailed: '通知設定失敗，你可以稍後到通知設定再試。',
+    pwaReturnEyebrow: '登入完成',
+    pwaReturnTitle: '返回已安裝的 AkaAka',
+    pwaReturnDescription: 'X 授權已完成。你可以嘗試開啟已安裝的 AkaAka，或繼續使用目前視窗。',
+    pwaReturnOpenApp: '開啟 AkaAka App',
+    pwaReturnContinueBrowser: '繼續目前視窗',
+    pwaReturnManual: '如果沒有自動切回 App，請從 Android 最近使用的 App 手動切回 AkaAka。',
 
     displayNameLabel: '顯示名稱',
     bioLabel: '簡介',
