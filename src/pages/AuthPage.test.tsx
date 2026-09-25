@@ -7,6 +7,7 @@ import { AuthPage } from './AuthPage'
 const mockUseAuth = vi.fn()
 const signInWithPassword = vi.fn()
 const signUp = vi.fn()
+const signInWithOAuth = vi.fn()
 const resend = vi.fn()
 const resetPasswordForEmail = vi.fn()
 
@@ -19,6 +20,7 @@ vi.mock('../supabaseClient', () => ({
     auth: {
       signInWithPassword: (...args: unknown[]) => signInWithPassword(...args),
       signUp: (...args: unknown[]) => signUp(...args),
+      signInWithOAuth: (...args: unknown[]) => signInWithOAuth(...args),
       resend: (...args: unknown[]) => resend(...args),
       resetPasswordForEmail: (...args: unknown[]) => resetPasswordForEmail(...args),
     },
@@ -36,6 +38,7 @@ describe('AuthPage', () => {
     mockUseAuth.mockReturnValue({ user: null })
     signInWithPassword.mockResolvedValue({ error: null })
     signUp.mockResolvedValue({ error: null })
+    signInWithOAuth.mockReset().mockResolvedValue({ error: null })
     resend.mockResolvedValue({ error: null })
     resetPasswordForEmail.mockResolvedValue({ error: null })
     vi.useRealTimers()
@@ -43,6 +46,28 @@ describe('AuthPage', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('marks Android standalone X callbacks and preserves the original destination', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Android Chrome')
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query === '(display-mode: standalone)', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    render(<MemoryRouter initialEntries={['/auth?from=%2Fevents%2Fmine']}><AuthPage /></MemoryRouter>)
+    await userEvent.setup().click(screen.getByRole('button', { name: '使用 X 登入' }))
+    expect(signInWithOAuth).toHaveBeenCalledWith({ provider: 'x', options: { redirectTo: `${window.location.origin}/onboarding?from=%2Fevents%2Fmine&pwa_return=1` } })
+  })
+
+  it.each([
+    ['google', 'Android Chrome', true, '使用 Google 登入'],
+    ['x', 'Android Chrome', false, '使用 X 登入'],
+    ['x', 'iPhone Safari', true, '使用 X 登入'],
+  ])('keeps the existing callback for %s / %s / standalone=%s', async (provider, ua, standalone, label) => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(ua)
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: standalone && query === '(display-mode: standalone)', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+    await userEvent.setup().click(screen.getByRole('button', { name: label }))
+    expect(signInWithOAuth).toHaveBeenCalledWith({ provider, options: { redirectTo: `${window.location.origin}/onboarding` } })
   })
 
   it('requires CAPTCHA before auth and forwards the verified token', async () => {
