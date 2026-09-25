@@ -77,7 +77,7 @@ describe('EventSchedulingPollPage', () => {
 
     const locationInput = await screen.findByLabelText('候選地點')
     fireEvent.change(locationInput, { target: { value: '台北車站' } })
-    const addButtons = screen.getAllByRole('button', { name: '新增' })
+    const addButtons = await screen.findAllByRole('button', { name: '新增' })
     const addLocationButton = addButtons[1]
 
     await user.click(addLocationButton)
@@ -106,7 +106,7 @@ describe('EventSchedulingPollPage', () => {
 
     const locationInput = await screen.findByLabelText('候選地點')
     fireEvent.change(locationInput, { target: { value: '台北車站' } })
-    const addLocationButton = screen.getAllByRole('button', { name: '新增' })[1]
+    const addLocationButton = (await screen.findAllByRole('button', { name: '新增' }))[1]
 
     await user.click(addLocationButton)
     await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
