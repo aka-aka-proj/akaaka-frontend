@@ -73,6 +73,7 @@ describe('OnboardingPage', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     HTMLDialogElement.prototype.showModal = origShowModal
     HTMLDialogElement.prototype.close = origClose
   })
