@@ -18,16 +18,32 @@ export function BlocklistPage() {
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
-    const { data, error: invokeError } = await supabase.functions.invoke('manage-blocklist', {
-      body: { action: 'list' },
-    })
-    if (invokeError) {
-      setError(invokeError.message)
+    const { data: blocks, error: blockError } = await supabase
+      .from('blocks')
+      .select('blocked_id')
+      .order('created_at', { ascending: false })
+    if (blockError) {
+      setError(blockError.message)
       setLoading(false)
       return
     }
-    const rows = Array.isArray(data?.profiles) ? data.profiles : Array.isArray(data) ? data : []
-    setProfiles(rows as BlockedProfile[])
+    const ids = (blocks ?? []).map((row) => row.blocked_id)
+    if (ids.length === 0) {
+      setProfiles([])
+      setLoading(false)
+      return
+    }
+    const { data: profileRows, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_path')
+      .in('id', ids)
+    if (profileError) {
+      setError(profileError.message)
+      setLoading(false)
+      return
+    }
+    const byId = new Map((profileRows ?? []).map((profile) => [profile.id, profile as BlockedProfile]))
+    setProfiles(ids.flatMap((id) => byId.get(id) ? [byId.get(id)!] : []))
     setLoading(false)
   }, [])
 
@@ -37,11 +53,12 @@ export function BlocklistPage() {
     if (removing) return
     setRemoving(profileId)
     setError('')
-    const { error: invokeError } = await supabase.functions.invoke('manage-blocklist', {
-      body: { action: 'unblock', profile_id: profileId },
-    })
-    if (invokeError) {
-      setError(invokeError.message)
+    const { error: deleteError } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocked_id', profileId)
+    if (deleteError) {
+      setError(deleteError.message)
       setRemoving(null)
       return
     }
