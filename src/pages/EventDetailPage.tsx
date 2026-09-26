@@ -1538,9 +1538,17 @@ export function EventDetailPage() {
                   setSubmitting(false)
                   if (error) {
                     const response = error instanceof FunctionsHttpError ? error.context : undefined
-                    let responseBody: { error?: string; message?: string } | null = null
-                    if (response?.status === 400) {
-                      responseBody = await response.clone().json().catch(() => null)
+                    const responseBody = await response?.clone().json().catch(() => null) as {
+                      error?: string | { code?: string; details?: { host_profile_id?: string } }
+                      message?: string
+                    } | null
+                    if (response?.status === 409 && typeof responseBody?.error === 'object' && responseBody.error.code === 'blocklist_confirmation_required') {
+                      setBlocklistConfirmation({
+                        kind: 'register',
+                        formResponses: { ...formData },
+                        hostProfileId: responseBody.error.details?.host_profile_id,
+                      })
+                      return
                     }
                     if (response?.status === 400 && responseBody?.error === 'form_validation_error') {
                       setFormValidationError(t('eventDetail.formValidationError'))
@@ -1593,6 +1601,18 @@ export function EventDetailPage() {
                 const pending = blocklistConfirmation
                 if (pending.kind === 'review' && pending.registrationId && pending.action) {
                   void handleReview(pending.registrationId, pending.action, true)
+                } else if (pending.formResponses) {
+                  setSubmitting(true)
+                  void supabase.functions.invoke('create-registration', {
+                    body: { event_id: id, form_responses: pending.formResponses, acknowledge_blocklist_conflict: true },
+                  }).then(async ({ error }) => {
+                    setSubmitting(false)
+                    if (error) { showError(error.message, error); return }
+                    setBlocklistConfirmation(null)
+                    setFormValidationError('')
+                    setShowForm(false)
+                    await load()
+                  })
                 } else {
                   void handleRegister(true)
                 }
