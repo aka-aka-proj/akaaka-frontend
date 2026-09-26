@@ -1,3 +1,6 @@
+import { useBlocklistConfirmation } from '../hooks/useBlocklistConfirmation'
+import { BlocklistConflictDialog } from './BlocklistConflictDialog'
+import { useAuth } from '../context/AuthContext'
 import { useState } from 'react'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
@@ -20,17 +23,21 @@ export function SeriesRegistrationFlow({
   showError,
 }: SeriesRegistrationFlowProps) {
   const { t } = useT()
+  const { user } = useAuth()
+  const { run, confirmation, busy, confirm, cancel } = useBlocklistConfirmation(`${user?.id ?? ''}:${seriesId}`)
   const [registrationMode, setRegistrationMode] = useState<'single' | 'series'>('single')
 
   const effectiveMode = isWholeSeriesRequired ? 'series' : registrationMode
 
   const handleSeriesRegister = async () => {
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
     setSubmitting(true)
 
     const { data: memberships, error: membershipError } = await supabase
       .from('event_series_membership')
       .select('event_id')
       .eq('series_id', seriesId)
+      .order('position', { ascending: true })
     if (membershipError) {
       setSubmitting(false)
       showError(membershipError.message)
@@ -59,15 +66,9 @@ export function SeriesRegistrationFlow({
       }
     }
 
-    const { error } = await supabase.functions.invoke('register-for-event-series', {
-      body: { series_id: seriesId },
-    })
+    await run({ trigger, name: 'register-for-event-series', kind: 'series', body: { series_id: seriesId, expected_event_ids: eventIds },
+      onSuccess: onRegistrationChanged, onError: error => showError(error.message) })
     setSubmitting(false)
-    if (error) {
-      showError(error.message)
-      return
-    }
-    onRegistrationChanged()
   }
 
   return (
@@ -110,12 +111,14 @@ export function SeriesRegistrationFlow({
         <button
           type="button"
           className="primary-cta"
-          disabled={submitting}
+          disabled={submitting || busy}
           onClick={() => void handleSeriesRegister()}
         >
           {submitting ? t('common.loading') : t('eventSeries.confirmRegister')}
         </button>
       )}
+      <BlocklistConflictDialog open={Boolean(confirmation)} kind="series" hostId={confirmation?.hostId} returnFocus={confirmation?.request.trigger}
+        busy={busy} onConfirm={() => void confirm()} onCancel={cancel} />
     </div>
   )
 }

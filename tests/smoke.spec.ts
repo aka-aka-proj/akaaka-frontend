@@ -37,6 +37,7 @@ test.describe('public event discovery', () => {
       '/virtual-lovers/new',
       '/virtual-lovers/synthetic-lover/chat',
       '/settings/security-privacy',
+  '/settings/blocklist',
       '/settings/analytics',
   ]
 

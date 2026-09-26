@@ -204,6 +204,7 @@ for (const locale of ['zh-TW', 'en']) {
       expect(box!.width).toBeGreaterThanOrEqual(44)
       expect(box!.height).toBeGreaterThanOrEqual(44)
     }
+    await page.unrouteAll({ behavior: 'wait' })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: test.info().outputPath(`pwa-return-${locale}.png`), fullPage: true })
     await panel.getByRole('button').click()
