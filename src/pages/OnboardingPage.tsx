@@ -35,8 +35,12 @@ export function OnboardingPage() {
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
-  const showPwaReturn = Boolean(user) && /Android/i.test(navigator.userAgent) &&
-    !isStandaloneDisplay() && new URLSearchParams(location.search).get('pwa_return') === '1'
+  const oauthParams = new URLSearchParams(location.search)
+  const callbackFailed = [...oauthParams.keys()].some((key) =>
+    /^(error|error_code|error_description|error_uri)$/i.test(key),
+  )
+  const showPwaReturn = Boolean(user && profile) && !callbackFailed && /Android/i.test(navigator.userAgent) &&
+    !isStandaloneDisplay() && oauthParams.get('pwa_return') === '1'
 
   const fromQuery = new URLSearchParams(location.search).get('from')
   const fromState = (location.state as { from?: string } | null)?.from
