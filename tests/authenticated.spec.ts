@@ -84,6 +84,7 @@ const authenticatedRoutes = [
   '/virtual-lovers/new',
   '/virtual-lovers/synthetic-lover/chat',
   '/settings/security-privacy',
+  '/settings/blocklist',
   '/settings/analytics',
 ]
 
@@ -140,6 +141,17 @@ test.describe('authenticated synthetic route boundary', () => {
     await gotoAuthenticatedRoute(page, '/events')
     await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: authenticatedStateTimeout })
     await expect(page.getByText(/沒有描述|no description|找不到符合條件的活動|no events match your filters/i)).toBeVisible({ timeout: authenticatedStateTimeout })
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
+  })
+
+  test('exposes owner-scoped blocklist management without accessibility violations', async ({ page }) => {
+    await page.route('**/rest/v1/blocks**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ blocked_id: 'synthetic-profile', created_at: '2026-09-26T00:00:00Z' }]) })
+    })
+    await gotoAuthenticatedRoute(page, '/settings/blocklist')
+    await expect(page.getByRole('heading', { name: /封鎖名單|blocklist/i })).toBeVisible({ timeout: authenticatedStateTimeout })
+    await expect(page.getByRole('button', { name: /解除封鎖|unblock/i })).toBeVisible()
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
   })
