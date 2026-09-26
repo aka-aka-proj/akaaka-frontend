@@ -188,6 +188,7 @@ for (const locale of ['zh-TW', 'en']) {
       await route.fulfill({ response: await route.fetch({ url: upstream.href }) })
     })
     await page.goto('https://pwa-return.example.test/onboarding?pwa_return=1&from=%2Fevents%2Fmine&code=discard-me')
+    await page.unrouteAll({ behavior: 'wait' })
     const panel = page.getByRole('region', { name: locale === 'en' ? 'Signed in successfully' : '登入成功' })
     await expect(panel).toBeVisible()
     await expect(panel.getByRole('heading')).toBeFocused()
