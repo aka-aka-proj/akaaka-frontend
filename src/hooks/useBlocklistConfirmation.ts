@@ -30,6 +30,7 @@ export function useBlocklistConfirmation(scope: string) {
     const current = generation.current
     inFlight.current = true
     setBusy(true)
+    let closeAfterBusy = false
     try {
       const { error } = await supabase.functions.invoke(request.name, {
         body: { ...request.body, ...(acknowledge ? { acknowledge_blocklist_conflict: true } : {}) },
@@ -51,7 +52,7 @@ export function useBlocklistConfirmation(scope: string) {
         await request.onError(error)
         return
       }
-      setConfirmation(null)
+      closeAfterBusy = true
       await request.onSuccess()
     } catch (error) {
       if (current === generation.current) {
@@ -59,7 +60,11 @@ export function useBlocklistConfirmation(scope: string) {
         await request.onError(error instanceof Error ? error : new Error('Request failed'))
       }
     } finally {
-      if (current === generation.current) { inFlight.current = false; setBusy(false) }
+      if (current === generation.current) {
+        inFlight.current = false
+        setBusy(false)
+        if (closeAfterBusy) setConfirmation(null)
+      }
     }
   }, [])
   const run = useCallback((request: Request) => execute({ ...request, body: structuredClone(request.body), trigger: request.trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined) }, false), [execute])
