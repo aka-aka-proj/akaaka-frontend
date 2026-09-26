@@ -44,3 +44,21 @@ it('shows a retryable error without claiming the blocklist is empty', async () =
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
   await screen.findByText('Your blocklist is empty.')
 })
+
+
+it('retries the failed target page instead of returning to the previous page', async () => {
+  const range = vi.fn()
+    .mockResolvedValueOnce({ data: Array.from({ length: 21 }, (_, i) => ({ blocked_id: `person-${i}`, created_at: '2026-09-01T00:00:00Z' })), error: null })
+    .mockResolvedValueOnce({ error: { message: 'temporary failure' } })
+    .mockResolvedValueOnce({ data: [{ blocked_id: 'person-last', created_at: '2026-08-01T00:00:00Z' }], error: null })
+  from.mockImplementation((table: string) => table === 'blocks'
+    ? { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range }
+    : { select: vi.fn().mockReturnThis(), in: (_field: string, ids: string[]) => Promise.resolve({ data: ids.map(id => ({ id, display_name: id === 'person-last' ? 'Last Person' : 'Blocked Person', avatar_path: null })), error: null }) })
+  render(<MemoryRouter><BlocklistPage /></MemoryRouter>)
+  await screen.findAllByText('Blocked Person')
+  await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByRole('alert')
+  await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  await screen.findByText('Last Person')
+  expect(range.mock.calls.slice(-2)).toEqual([[20, 40], [20, 40]])
+})
