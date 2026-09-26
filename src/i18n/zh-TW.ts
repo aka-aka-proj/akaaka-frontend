@@ -97,6 +97,11 @@ const zhTW = {
     aiConversation: '這些 AI 對話不會提供給其他 BDSM 圈內揪使用者；但目前會保存於您的對話歷史與角色記憶，並送至設定的模型提供者處理。分享敏感資訊前，請先查看保存、提供者處理與刪除限制。',
   },
   auth: {
+    pwaReturnTitle: '登入成功',
+    pwaReturnDescription: '如果你是從主畫面的 BDSM 圈內揪 App 開始登入，現在可以返回 App 繼續。新帳號仍需完成初次設定。',
+    pwaReturnHelp: '手機可能不會自動切回 App。你可以嘗試下方按鈕；若沒有開啟，請回到主畫面點選 BDSM 圈內揪，或繼續使用此視窗。',
+    pwaReturnOpen: '嘗試開啟 App',
+    pwaReturnContinue: '繼續使用此視窗',
     title: 'BDSM 圈內揪登入',
     signIn: '登入',
     forgotPassword: '忘記密碼？',

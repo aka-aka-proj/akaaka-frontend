@@ -174,3 +174,62 @@ test('Google sign-in starts the onboarding callback', async ({ page }) => {
   await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('google')
   expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${origin}/onboarding`)
 })
+
+// HTTPS origin is a local reverse-proxy fixture, never a hosted OAuth or Android Intent test.
+for (const locale of ['zh-TW', 'en']) {
+  test(`Android PWA return guidance is accessible and continues onboarding: ${locale}`, async ({ page, baseURL }) => {
+    await installFixture(page, locale)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'userAgent', { get: () => 'Android Chrome synthetic callback' })
+    })
+    await page.route('https://pwa-return.example.test/**', async route => {
+      const url = new URL(route.request().url())
+      const upstream = new URL(`${url.pathname}${url.search}`, baseURL)
+      await route.fulfill({ response: await route.fetch({ url: upstream.href }) })
+    })
+    await page.goto('https://pwa-return.example.test/onboarding?pwa_return=1&from=%2Fevents%2Fmine&code=discard-me')
+    const panel = page.getByRole('region', { name: locale === 'en' ? 'Signed in successfully' : '登入成功' })
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('heading')).toBeFocused()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    const open = panel.getByRole('link')
+    const href = await open.getAttribute('href')
+    expect(href).toContain('intent://pwa-return.example.test/onboarding?from=%2Fevents%2Fmine#Intent;')
+    expect(href).not.toMatch(/discard-me|pwa_return|package=/)
+    await page.keyboard.press('Tab')
+    await expect(open).toBeFocused()
+    for (const action of await panel.locator('a, button').all()) {
+      await expect(action).toBeInViewport({ ratio: 1 })
+      const box = await action.boundingBox()
+      expect(box!.width).toBeGreaterThanOrEqual(44)
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: test.info().outputPath(`pwa-return-${locale}.png`), fullPage: true })
+    await panel.getByRole('button').click()
+    await expect(page).toHaveURL('https://pwa-return.example.test/onboarding?from=%2Fevents%2Fmine')
+    await expect(page.getByRole('dialog')).toBeVisible()
+  })
+}
+
+test('Android standalone X callback carries return marker and source', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', { get: () => 'Android Chrome synthetic standalone' })
+    const original = window.matchMedia.bind(window)
+    window.matchMedia = query => {
+      const result = original(query)
+      if (query === '(display-mode: standalone)') Object.defineProperty(result, 'matches', { value: true })
+      return result
+    }
+  })
+  let authorizeUrl: URL | undefined
+  await page.route('**/auth/v1/authorize**', route => {
+    authorizeUrl = new URL(route.request().url())
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<title>X callback boundary</title>' })
+  })
+  await page.goto('/auth?from=%2Fevents%2Fmine')
+  const origin = new URL(page.url()).origin
+  await page.getByRole('button', { name: /使用 X 登入|continue with x/i }).click()
+  await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('x')
+  expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${origin}/onboarding?from=%2Fevents%2Fmine&pwa_return=1`)
+})

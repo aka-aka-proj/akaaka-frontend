@@ -97,6 +97,11 @@ const en = {
     aiConversation: 'These AI conversations are not provided to other BDSM Circle Connect users, but they are currently stored in your conversation history and character memory and sent to the configured model provider for processing. Review retention, provider-processing, and deletion limits before sharing sensitive information.',
   },
   auth: {
+    pwaReturnTitle: 'Signed in successfully',
+    pwaReturnDescription: 'If you started signing in from the BDSM Meetup app on your home screen, you can now return to the app. New accounts still need to finish setup.',
+    pwaReturnHelp: 'Your phone may not switch back automatically. Try the button below. If the app does not open, tap BDSM Meetup on your home screen, or continue in this window.',
+    pwaReturnOpen: 'Try opening the app',
+    pwaReturnContinue: 'Continue in this window',
     title: 'BDSM Circle Connect Auth',
     signIn: 'Sign In',
     forgotPassword: 'Forgot password?',
