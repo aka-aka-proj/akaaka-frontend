@@ -99,12 +99,21 @@ describe('OnboardingPage', () => {
   it('returns a new user to the safety compact without creating a profile', async () => {
     androidMode()
     render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: '登入成功' })).toBeTruthy()
-    expect(screen.queryByRole('dialog')).toBeNull()
-    await userEvent.setup().click(screen.getByRole('button', { name: '繼續使用此視窗' }))
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByTestId('location').textContent).toBe('/onboarding?from=%2Fevents%2Fmine')
+    expect(screen.getByTestId('location').textContent).toBe('/onboarding?pwa_return=1&from=%2Fevents%2Fmine')
     expect(insert).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '?pwa_return=1&error=access_denied',
+    '?pwa_return=1&error_code=oauth_state_mismatch',
+    '?pwa_return=1&error_description=PKCE%20verification%20failed',
+  ])('does not show success for a failed callback even with an existing session: %s', (search) => {
+    androidMode()
+    mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
+    render(<MemoryRouter initialEntries={[`/onboarding${search}`]}><OnboardingPage /></MemoryRouter>)
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
   })
 
   it('skips the handoff when already inside the standalone PWA', () => {
