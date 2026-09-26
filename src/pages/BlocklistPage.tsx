@@ -20,7 +20,7 @@ export function BlocklistPage() {
     setError('')
     const { data: blocks, error: blockError } = await supabase
       .from('blocks')
-      .select('blocked_id')
+      .select('blocked_id, created_at')
       .order('created_at', { ascending: false })
     if (blockError) {
       setError(blockError.message)
