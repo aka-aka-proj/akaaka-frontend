@@ -14,6 +14,7 @@ function Blocklist({ userId }: { userId: string }) {
   const { t, locale } = useT()
   const [rows, setRows] = useState<Entry[]>([])
   const [page, setPage] = useState(0)
+  const [retryPage, setRetryPage] = useState(0)
   const [hasNext, setHasNext] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -24,7 +25,7 @@ function Blocklist({ userId }: { userId: string }) {
   const changing = useRef(false)
   const load = useCallback(async (targetPage: number) => {
     const current = ++generation.current
-    setLoading(true); setError(false)
+    setLoading(true); setError(false); setRetryPage(targetPage)
     try {
       const { data, error: queryError } = await supabase.from('blocks').select('blocked_id, created_at')
         .eq('blocker_id', userId).order('created_at', { ascending: false }).order('blocked_id', { ascending: true })
@@ -73,7 +74,7 @@ function Blocklist({ userId }: { userId: string }) {
     {message ? <p role="status">{t('blocklist.unblocked')}</p> : null}
     {actionError ? <p role="alert">{t('blocklist.unblockError')}</p> : null}
     {loading ? <p role="status">{t('common.loading')}</p> : null}
-    {error ? <div role="alert"><p>{t('blocklist.loadError')}</p><button type="button" disabled={loading} onClick={() => void load(page)}>{t('blocklist.retry')}</button></div> : null}
+    {error ? <div role="alert"><p>{t('blocklist.loadError')}</p><button type="button" disabled={loading} onClick={() => void load(retryPage)}>{t('blocklist.retry')}</button></div> : null}
     {!loading && !error && rows.length === 0 ? <p>{t('blocklist.empty')}</p> : null}
     {!loading && !error && rows.length > 0 ? <ul className="user-directory-list">
       {rows.map(row => <li key={row.blocked_id} className="user-directory-item">
