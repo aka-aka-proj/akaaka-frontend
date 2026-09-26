@@ -37,6 +37,7 @@ import { ProfileFeedbackPage } from './pages/ProfileFeedbackPage'
 import { ProfileReportPage } from './pages/ProfileReportPage'
 import { ReportIssuePage } from './pages/ReportIssuePage'
 import { SecurityPrivacyPage } from './pages/SecurityPrivacyPage'
+import { BlocklistPage } from './pages/BlocklistPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { VirtualLoversPage } from './pages/VirtualLoversPage'
 import { VirtualLoverChatPage } from './pages/VirtualLoverChatPage'
@@ -299,6 +300,10 @@ function App() {
             <VirtualLoverChatPage />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/settings/blocklist"
+        element={<ProtectedRoute><BlocklistPage /></ProtectedRoute>}
       />
       <Route
         path="/settings/security-privacy"
