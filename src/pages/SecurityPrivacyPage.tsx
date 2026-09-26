@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../context/AuthContext'
@@ -288,6 +289,7 @@ export function SecurityPrivacyPage() {
         <h2 style={{ fontSize: 20, marginBottom: 8 }}>
           <Icon href="/action-icons.svg" name="action-block" size={20} /> {t('securityPrivacy.securityTitle')}
         </h2>
+        <p><Link className="primary-action" to="/settings/blocklist">封鎖名單 / Blocklist</Link></p>
         <ul style={{ paddingLeft: 20, lineHeight: 1.8 }}>
           <li>{t('securityPrivacy.securityRls')}</li>
           <li>{t('securityPrivacy.securityVisibility')}</li>
