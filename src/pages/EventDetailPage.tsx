@@ -113,6 +113,13 @@ export function EventDetailPage() {
   const [capacityQueryFailed, setCapacityQueryFailed] = useState(false)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
   const [submitting, setSubmitting] = useState(false)
+  const [blocklistConfirmation, setBlocklistConfirmation] = useState<{
+    kind: 'register' | 'review'
+    registrationId?: string
+    action?: 'approve' | 'reject' | 'reopen'
+    formResponses?: Record<string, unknown>
+    hostProfileId?: string
+  } | null>(null)
   const [publicationPending, setPublicationPending] = useState(false)
   const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -677,26 +684,41 @@ export function EventDetailPage() {
     void load()
   }, [load])
 
-  const handleRegister = useCallback(async () => {
+  const invokeWithBlocklistHandling = useCallback(async (
+    functionName: 'create-registration' | 'review-registration',
+    body: Record<string, unknown>,
+    pending: NonNullable<typeof blocklistConfirmation>,
+  ) => {
+    const { error } = await supabase.functions.invoke(functionName, { body })
+    if (!error) return true
+    const response = error instanceof FunctionsHttpError ? error.context : undefined
+    if (response?.status === 409) {
+      const payload = await response.clone().json().catch(() => null) as { error?: { code?: string; details?: { host_profile_id?: string } } } | null
+      if (payload?.error?.code === 'blocklist_confirmation_required') {
+        setBlocklistConfirmation({ ...pending, hostProfileId: payload.error.details?.host_profile_id })
+        return false
+      }
+    }
+    showError(error.message, error)
+    return false
+  }, [showError])
+
+  const handleRegister = useCallback(async (acknowledge = false) => {
     if (!id || !user) {
       return
     }
     setSubmitting(true)
 
-    const { error } = await supabase.functions.invoke('create-registration', {
-      body: { event_id: id },
-    })
-
+    const ok = await invokeWithBlocklistHandling(
+      'create-registration',
+      { event_id: id, acknowledge_blocklist_conflict: acknowledge },
+      { kind: 'register' },
+    )
     setSubmitting(false)
-
-    if (error) {
-      const errorMessage = error.message
-      showError(errorMessage, error)
-      return
-    }
-
+    if (!ok) return
+    setBlocklistConfirmation(null)
     await load()
-  }, [id, user, showError, load])
+  }, [id, user, invokeWithBlocklistHandling, load])
 
   const mobileRegistrationShortcut = useMemo(() => {
     if (!eventItem
@@ -899,23 +921,20 @@ export function EventDetailPage() {
     await load()
   }
 
-  const handleReview = async (registrationId: string, action: 'approve' | 'reject' | 'reopen') => {
+  const handleReview = async (registrationId: string, action: 'approve' | 'reject' | 'reopen', acknowledge = false) => {
     if (!id || !user) {
       return
     }
     setSubmitting(true)
 
-    const { error } = await supabase.functions.invoke('review-registration', {
-      body: { event_id: id, registration_id: registrationId, action },
-    })
-
+    const ok = await invokeWithBlocklistHandling(
+      'review-registration',
+      { event_id: id, registration_id: registrationId, action, acknowledge_blocklist_conflict: acknowledge },
+      { kind: 'review', registrationId, action },
+    )
     setSubmitting(false)
-
-    if (error) {
-      showError(error.message, error)
-      return
-    }
-
+    if (!ok) return
+    setBlocklistConfirmation(null)
     await load()
   }
 
@@ -1554,6 +1573,35 @@ export function EventDetailPage() {
             </button>
           )}
         </section>
+      ) : null}
+
+      {blocklistConfirmation ? (
+        <div className="modal-overlay" role="presentation">
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="blocklist-confirm-title">
+            <h2 id="blocklist-confirm-title">同場安全提醒 / Safety confirmation</h2>
+            <p>
+              {blocklistConfirmation.kind === 'review'
+                ? '此申請與活動中的封鎖關係有衝突。為保護隱私，不會顯示對象、數量或封鎖方向。是否仍要核可？ / A blocklist conflict exists. No identity, count, or direction is disclosed. Continue approval?'
+                : '你封鎖的使用者可能也會參加此活動。是否仍要繼續報名？ / Someone you blocked may also attend this event. Continue registration?'}
+            </p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setBlocklistConfirmation(null)} disabled={submitting}>取消 / Cancel</button>
+              {blocklistConfirmation.kind === 'register' && blocklistConfirmation.hostProfileId ? (
+                <Link className="secondary-button" to={`/profile/${blocklistConfirmation.hostProfileId}`}>聯絡主辦人 / Contact host</Link>
+              ) : null}
+              <button type="button" className="primary-cta" disabled={submitting} onClick={() => {
+                const pending = blocklistConfirmation
+                if (pending.kind === 'review' && pending.registrationId && pending.action) {
+                  void handleReview(pending.registrationId, pending.action, true)
+                } else {
+                  void handleRegister(true)
+                }
+              }}>
+                {submitting ? '處理中… / Working…' : '同意並繼續 / Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {/* Host Review Section - All Registrations */}
