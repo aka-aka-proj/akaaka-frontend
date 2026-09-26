@@ -207,8 +207,8 @@ for (const locale of ['zh-TW', 'en']) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: test.info().outputPath(`pwa-return-${locale}.png`), fullPage: true })
     await panel.getByRole('button').click()
-    await expect(page).toHaveURL('https://pwa-return.example.test/onboarding?from=%2Fevents%2Fmine')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page).toHaveURL('https://pwa-return.example.test/events/mine')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 }
 
