@@ -49,3 +49,13 @@ it('does not interpret an unrelated 409 as blocklist consent', async () => {
   expect(result.current.confirmation).toBeNull()
   expect(onError).toHaveBeenCalledWith(error)
 })
+
+it("resends the server series snapshot when the first request omitted it", async () => {
+  invoke.mockResolvedValueOnce({ error: { context: new Response(JSON.stringify({ error: {
+    code: "blocklist_confirmation_required", details: { host_profile_id: "host", expected_event_ids: ["first", "second"] },
+  } }), { status: 409 }) } }).mockResolvedValueOnce({ data: {}, error: null })
+  const { result } = renderHook(() => useBlocklistConfirmation("user:series"))
+  await act(() => result.current.run({ name: "register-for-event-series", kind: "series", body: { series_id: "series" }, onSuccess: vi.fn(), onError: vi.fn() }))
+  await act(() => result.current.confirm())
+  expect(invoke.mock.calls[1][1].body).toEqual({ series_id: "series", expected_event_ids: ["first", "second"], acknowledge_blocklist_conflict: true })
+})
