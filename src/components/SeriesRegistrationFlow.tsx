@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 
@@ -21,10 +22,11 @@ export function SeriesRegistrationFlow({
 }: SeriesRegistrationFlowProps) {
   const { t } = useT()
   const [registrationMode, setRegistrationMode] = useState<'single' | 'series'>('single')
+  const [pendingEventIds, setPendingEventIds] = useState<string[] | null>(null)
 
   const effectiveMode = isWholeSeriesRequired ? 'series' : registrationMode
 
-  const handleSeriesRegister = async () => {
+  const handleSeriesRegister = async (acknowledge = false, expectedEventIds?: string[]) => {
     setSubmitting(true)
 
     const { data: memberships, error: membershipError } = await supabase
@@ -37,7 +39,7 @@ export function SeriesRegistrationFlow({
       return
     }
 
-    const eventIds = (memberships ?? []).map((membership) => membership.event_id)
+    const eventIds = expectedEventIds ?? (memberships ?? []).map((membership) => membership.event_id)
     if (eventIds.length > 0) {
       const { data: memberEvents, error: memberEventsError } = await supabase
         .from('events')
@@ -60,13 +62,28 @@ export function SeriesRegistrationFlow({
     }
 
     const { error } = await supabase.functions.invoke('register-for-event-series', {
-      body: { series_id: seriesId },
+      body: {
+        series_id: seriesId,
+        ...(acknowledge ? { acknowledge_blocklist_conflict: true, expected_event_ids: eventIds } : {}),
+      },
     })
     setSubmitting(false)
     if (error) {
+      const response = error instanceof FunctionsHttpError ? error.context : undefined
+      if (response?.status === 409) {
+        const payload = await response.clone().json().catch(() => null) as { error?: { code?: string; details?: { expected_event_ids?: string[] } } } | null
+        if (payload?.error?.code === 'blocklist_confirmation_required') {
+          const snapshot = payload.error.details?.expected_event_ids
+          if (Array.isArray(snapshot) && snapshot.every((id) => typeof id === 'string')) {
+            setPendingEventIds(snapshot)
+            return
+          }
+        }
+      }
       showError(error.message)
       return
     }
+    setPendingEventIds(null)
     onRegistrationChanged()
   }
 
@@ -116,6 +133,20 @@ export function SeriesRegistrationFlow({
           {submitting ? t('common.loading') : t('eventSeries.confirmRegister')}
         </button>
       )}
+      {pendingEventIds ? (
+        <div className="modal-overlay" role="presentation">
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="series-blocklist-confirm-title">
+            <h2 id="series-blocklist-confirm-title">同場安全提醒 / Safety confirmation</h2>
+            <p>你封鎖的使用者可能也會參加此系列中的活動。確認後會使用原始活動清單重新驗證；清單若已變更，伺服器會拒絕。 / Someone you blocked may attend this series. Confirmation retries against the original event snapshot.</p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setPendingEventIds(null)} disabled={submitting}>取消 / Cancel</button>
+              <button type="button" className="primary-cta" onClick={() => void handleSeriesRegister(true, pendingEventIds)} disabled={submitting}>
+                {submitting ? '處理中… / Working…' : '同意並繼續 / Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
