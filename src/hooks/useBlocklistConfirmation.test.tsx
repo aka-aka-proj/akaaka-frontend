@@ -59,3 +59,21 @@ it("resends the server series snapshot when the first request omitted it", async
   await act(() => result.current.confirm())
   expect(invoke.mock.calls[1][1].body).toEqual({ series_id: "series", expected_event_ids: ["first", "second"], acknowledge_blocklist_conflict: true })
 })
+
+
+it('keeps confirmation open while success handling is busy and closes it after busy clears', async () => {
+  invoke.mockResolvedValueOnce(warning()).mockResolvedValueOnce({ data: {}, error: null })
+  let finishSuccess!: () => void
+  const onSuccess = vi.fn(() => new Promise<void>(resolve => { finishSuccess = resolve }))
+  const { result } = renderHook(() => useBlocklistConfirmation('event-focus'))
+  await act(() => result.current.run({ name: 'create-registration', kind: 'register', body: { event_id: 'event-focus' }, onSuccess, onError: vi.fn() }))
+  expect(result.current.confirmation).not.toBeNull()
+  let task!: Promise<void>
+  act(() => { task = result.current.confirm() })
+  await act(async () => { await Promise.resolve() })
+  expect(result.current.busy).toBe(true)
+  expect(result.current.confirmation).not.toBeNull()
+  await act(async () => { finishSuccess(); await task })
+  expect(result.current.busy).toBe(false)
+  expect(result.current.confirmation).toBeNull()
+})
