@@ -4,7 +4,7 @@ import { useBlocklistConfirmation } from './useBlocklistConfirmation'
 
 const invoke = vi.fn()
 vi.mock('../supabaseClient', () => ({ supabase: { functions: { invoke: (...args: unknown[]) => invoke(...args) } } }))
-const warning = () => ({ error: { message: 'HTTP error', context: new Response(JSON.stringify({ error: 'blocklist_confirmation_required', host_profile_id: 'host' }), { status: 409 }) } })
+const warning = () => ({ error: { message: 'HTTP error', context: new Response(JSON.stringify({ error: { code: 'blocklist_confirmation_required', details: { host_profile_id: 'host' } } }), { status: 409 }) } })
 beforeEach(() => { invoke.mockReset() })
 
 it('cancel makes no second request; consent resends the original answers exactly once', async () => {

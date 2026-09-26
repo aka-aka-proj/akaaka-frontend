@@ -39,8 +39,12 @@ export function useBlocklistConfirmation(scope: string) {
         const response = error.context instanceof Response ? error.context : null
         const payload = response?.status === 409 ? await response.clone().json().catch(() => null) : null
         if (current !== generation.current) return
-        if (payload?.error === 'blocklist_confirmation_required' && !acknowledge) {
-          setConfirmation({ request, hostId: typeof payload.host_profile_id === 'string' ? payload.host_profile_id : undefined })
+        if (payload?.error?.code === 'blocklist_confirmation_required' && !acknowledge) {
+          const details = payload.error.details
+          const snapshot = details?.expected_event_ids
+          const confirmedRequest = request.kind === 'series' && Array.isArray(snapshot) && snapshot.every((id: unknown) => typeof id === 'string')
+            ? { ...request, body: { ...request.body, expected_event_ids: snapshot } } : request
+          setConfirmation({ request: confirmedRequest, hostId: typeof details?.host_profile_id === 'string' ? details.host_profile_id : undefined })
           return
         }
         setConfirmation(null)
@@ -58,7 +62,7 @@ export function useBlocklistConfirmation(scope: string) {
       if (current === generation.current) { inFlight.current = false; setBusy(false) }
     }
   }, [])
-  const run = useCallback((request: Request) => execute({ ...request, body: structuredClone(request.body), trigger: document.activeElement instanceof HTMLElement ? document.activeElement : undefined }, false), [execute])
+  const run = useCallback((request: Request) => execute({ ...request, body: structuredClone(request.body), trigger: request.trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined) }, false), [execute])
   const cancel = useCallback(() => { if (!inFlight.current) setConfirmation(null) }, [])
   const confirm = useCallback(async () => {
     if (confirmation) await execute(confirmation.request, true)

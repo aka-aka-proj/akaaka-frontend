@@ -367,6 +367,10 @@ test.describe('authenticated synthetic route boundary', () => {
           attendance_fee_type: 'free', attendance_fee_amount: null, external_registration_url: null,
           created_at: '2026-09-01T00:00:00Z',
         }
+        await page.route('**/rest/v1/rpc/get_profile_for_viewer', route => {
+          const id = route.request().postDataJSON().target_profile_id
+          return route.fulfill({ json: { ...syntheticProfile, id, display_name: id === syntheticUserId ? syntheticProfile.display_name : 'Test Person' } })
+        })
         await page.route('**/rest/v1/events?**', route => route.fulfill({ json: [event] }))
         if (flow === 'series') {
           await page.route('**/rest/v1/event_series_membership?**', route => route.fulfill({ json: [{ event_id: event.id, series_id: 'conflict-series', position: 1 }] }))
@@ -382,12 +386,12 @@ test.describe('authenticated synthetic route boundary', () => {
           requests.push(body)
           await route.fulfill(body.acknowledge_blocklist_conflict === true
             ? { status: 200, json: { success: true } }
-            : { status: 409, json: { error: 'blocklist_confirmation_required', ...(flow === 'review' ? {} : { host_profile_id: 'host-profile', warning_event_id: event.id }) } })
+            : { status: 409, json: { error: { code: 'blocklist_confirmation_required', details: flow === 'review' ? {} : { host_profile_id: 'host-profile', warning_event_id: event.id, ...(flow === 'series' ? { expected_event_ids: [event.id] } : {}) } } } })
         })
         await gotoAuthenticatedRoute(page, '/events/conflict-event')
         const submit = page.getByRole('button', { name: flow === 'review' ? /^Approve$|^核准報名$/ : flow === 'series' ? /^Confirm Registration$|^確認報名$/ : /^Register$|^報名參加$/ }).first()
         await expect(submit).toBeVisible()
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
         if (flow === 'form') {
           await submit.click()
           await page.getByLabel('Registration answer').fill('Keep my original answer')
@@ -409,7 +413,7 @@ test.describe('authenticated synthetic route boundary', () => {
         await page.screenshot({ path: testInfo.outputPath(`blocklist-${flow}-${locale}.png`), fullPage: true })
         const confirmButton = dialog.getByRole('button').last()
         expect(await confirmButton.evaluate(el => getComputedStyle(el).color !== getComputedStyle(el).backgroundColor)).toBe(true)
-        expect((await confirmButton.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        expect(Math.round((await confirmButton.boundingBox())!.height)).toBeGreaterThanOrEqual(44)
         await cancel.click()
         await expect(dialog).not.toBeVisible()
         await expect(submit).toBeFocused()

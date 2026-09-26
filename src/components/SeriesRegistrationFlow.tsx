@@ -30,6 +30,7 @@ export function SeriesRegistrationFlow({
   const effectiveMode = isWholeSeriesRequired ? 'series' : registrationMode
 
   const handleSeriesRegister = async () => {
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
     setSubmitting(true)
 
     const { data: memberships, error: membershipError } = await supabase
@@ -65,7 +66,7 @@ export function SeriesRegistrationFlow({
       }
     }
 
-    await run({ name: 'register-for-event-series', kind: 'series', body: { series_id: seriesId, expected_event_ids: eventIds },
+    await run({ trigger, name: 'register-for-event-series', kind: 'series', body: { series_id: seriesId, expected_event_ids: eventIds },
       onSuccess: onRegistrationChanged, onError: error => showError(error.message) })
     setSubmitting(false)
   }
