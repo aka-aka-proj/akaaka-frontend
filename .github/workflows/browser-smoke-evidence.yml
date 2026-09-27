@@ -1,0 +1,166 @@
+name: Release browser smoke evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Authorized preview or production origin
+        required: true
+        type: string
+      commit_sha:
+        description: Exact frontend commit to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-smoke-evidence-${{ inputs.commit_sha }}
+  cancel-in-progress: false
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      BROWSER_FILTER: chromium-desktop,chromium-mobile,webkit-mobile
+      RELEASE_BROWSER_EVIDENCE: 'true'
+      EVIDENCE_COMMIT_SHA: ${{ inputs.commit_sha }}
+    steps:
+      - name: Validate dispatch inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const base = new URL(process.env.PLAYWRIGHT_BASE_URL)
+          if (base.protocol !== 'https:' || base.username || base.password || base.pathname !== '/' || base.search || base.hash) {
+            throw new Error('base_url must be a credential-free HTTPS origin')
+          }
+          if (!/^[0-9a-f]{40}$/i.test(process.env.EVIDENCE_COMMIT_SHA || '')) {
+            throw new Error('commit_sha must be a full 40-character SHA')
+          }
+          NODE
+
+      - name: Checkout exact evidence commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          persist-credentials: false
+
+      - name: Assert exact evidence commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EVIDENCE_COMMIT_SHA"
+
+      - name: Classify target
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_ENV"
+          const host = new URL(process.env.PLAYWRIGHT_BASE_URL).hostname
+          const production = host === 'akaaka-frontend.vercel.app'
+          console.log(`EVIDENCE_TARGET=${production ? 'production' : 'preview'}`)
+          console.log(`VERCEL_ENV=${production ? 'production' : 'preview'}`)
+          NODE
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: browser-evidence-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install evidence browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Fail fast on canonical project inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          BROWSER_FILTER= npx playwright test tests/smoke.spec.ts --list --reporter=json > /tmp/playwright-inventory.json
+          node - <<'NODE'
+          const fs = require('fs')
+          const report = JSON.parse(fs.readFileSync('/tmp/playwright-inventory.json', 'utf8'))
+          const names = new Set((report.suites || []).flatMap(function walk(suite) {
+            const specs = (suite.specs || []).flatMap(spec => (spec.tests || []).map(test => test.projectName))
+            return specs.concat((suite.suites || []).flatMap(walk))
+          }).filter(Boolean))
+          for (const required of ['chromium-desktop', 'chromium-mobile', 'webkit-mobile']) {
+            if (!names.has(required)) throw new Error(`missing canonical evidence project: ${required}`)
+          }
+          NODE
+
+      - name: Fail fast on anonymous selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright test tests/smoke.spec.ts --list --reporter=json > /tmp/playwright-selection.json
+          node - <<'NODE'
+          const fs = require('fs')
+          const report = JSON.parse(fs.readFileSync('/tmp/playwright-selection.json', 'utf8'))
+          const text = JSON.stringify(report)
+          if (/authenticated\.spec|authenticated fixture|storageState/i.test(text)) {
+            throw new Error('evidence selection contains authenticated fixture coverage')
+          }
+          if (!/smoke\.spec\.ts/.test(text)) {
+            throw new Error('canonical anonymous smoke file was not selected')
+          }
+          NODE
+
+      - name: Run anonymous browser evidence
+        run: npx playwright test tests/smoke.spec.ts
+
+      - name: Materialize runtime manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p playwright-report
+          if [ -f .playwright-runtime-manifest.json ]; then
+            cp .playwright-runtime-manifest.json playwright-report/runtime-manifest.json
+          fi
+
+      - name: Remove production traces
+        if: always() && env.EVIDENCE_TARGET == 'production'
+        shell: bash
+        run: |
+          find test-results playwright-report -type f \( -name 'trace.zip' -o -name '*.zip' \) -delete 2>/dev/null || true
+
+      - name: Validate evidence manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs')
+          const manifest = JSON.parse(fs.readFileSync('playwright-report/runtime-manifest.json', 'utf8'))
+          const expectedOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL).origin
+          if (manifest.commit !== process.env.EVIDENCE_COMMIT_SHA) throw new Error('runtime manifest commit mismatch')
+          if (manifest.baseUrl !== expectedOrigin) throw new Error(`runtime manifest base URL mismatch: ${manifest.baseUrl}`)
+          const projects = new Set((manifest.projects || []).map(project => project.project))
+          for (const required of ['chromium-desktop', 'chromium-mobile', 'webkit-mobile']) {
+            if (!projects.has(required)) throw new Error(`runtime manifest missing project: ${required}`)
+          }
+          const serialized = JSON.stringify(manifest)
+          if (/cookie|access[_-]?token|anon[_-]?key/i.test(serialized)) throw new Error('runtime manifest contains forbidden secret-shaped fields')
+          NODE
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-evidence-${{ inputs.commit_sha }}
+          path: playwright-report/
+          if-no-files-found: error
+          retention-days: 14
