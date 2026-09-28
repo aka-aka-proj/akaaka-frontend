@@ -177,6 +177,10 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
               ))}
             </select>
           </div>
+          <Link to="/settings/blocklist" onClick={onClose} className="more-drawer-item">
+            <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
+            <span>{t('blocklist.title')}</span>
+          </Link>
           <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-lock" size={20} />
             <span>{t('nav.securityPrivacy')}</span>
