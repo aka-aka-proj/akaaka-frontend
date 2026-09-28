@@ -179,9 +179,21 @@ test('Google sign-in starts the onboarding callback', async ({ page }) => {
 for (const locale of ['zh-TW', 'en']) {
   test(`Android PWA return guidance is accessible and continues onboarding: ${locale}`, async ({ page, baseURL }) => {
     await installFixture(page, locale, true)
-    await page.addInitScript(() => {
+    await page.addInitScript(({ apiUrl }) => {
       Object.defineProperty(navigator, 'userAgent', { get: () => 'Android Chrome synthetic callback' })
-    })
+      // WebKit rejects HTTP API calls from this HTTPS fixture before route interception.
+      // Upgrade only the configured mock API; installFixture still supplies every response.
+      const apiOrigin = new URL(apiUrl).origin
+      const originalFetch = window.fetch.bind(window)
+      window.fetch = (input, init) => {
+        const url = new URL(input instanceof Request ? input.url : input.toString())
+        if (url.origin === apiOrigin && url.protocol === 'http:') {
+          url.protocol = 'https:'
+          return originalFetch(input instanceof Request ? new Request(url, input) : url, init)
+        }
+        return originalFetch(input, init)
+      }
+    }, { apiUrl: process.env.VITE_SUPABASE_URL || 'http://localhost:54321' })
     await page.route('https://pwa-return.example.test/**', async route => {
       const url = new URL(route.request().url())
       const upstream = new URL(`${url.pathname}${url.search}`, baseURL)
