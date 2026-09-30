@@ -98,8 +98,8 @@ const zhTW = {
   },
   auth: {
     pwaReturnTitle: '登入成功',
-    pwaReturnDescription: '如果你是從主畫面的 BDSM 圈內揪 App 開始登入，現在可以返回 App 繼續。新帳號仍需完成初次設定。',
-    pwaReturnHelp: '手機可能不會自動切回 App。你可以嘗試下方按鈕；若沒有開啟，請回到主畫面點選 BDSM 圈內揪，或繼續使用此視窗。',
+    pwaReturnDescription: '你已登入 BDSM 圈內揪。你可以繼續使用此視窗，或開啟已安裝的 App。',
+    pwaReturnHelp: '若已安裝 App，請從主畫面或應用程式清單開啟 BDSM 圈內揪。瀏覽器不一定能自動切換；未安裝 App 也可繼續使用此視窗。',
     pwaReturnOpen: '嘗試開啟 App',
     pwaReturnContinue: '繼續使用此視窗',
     title: 'BDSM 圈內揪登入',

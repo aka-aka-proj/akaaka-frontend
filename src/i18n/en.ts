@@ -98,8 +98,8 @@ const en = {
   },
   auth: {
     pwaReturnTitle: 'Signed in successfully',
-    pwaReturnDescription: 'If you started signing in from the BDSM Meetup app on your home screen, you can now return to the app. New accounts still need to finish setup.',
-    pwaReturnHelp: 'Your phone may not switch back automatically. Try the button below. If the app does not open, tap BDSM Meetup on your home screen, or continue in this window.',
+    pwaReturnDescription: 'You are signed in to BDSM Meetup. Continue in this window, or open the app if you have installed it.',
+    pwaReturnHelp: 'If you have installed the app, open BDSM Meetup from your home screen or app list. Browsers may not switch automatically. You can continue in this window without installing the app.',
     pwaReturnOpen: 'Try opening the app',
     pwaReturnContinue: 'Continue in this window',
     title: 'BDSM Circle Connect Auth',

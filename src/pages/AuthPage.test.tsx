@@ -62,12 +62,15 @@ describe('AuthPage', () => {
     ['google', 'Android Chrome', true, '使用 Google 登入'],
     ['x', 'Android Chrome', false, '使用 X 登入'],
     ['x', 'iPhone Safari', true, '使用 X 登入'],
-  ])('keeps the existing callback for %s / %s / standalone=%s', async (provider, ua, standalone, label) => {
+    ['x', 'iPhone Safari', false, '使用 X 登入'],
+    ['x', 'Desktop Firefox', false, '使用 X 登入'],
+    ['facebook', 'Desktop Chrome', false, '使用 Facebook 登入'],
+  ])('marks X callbacks across browsers: %s / %s / standalone=%s', async (provider, ua, standalone, label) => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(ua)
     vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: standalone && query === '(display-mode: standalone)', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
     await userEvent.setup().click(screen.getByRole('button', { name: label }))
-    expect(signInWithOAuth).toHaveBeenCalledWith({ provider, options: { redirectTo: `${window.location.origin}/onboarding` } })
+    expect(signInWithOAuth).toHaveBeenCalledWith({ provider, options: { redirectTo: `${window.location.origin}/onboarding${provider === 'x' ? '?pwa_return=1' : ''}` } })
   })
 
   it('requires CAPTCHA before auth and forwards the verified token', async () => {
