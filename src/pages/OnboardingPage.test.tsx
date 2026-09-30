@@ -84,8 +84,9 @@ describe('OnboardingPage', () => {
     vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: standalone && query === '(display-mode: standalone)', addEventListener: vi.fn(), removeEventListener: vi.fn() })))
   }
 
-  it('holds existing-profile navigation until the user chooses to continue', async () => {
+  it.each(['Android Chrome', 'iPhone Safari', 'Desktop Firefox'])('holds existing-profile navigation on %s until continue', async (ua) => {
     androidMode()
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(ua)
     mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
     render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: '登入成功' })).toBeTruthy()
@@ -109,6 +110,7 @@ describe('OnboardingPage', () => {
     '?pwa_return=1&error=access_denied',
     '?pwa_return=1&error_code=oauth_state_mismatch',
     '?pwa_return=1&error_description=PKCE%20verification%20failed',
+    '?pwa_return=1#error=access_denied',
   ])('does not show success for a failed callback even with an existing session: %s', (search) => {
     androidMode()
     mockUseAuth.mockReturnValue({ user: { id: 'user-1' }, profile: { id: 'user-1' }, refreshProfile })
@@ -128,6 +130,33 @@ describe('OnboardingPage', () => {
     mockUseAuth.mockReturnValue({ user: null, refreshProfile })
     render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1']}><OnboardingPage /></MemoryRouter>)
     expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
+  })
+
+  it.each(['unsupported', 'skip', 'accept'])('keeps new X users at the return panel after %s notification completion', async (mode) => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('iPhone Safari')
+    getWebPushState.mockResolvedValue(mode === 'unsupported' ? 'unsupported' : 'unsubscribed')
+    let savedProfile: { id: string } | null = null
+    mockUseAuth.mockImplementation(() => ({ user: { id: 'user-1' }, profile: savedProfile, refreshProfile }))
+    refreshProfile.mockImplementation(async () => { savedProfile = { id: 'user-1' } })
+    const tree = <MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>
+    const view = render(tree)
+    const user = userEvent.setup()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    if (mode !== 'unsupported') {
+      expect(screen.queryByRole('heading', { name: '登入成功' })).toBeNull()
+      await user.click(screen.getByRole('button', { name: mode === 'skip' ? '稍後到通知設定' : '開啟通知' }))
+    }
+    await waitFor(() => expect(refreshProfile).toHaveBeenCalledTimes(1))
+    expect(screen.getByTestId('location').textContent).toContain('pwa_return=1')
+    view.rerender(<MemoryRouter><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: '登入成功' })).toBeTruthy()
+    expect(document.querySelector('a[href^="intent:"]')).toBeNull()
+    await user.click(screen.getByRole('button', { name: '繼續使用此視窗' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+    expect(insert).toHaveBeenCalledTimes(1)
   })
 
   it('shows safety compact modal automatically on mount', () => {

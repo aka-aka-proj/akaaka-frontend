@@ -36,11 +36,12 @@ export function OnboardingPage() {
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
   const oauthParams = new URLSearchParams(location.search)
-  const callbackFailed = [...oauthParams.keys()].some((key) =>
+  const callbackHash = new URLSearchParams(location.hash.slice(1))
+  const callbackFailed = [...oauthParams.keys(), ...callbackHash.keys()].some((key) =>
     /^(error|error_code|error_description|error_uri)$/i.test(key),
   )
-  const showPwaReturn = Boolean(user && profile) && !callbackFailed && /Android/i.test(navigator.userAgent) &&
-    !isStandaloneDisplay() && oauthParams.get('pwa_return') === '1'
+  const wantsPwaReturn = !callbackFailed && !isStandaloneDisplay() && oauthParams.get('pwa_return') === '1'
+  const showPwaReturn = Boolean(user && profile) && wantsPwaReturn
 
   const fromQuery = new URLSearchParams(location.search).get('from')
   const fromState = (location.state as { from?: string } | null)?.from
@@ -55,7 +56,7 @@ export function OnboardingPage() {
   }, [agreed])
 
   if (showPwaReturn) {
-    const links = buildPwaReturnLinks(window.location.origin, location.search)
+    const links = buildPwaReturnLinks(window.location.origin, location.search, navigator.userAgent)
     return <Layout showPageBack={false}>
       <PwaOAuthReturn intent={links.intent} onContinue={() => navigate(links.continuePath, { replace: true })} />
     </Layout>
@@ -89,7 +90,8 @@ export function OnboardingPage() {
 
   const finishOnboarding = async () => {
     await refreshProfile()
-    navigate(returnPath, { replace: true })
+    // Keep the callback marker until the newly loaded profile can show the return choice.
+    if (!wantsPwaReturn) navigate(returnPath, { replace: true })
   }
 
   const acceptPush = async () => {

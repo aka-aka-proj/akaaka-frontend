@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { supabase } from '../supabaseClient'
 import { TurnstileCaptcha } from '../components/TurnstileCaptcha'
-import { isStandaloneDisplay, shouldMarkPwaReturn } from '../lib/pwa-oauth-return'
+import { shouldMarkPwaReturn } from '../lib/pwa-oauth-return'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_login_credentials: '電子郵件或密碼不正確',
@@ -96,7 +96,7 @@ export function AuthPage() {
     let redirectTo = from
       ? `${window.location.origin}/onboarding?from=${encodeURIComponent(from)}`
       : `${window.location.origin}/onboarding`
-    if (shouldMarkPwaReturn(provider, navigator.userAgent, isStandaloneDisplay())) {
+    if (shouldMarkPwaReturn(provider)) {
       redirectTo += `${from ? '&' : '?'}pwa_return=1`
     }
 

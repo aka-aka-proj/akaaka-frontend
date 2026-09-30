@@ -197,7 +197,7 @@ for (const locale of ['zh-TW', 'en']) {
     await page.route('https://pwa-return.example.test/**', async route => {
       const url = new URL(route.request().url())
       const upstream = new URL(`${url.pathname}${url.search}`, baseURL)
-      await route.fulfill({ response: await route.fetch({ url: upstream.href }) })
+      await route.fulfill({ response: await route.fetch({ url: upstream.href, headers: { ...route.request().headers(), host: upstream.host } }) })
     })
     await page.goto('https://pwa-return.example.test/onboarding?pwa_return=1&from=%2Fevents%2Fmine&code=discard-me')
     const panel = page.getByRole('region', { name: locale === 'en' ? 'Signed in successfully' : '登入成功' })
@@ -245,4 +245,72 @@ test('Android standalone X callback carries return marker and source', async ({ 
   await page.getByRole('button', { name: /使用 X 登入|continue with x/i }).click()
   await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('x')
   expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${origin}/onboarding?from=%2Fevents%2Fmine&pwa_return=1`)
+})
+
+// Native project UA is retained: Chromium/Firefox desktop and iPhone WebKit use the same flow.
+test('X browser login carries the return marker without standalone emulation', async ({ page }) => {
+  let callback: URL | undefined
+  await page.route('**/auth/v1/authorize**', route => {
+    callback = new URL(new URL(route.request().url()).searchParams.get('redirect_to')!)
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<title>X callback captured</title>' })
+  })
+  await page.goto('/auth?from=%2Fevents%2Fmine')
+  expect(await page.evaluate(() => matchMedia('(display-mode: standalone)').matches)).toBe(false)
+  await page.getByRole('button', { name: /使用 X 登入|continue with x/i }).click()
+  await expect.poll(() => callback?.searchParams.get('pwa_return')).toBe('1')
+  expect(callback?.pathname).toBe('/onboarding')
+  expect(callback?.searchParams.get('from')).toBe('/events/mine')
+  await page.unrouteAll({ behavior: 'wait' })
+})
+
+for (const locale of ['zh-TW', 'en']) {
+  test(`browser X callback offers a return choice with native user agent: ${locale}`, async ({ page }) => {
+    await installFixture(page, locale, true)
+    await page.goto('/onboarding?pwa_return=1&from=%2Fevents%2Fmine')
+    const panel = page.getByRole('region', { name: locale === 'en' ? 'Signed in successfully' : '登入成功' })
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('heading')).toBeFocused()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    const androidHttps = await page.evaluate(() => /Android/i.test(navigator.userAgent) && location.protocol === 'https:')
+    await expect(panel.locator('a[href^="intent:"]')).toHaveCount(androidHttps ? 1 : 0)
+    const proceed = panel.getByRole('button')
+    await expect(proceed).toBeInViewport({ ratio: 1 })
+    const box = await proceed.boundingBox()
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: test.info().outputPath(`browser-return-${locale}.png`), fullPage: true })
+    await proceed.click()
+    await expect(page).toHaveURL(/\/events\/mine$/)
+    await expect(panel).toHaveCount(0)
+    await page.unrouteAll({ behavior: 'wait' })
+  })
+}
+
+test('new X account completes compact and profile before the browser return choice', async ({ page }) => {
+  await installFixture(page, 'en')
+  let saved = false
+  let profileWrites = 0
+  await page.route('**/rest/v1/rpc/get_profile_for_viewer', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(saved ? syntheticProfile : null),
+  }))
+  await page.route('**/rest/v1/profiles', route => {
+    if (route.request().method() === 'POST') { saved = true; profileWrites++ }
+    return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+  })
+  await page.goto('/onboarding?pwa_return=1&from=%2Fevents%2Fmine')
+  const panel = page.getByRole('region', { name: 'Signed in successfully' })
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(panel).toHaveCount(0)
+  await page.getByRole('dialog').getByRole('button', { name: /agree.*continue/i }).click()
+  await page.locator('form .onboarding-submit').click()
+  const pushLater = page.locator('.onboarding-push-later')
+  await expect(panel.or(pushLater)).toBeVisible()
+  if (await pushLater.isVisible()) await pushLater.click()
+  await expect(panel).toBeVisible()
+  expect(profileWrites).toBe(1)
+  await panel.getByRole('button').click()
+  await expect(page).toHaveURL(/\/events\/mine$/)
+  expect(profileWrites).toBe(1)
+  await page.unrouteAll({ behavior: 'wait' })
 })
