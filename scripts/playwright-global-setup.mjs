@@ -32,7 +32,11 @@ function safeBaseUrl(rawBaseUrl) {
     const url = new URL(rawBaseUrl)
     const isLoopback = ['localhost', '127.0.0.1', '::1'].includes(url.hostname)
     const isPreview = process.env.VERCEL_ENV === 'preview' && url.hostname.endsWith('.vercel.app')
-    return isLoopback || isPreview ? url.origin : 'redacted-non-preview-url'
+    const isReleaseProduction =
+      process.env.RELEASE_BROWSER_EVIDENCE === 'true' &&
+      process.env.VERCEL_ENV === 'production' &&
+      url.hostname === 'akaaka-frontend.vercel.app'
+    return isLoopback || isPreview || isReleaseProduction ? url.origin : 'redacted-non-preview-url'
   } catch {
     return 'unavailable'
   }
@@ -137,7 +141,7 @@ export default async function globalSetup(config) {
     `${JSON.stringify({
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
-      commit: process.env.GITHUB_SHA || 'local',
+      commit: process.env.EVIDENCE_COMMIT_SHA || process.env.GITHUB_SHA || 'local',
       ci: process.env.GITHUB_ACTIONS === 'true',
       baseUrl: safeBaseUrl(process.env.PLAYWRIGHT_BASE_URL),
       ...common,
