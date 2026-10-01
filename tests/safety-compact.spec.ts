@@ -314,3 +314,53 @@ test('new X account completes compact and profile before the browser return choi
   expect(profileWrites).toBe(1)
   await page.unrouteAll({ behavior: 'wait' })
 })
+
+for (const locale of ['zh-TW', 'en']) {
+  test(`saved profile retry retains onboarding through failed and delayed RPC: ${locale}`, async ({ page }) => {
+    await installFixture(page, locale)
+    let profileWrites = 0
+    let savedReads = 0
+    let releaseRetry!: () => void
+    const retryResponse = new Promise<void>(resolve => { releaseRetry = resolve })
+    await page.route('**/rest/v1/profiles', route => {
+      if (route.request().method() === 'POST') profileWrites++
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+    })
+    await page.route('**/rest/v1/rpc/get_profile_for_viewer', async route => {
+      if (!profileWrites) return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' })
+      savedReads++
+      if (savedReads === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Synthetic temporary failure' }) })
+      await retryResponse
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(syntheticProfile) })
+    })
+    try {
+      await page.goto('/onboarding?pwa_return=1&from=%2Fevents%2Fmine')
+      await page.getByRole('dialog').getByRole('button', { name: /agree.*continue|同意並繼續/i }).click()
+      await page.locator('form .onboarding-submit').click()
+      const recovery = page.locator('section[aria-labelledby="onboarding-refresh-title"]')
+      const pushLater = page.locator('.onboarding-push-later')
+      await expect(recovery.or(pushLater)).toBeVisible()
+      if (await pushLater.isVisible()) await pushLater.click()
+      await expect(recovery).toBeVisible()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await recovery.getByRole('button').click()
+      await expect.poll(() => savedReads).toBe(2)
+      await expect(recovery).toBeVisible()
+      await expect(recovery).toHaveAttribute('aria-busy', 'true')
+      await expect(recovery.getByRole('button')).toBeDisabled()
+      await expect(recovery.getByRole('button')).toHaveText(locale === 'en' ? 'Loading...' : '載入中...')
+      await expect(pushLater).toHaveCount(0)
+      expect(profileWrites).toBe(1)
+      releaseRetry()
+      const panel = page.getByRole('region', { name: locale === 'en' ? 'Signed in successfully' : '登入成功' })
+      await expect(panel).toBeVisible()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await panel.getByRole('button').click()
+      await expect(page).toHaveURL(/\/events\/mine$/)
+      expect(profileWrites).toBe(1)
+    } finally {
+      releaseRetry()
+      await page.unrouteAll({ behavior: 'wait' })
+    }
+  })
+}

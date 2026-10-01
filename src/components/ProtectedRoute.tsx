@@ -9,7 +9,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
   const from = `${location.pathname}${location.search}`
 
-  if (loading || isProfileLoading || isInitialProfileLoad) {
+  // Keep saved onboarding state mounted while its profile refresh/retry is pending.
+  if (loading || isInitialProfileLoad || (isProfileLoading && location.pathname !== '/onboarding')) {
     return <main className="page" role="main"><p>{t('common.loading')}</p></main>
   }
 

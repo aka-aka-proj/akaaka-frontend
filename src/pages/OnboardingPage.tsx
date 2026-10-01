@@ -33,6 +33,8 @@ export function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileRefreshFailed, setProfileRefreshFailed] = useState(false)
+  const [profileRefreshBusy, setProfileRefreshBusy] = useState(false)
+  const profileRefreshInFlight = useRef(false)
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
@@ -54,7 +56,7 @@ export function OnboardingPage() {
 
   useEffect(() => {
     if (agreed) headingRef.current?.focus()
-  }, [agreed])
+  }, [agreed, profileRefreshFailed])
 
   if (showPwaReturn) {
     const links = buildPwaReturnLinks(window.location.origin, location.search, navigator.userAgent)
@@ -90,15 +92,26 @@ export function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
-    setProfileRefreshFailed(false)
-    const profileLoaded = await refreshProfile()
-    if (!profileLoaded) {
+    if (profileRefreshInFlight.current) return false
+    profileRefreshInFlight.current = true
+    setProfileRefreshBusy(true)
+    try {
+      const profileLoaded = await refreshProfile()
+      if (!profileLoaded) {
+        setProfileRefreshFailed(true)
+        return false
+      }
+      setProfileRefreshFailed(false)
+      if (!wantsPwaReturn) navigate(returnPath, { replace: true })
+      return true
+    } catch {
       setProfileRefreshFailed(true)
-      setPushPromptBusy(false)
       return false
+    } finally {
+      profileRefreshInFlight.current = false
+      setProfileRefreshBusy(false)
+      setPushPromptBusy(false)
     }
-    if (!wantsPwaReturn) navigate(returnPath, { replace: true })
-    return true
   }
 
   const acceptPush = async () => {
@@ -112,10 +125,11 @@ export function OnboardingPage() {
   return <Layout>
     <SafetyCompactModal open={compactOpen} onClose={async () => { await supabase.auth.signOut(); navigate('/auth', { replace: true }) }} onAgree={() => { setAgreed(true); setCompactOpen(false) }} />
     {agreed && <div className="onboarding-shell">
-      {profileSaved && profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-refresh-title">
-        <h1 id="onboarding-refresh-title">{t('onboarding.profileRefreshFailedTitle')}</h1>
+      {profileSaved && profileRefreshBusy && !profileRefreshFailed && !pushPromptVisible ? <p role="status">{t('common.loading')}</p> : null}
+      {profileSaved && profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-refresh-title" aria-busy={profileRefreshBusy}>
+        <h1 id="onboarding-refresh-title" ref={headingRef} tabIndex={-1}>{t('onboarding.profileRefreshFailedTitle')}</h1>
         <p>{t('onboarding.profileRefreshFailedDescription')}</p>
-        <button type="button" className="primary onboarding-submit" onClick={() => void finishOnboarding()}>{t('onboarding.profileRefreshRetry')}</button>
+        <button type="button" className="primary onboarding-submit" disabled={profileRefreshBusy} onClick={() => void finishOnboarding()}>{profileRefreshBusy ? t('common.loading') : t('onboarding.profileRefreshRetry')}</button>
       </section> : null}
       {profileSaved && pushPromptVisible && !profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
         <p className="eyebrow">{t('onboarding.pushEyebrow')}</p><h1 id="onboarding-push-title">{t('onboarding.pushTitle')}</h1><p>{t('onboarding.pushDescription')}</p>
