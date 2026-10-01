@@ -1049,6 +1049,9 @@ const zhTW = {
     pushLater: '稍後到通知設定',
     pushWorking: '正在設定…',
     pushEnableFailed: '通知設定失敗，你可以稍後到通知設定再試。',
+    profileRefreshFailedTitle: '個人資料已儲存',
+    profileRefreshFailedDescription: '暫時無法重新載入個人資料。請重試；系統不會再次建立資料。',
+    profileRefreshRetry: '重新載入個人資料',
 
     displayNameLabel: '顯示名稱',
     bioLabel: '簡介',
