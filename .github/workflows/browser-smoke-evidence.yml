@@ -43,6 +43,10 @@ jobs:
           }
           NODE
 
+      - name: Normalize evidence SHA
+        shell: bash
+        run: echo "EVIDENCE_COMMIT_SHA=$(printf '%s' "$EVIDENCE_COMMIT_SHA" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - name: Checkout exact evidence commit
         uses: actions/checkout@v4
         with:
@@ -64,6 +68,28 @@ jobs:
           const production = host === 'akaaka-frontend.vercel.app'
           console.log(`EVIDENCE_TARGET=${production ? 'production' : 'preview'}`)
           console.log(`VERCEL_ENV=${production ? 'production' : 'preview'}`)
+          NODE
+
+      - name: Verify deployed commit and branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-redirs 2 "$PLAYWRIGHT_BASE_URL/version.json" -o /tmp/deployment-version.json
+          node - <<'NODE'
+          const fs = require('fs')
+          const metadata = JSON.parse(fs.readFileSync('/tmp/deployment-version.json', 'utf8'))
+          const expectedCommit = process.env.EVIDENCE_COMMIT_SHA
+          const expectedRef = process.env.EVIDENCE_TARGET === 'production' ? 'main' : 'preview'
+          const expectedEnvironment = process.env.EVIDENCE_TARGET === 'production' ? 'production' : 'preview'
+          if (String(metadata.commit || '').toLowerCase() !== expectedCommit) {
+            throw new Error(`deployed commit mismatch: expected ${expectedCommit}, got ${metadata.commit || 'missing'}`)
+          }
+          if (metadata.ref !== expectedRef) {
+            throw new Error(`deployed ref mismatch: expected ${expectedRef}, got ${metadata.ref || 'missing'}`)
+          }
+          if (metadata.environment !== expectedEnvironment) {
+            throw new Error(`deployed environment mismatch: expected ${expectedEnvironment}, got ${metadata.environment || 'missing'}`)
+          }
           NODE
 
       - name: Setup Node.js
