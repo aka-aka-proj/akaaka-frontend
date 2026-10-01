@@ -159,16 +159,19 @@ describe('OnboardingPage', () => {
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
-  it('falls back to the requested destination when profile refresh fails after saving', async () => {
+  it('keeps saved onboarding recoverable when profile refresh fails', async () => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('iPhone Safari')
     getWebPushState.mockResolvedValue('unsupported')
-    refreshProfile.mockResolvedValue(false)
+    refreshProfile.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
     const user = userEvent.setup()
-    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
     await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
-    expect(refreshProfile).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('heading', { name: '個人資料已儲存' })).toBeTruthy()
+    expect(screen.getByTestId('location').textContent).toContain('/onboarding')
+    expect(insert).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: '重新載入個人資料' }))
+    await waitFor(() => expect(refreshProfile).toHaveBeenCalledTimes(2))
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
