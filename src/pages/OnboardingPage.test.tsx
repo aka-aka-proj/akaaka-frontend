@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -159,19 +159,29 @@ describe('OnboardingPage', () => {
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps saved onboarding recoverable when profile refresh fails', async () => {
+  it.each(['unsupported', 'skip'])('keeps saved onboarding visible during a delayed retry after %s', async (mode) => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('iPhone Safari')
-    getWebPushState.mockResolvedValue('unsupported')
-    refreshProfile.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    getWebPushState.mockResolvedValue(mode === 'unsupported' ? 'unsupported' : 'unsubscribed')
+    let completeRetry!: (loaded: boolean) => void
+    refreshProfile.mockResolvedValueOnce(false).mockImplementationOnce(() => new Promise<boolean>(resolve => { completeRetry = resolve }))
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><OnboardingPage /><LocationProbe /></MemoryRouter>)
     await user.click(screen.getByRole('button', { name: '同意並繼續' }))
     await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    if (mode === 'skip') await user.click(screen.getByRole('button', { name: '稍後到通知設定' }))
     expect(await screen.findByRole('heading', { name: '個人資料已儲存' })).toBeTruthy()
     expect(screen.getByTestId('location').textContent).toContain('/onboarding')
     expect(insert).toHaveBeenCalledTimes(1)
     await user.click(screen.getByRole('button', { name: '重新載入個人資料' }))
     await waitFor(() => expect(refreshProfile).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('heading', { name: '個人資料已儲存' })).toBeTruthy()
+    const retry = screen.getByRole('button', { name: '載入中...' })
+    expect(retry.hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: '稍後到通知設定' })).toBeNull()
+    await user.click(retry)
+    expect(refreshProfile).toHaveBeenCalledTimes(2)
+    await act(async () => completeRetry(false))
+    expect(screen.getByRole('button', { name: '重新載入個人資料' }).hasAttribute('disabled')).toBe(false)
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
