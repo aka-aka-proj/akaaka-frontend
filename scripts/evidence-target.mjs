@@ -6,9 +6,9 @@ export function validateDeployment(deployment, { sha, projectId, repository, tar
   const production = target === 'production'
   const branch = production ? 'main' : 'preview'
   const meta = deployment.meta || {}
-  if (!['production', 'preview'].includes(target) || deployment.readyState !== 'READY' || deployment.projectId !== projectId ||
+  if (!['production', 'preview'].includes(target) || deployment.readyState !== 'READY' || (deployment.projectId || deployment.project?.id) !== projectId ||
       meta.githubCommitSha !== sha || meta.githubCommitRef !== branch ||
-      `${meta.githubCommitOrg}/${meta.githubCommitRepo}` !== repository ||
+      `${meta.githubOrg || meta.githubCommitOrg}/${meta.githubRepo || meta.githubCommitRepo}` !== repository ||
       (production ? deployment.target !== 'production' : deployment.target != null) ||
       !/^[a-z0-9-]+\.vercel\.app$/.test(deployment.url || '') ||
       typeof deployment.id !== 'string' || !deployment.id.startsWith('dpl_')) {
@@ -24,13 +24,25 @@ async function main() {
   if (![origin, sha, token, team, projectId, repository, target].every(Boolean)) {
     throw new Error('Missing deployment verification configuration')
   }
-  const url = new URL('https://api.vercel.com/v13/deployments/lookup')
-  url.searchParams.set('url', new URL(origin).hostname)
-  url.searchParams.set('teamId', team)
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` },
-    redirect: 'error', signal: AbortSignal.timeout(30000) })
-  if (!response.ok) throw new Error(`Deployment metadata request failed: HTTP ${response.status}`)
-  const evidence = validateDeployment(await response.json(), { sha, origin: new URL(origin).origin, projectId, repository, target })
+  const get = async (resource) => {
+    const url = new URL(resource, 'https://api.vercel.com')
+    url.searchParams.set('teamId', team)
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` },
+      redirect: 'error', signal: AbortSignal.timeout(30000) })
+    if (response.status === 404) return null
+    if (!response.ok) throw new Error(`Deployment metadata request failed: HTTP ${response.status}`)
+    return response.json()
+  }
+  const host = new URL(origin).hostname
+  let deployment = await get(`/v13/deployments/${encodeURIComponent(host)}`)
+  if (!deployment) {
+    const alias = await get(`/v4/aliases/${encodeURIComponent(host)}`)
+    const id = alias?.deploymentId || alias?.deployment?.id
+    if (!id) throw new Error('Deployment or alias not found')
+    deployment = await get(`/v13/deployments/${encodeURIComponent(id)}`)
+  }
+  if (!deployment) throw new Error('Deployment not found')
+  const evidence = validateDeployment(deployment, { sha, origin: new URL(origin).origin, projectId, repository, target })
   execFileSync('git', ['merge-base', '--is-ancestor', sha, `origin/${evidence.branch}`], { stdio: 'ignore' })
   const file = '.verified-evidence-target.json'
   if (process.argv.includes('--recheck')) {

@@ -24,3 +24,11 @@ for (const [name, patch] of Object.entries({
 })) {
   test(`rejects ${name} mismatch`, () => assert.throws(() => validateDeployment({ ...deployment, ...patch }, config)))
 }
+
+test('supports Vercel project and repository metadata from live deployments', () => {
+  const live = { ...deployment, projectId: undefined, project: { id: config.projectId },
+    meta: { githubCommitSha: sha, githubCommitRef: 'preview', githubOrg: 'owner', githubRepo: 'repo' } }
+  const result = validateDeployment(live, config)
+  assert.equal(result.origin, 'https://example-deploy.vercel.app')
+  assert.equal(result.deploymentId, 'dpl_test')
+})
