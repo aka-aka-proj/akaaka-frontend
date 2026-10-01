@@ -32,6 +32,7 @@ export function OnboardingPage() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [profileRefreshFailed, setProfileRefreshFailed] = useState(false)
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
@@ -89,10 +90,15 @@ export function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
+    setProfileRefreshFailed(false)
     const profileLoaded = await refreshProfile()
-    // Keep the callback marker only when the refreshed profile can render the return choice.
-    // On a transient refresh failure, fall back to the normal destination so the user is not trapped in onboarding.
-    if (!wantsPwaReturn || !profileLoaded) navigate(returnPath, { replace: true })
+    if (!profileLoaded) {
+      setProfileRefreshFailed(true)
+      setPushPromptBusy(false)
+      return false
+    }
+    if (!wantsPwaReturn) navigate(returnPath, { replace: true })
+    return true
   }
 
   const acceptPush = async () => {
@@ -106,7 +112,12 @@ export function OnboardingPage() {
   return <Layout>
     <SafetyCompactModal open={compactOpen} onClose={async () => { await supabase.auth.signOut(); navigate('/auth', { replace: true }) }} onAgree={() => { setAgreed(true); setCompactOpen(false) }} />
     {agreed && <div className="onboarding-shell">
-      {profileSaved && pushPromptVisible ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
+      {profileSaved && profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-refresh-title">
+        <h1 id="onboarding-refresh-title">{t('onboarding.profileRefreshFailedTitle')}</h1>
+        <p>{t('onboarding.profileRefreshFailedDescription')}</p>
+        <button type="button" className="primary onboarding-submit" onClick={() => void finishOnboarding()}>{t('onboarding.profileRefreshRetry')}</button>
+      </section> : null}
+      {profileSaved && pushPromptVisible && !profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
         <p className="eyebrow">{t('onboarding.pushEyebrow')}</p><h1 id="onboarding-push-title">{t('onboarding.pushTitle')}</h1><p>{t('onboarding.pushDescription')}</p>
         <div className="onboarding-push-actions"><button type="button" className="primary onboarding-submit" disabled={pushPromptBusy} onClick={() => void acceptPush()}>{pushPromptBusy ? t('onboarding.pushWorking') : t('onboarding.pushAccept')}</button><button type="button" className="secondary onboarding-push-later" disabled={pushPromptBusy} onClick={() => void skipPush()}>{t('onboarding.pushLater')}</button></div>
         {pushPromptMessage ? <p className="message" role="alert">{pushPromptMessage}</p> : null}
