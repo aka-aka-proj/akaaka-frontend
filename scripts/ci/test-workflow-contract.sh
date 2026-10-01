@@ -41,4 +41,6 @@ if grep -Fq 'Consumes-Expand declaration gate' "$heavy"; then
   exit 1
 fi
 
+node --test "$repo_root/scripts/evidence-target.test.mjs"
+
 printf 'frontend workflow contract passed\n'

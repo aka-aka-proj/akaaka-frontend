@@ -1,6 +1,13 @@
 name: Release browser smoke evidence
 
 on:
+  push:
+    branches: [preview]
+    paths:
+      - .github/workflows/browser-smoke-evidence.yml
+      - scripts/evidence-target.mjs
+      - scripts/playwright-global-setup.mjs
+      - scripts/validate-playwright-manifest.mjs
   workflow_dispatch:
     inputs:
       base_url:
@@ -16,18 +23,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: browser-smoke-evidence-${{ inputs.commit_sha }}
+  group: browser-smoke-evidence-${{ inputs.commit_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
   evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
-      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://akaaka-git-preview-aka-aka.vercel.app' }}
       BROWSER_FILTER: chromium-desktop,chromium-mobile,webkit-mobile
       RELEASE_BROWSER_EVIDENCE: 'true'
-      EVIDENCE_COMMIT_SHA: ${{ inputs.commit_sha }}
+      EVIDENCE_COMMIT_SHA: ${{ inputs.commit_sha || github.sha }}
     steps:
       - name: Validate dispatch inputs
         shell: bash
@@ -50,8 +57,9 @@ jobs:
       - name: Checkout exact evidence commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit_sha }}
+          ref: ${{ inputs.commit_sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Assert exact evidence commit
         shell: bash
@@ -71,26 +79,22 @@ jobs:
           NODE
 
       - name: Verify deployed commit and branch
+        id: target
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --max-redirs 2 "$PLAYWRIGHT_BASE_URL/version.json" -o /tmp/deployment-version.json
-          node - <<'NODE'
-          const fs = require('fs')
-          const metadata = JSON.parse(fs.readFileSync('/tmp/deployment-version.json', 'utf8'))
-          const expectedCommit = process.env.EVIDENCE_COMMIT_SHA
-          const expectedRef = process.env.EVIDENCE_TARGET === 'production' ? 'main' : 'preview'
-          const expectedEnvironment = process.env.EVIDENCE_TARGET === 'production' ? 'production' : 'preview'
-          if (String(metadata.commit || '').toLowerCase() !== expectedCommit) {
-            throw new Error(`deployed commit mismatch: expected ${expectedCommit}, got ${metadata.commit || 'missing'}`)
-          }
-          if (metadata.ref !== expectedRef) {
-            throw new Error(`deployed ref mismatch: expected ${expectedRef}, got ${metadata.ref || 'missing'}`)
-          }
-          if (metadata.environment !== expectedEnvironment) {
-            throw new Error(`deployed environment mismatch: expected ${expectedEnvironment}, got ${metadata.environment || 'missing'}`)
-          }
-          NODE
+          # A preview push can arrive before its Vercel deployment is ready.
+          attempts=1
+          if [ "$GITHUB_EVENT_NAME" = push ]; then attempts=30; fi
+          for ((i=1; i<=attempts; i++)); do
+            if node scripts/evidence-target.mjs; then exit 0; fi
+            if [ "$i" -lt "$attempts" ]; then sleep 20; fi
+          done
+          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -145,6 +149,7 @@ jobs:
           NODE
 
       - name: Run anonymous browser evidence
+        id: smoke
         run: npx playwright test tests/smoke.spec.ts
 
       - name: Materialize runtime manifest
@@ -164,12 +169,14 @@ jobs:
           find test-results playwright-report -type f \( -name 'trace.zip' -o -name '*.zip' \) -delete 2>/dev/null || true
 
       - name: Validate evidence manifest
-        if: always()
+        id: manifest
+        if: always() && steps.smoke.outcome != 'skipped'
         shell: bash
         run: |
           set -euo pipefail
           node - <<'NODE'
           const fs = require('fs')
+          require('child_process').execFileSync('node', ['scripts/validate-playwright-manifest.mjs', 'playwright-report/runtime-manifest.json'], { stdio: 'inherit' })
           const manifest = JSON.parse(fs.readFileSync('playwright-report/runtime-manifest.json', 'utf8'))
           const expectedOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL).origin
           if (manifest.commit !== process.env.EVIDENCE_COMMIT_SHA) throw new Error('runtime manifest commit mismatch')
@@ -182,11 +189,22 @@ jobs:
           if (/cookie|access[_-]?token|anon[_-]?key/i.test(serialized)) throw new Error('runtime manifest contains forbidden secret-shaped fields')
           NODE
 
+      - name: Recheck immutable deployment
+        id: recheck
+        if: always() && steps.smoke.outcome != 'skipped' && steps.target.outcome == 'success'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          node scripts/evidence-target.mjs --recheck
+          cp .verified-evidence-target.json playwright-report/deployment.json
+
       - name: Upload browser evidence
-        if: always()
+        if: always() && steps.recheck.outcome == 'success' && steps.manifest.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: browser-smoke-evidence-${{ inputs.commit_sha }}
+          name: browser-smoke-evidence-${{ inputs.commit_sha || github.sha }}
           path: playwright-report/
           if-no-files-found: error
           retention-days: 14
