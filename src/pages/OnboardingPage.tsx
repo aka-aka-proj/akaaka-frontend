@@ -89,9 +89,10 @@ export function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
-    await refreshProfile()
-    // Keep the callback marker until the newly loaded profile can show the return choice.
-    if (!wantsPwaReturn) navigate(returnPath, { replace: true })
+    const profileLoaded = await refreshProfile()
+    // Keep the callback marker only when the refreshed profile can render the return choice.
+    // On a transient refresh failure, fall back to the normal destination so the user is not trapped in onboarding.
+    if (!wantsPwaReturn || !profileLoaded) navigate(returnPath, { replace: true })
   }
 
   const acceptPush = async () => {
