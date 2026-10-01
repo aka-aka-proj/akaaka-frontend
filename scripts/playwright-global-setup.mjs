@@ -35,7 +35,7 @@ function safeBaseUrl(rawBaseUrl) {
     const isReleaseProduction =
       process.env.RELEASE_BROWSER_EVIDENCE === 'true' &&
       process.env.VERCEL_ENV === 'production' &&
-      url.hostname === 'akaaka-frontend.vercel.app'
+      url.origin === process.env.VERIFIED_EVIDENCE_ORIGIN
     return isLoopback || isPreview || isReleaseProduction ? url.origin : 'redacted-non-preview-url'
   } catch {
     return 'unavailable'
