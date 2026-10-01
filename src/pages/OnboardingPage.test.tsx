@@ -47,7 +47,7 @@ describe('OnboardingPage', () => {
     insert.mockReset()
     insert.mockResolvedValue({ error: null })
     refreshProfile.mockReset()
-    refreshProfile.mockResolvedValue(undefined)
+    refreshProfile.mockResolvedValue(true)
     enableWebPush.mockReset()
     enableWebPush.mockResolvedValue(undefined)
     getWebPushState.mockReset()
@@ -137,7 +137,7 @@ describe('OnboardingPage', () => {
     getWebPushState.mockResolvedValue(mode === 'unsupported' ? 'unsupported' : 'unsubscribed')
     let savedProfile: { id: string } | null = null
     mockUseAuth.mockImplementation(() => ({ user: { id: 'user-1' }, profile: savedProfile, refreshProfile }))
-    refreshProfile.mockImplementation(async () => { savedProfile = { id: 'user-1' } })
+    refreshProfile.mockImplementation(async () => { savedProfile = { id: 'user-1' }; return true })
     const tree = <MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>
     const view = render(tree)
     const user = userEvent.setup()
@@ -156,6 +156,19 @@ describe('OnboardingPage', () => {
     expect(document.querySelector('a[href^="intent:"]')).toBeNull()
     await user.click(screen.getByRole('button', { name: '繼續使用此視窗' }))
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+    expect(insert).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to the requested destination when profile refresh fails after saving', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('iPhone Safari')
+    getWebPushState.mockResolvedValue('unsupported')
+    refreshProfile.mockResolvedValue(false)
+    const user = userEvent.setup()
+    render(<MemoryRouter initialEntries={['/onboarding?pwa_return=1&from=%2Fevents%2Fmine']}><Routes><Route path="/onboarding" element={<OnboardingPage />} /><Route path="*" element={<div />} /></Routes><LocationProbe /></MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/events/mine'))
+    expect(refreshProfile).toHaveBeenCalledTimes(1)
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
