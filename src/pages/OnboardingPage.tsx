@@ -125,7 +125,7 @@ export function OnboardingPage() {
   return <Layout>
     <SafetyCompactModal open={compactOpen} onClose={async () => { await supabase.auth.signOut(); navigate('/auth', { replace: true }) }} onAgree={() => { setAgreed(true); setCompactOpen(false) }} />
     {agreed && <div className="onboarding-shell">
-      {profileSaved && profileRefreshBusy && !profileRefreshFailed && !pushPromptVisible ? <p role="status">{t('common.loading')}</p> : null}
+      {profileSaved && !profileRefreshFailed && !pushPromptVisible ? <p role="status">{t('common.loading')}</p> : null}
       {profileSaved && profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-refresh-title" aria-busy={profileRefreshBusy}>
         <h1 id="onboarding-refresh-title" ref={headingRef} tabIndex={-1}>{t('onboarding.profileRefreshFailedTitle')}</h1>
         <p>{t('onboarding.profileRefreshFailedDescription')}</p>
