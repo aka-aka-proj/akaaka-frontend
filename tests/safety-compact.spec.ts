@@ -305,7 +305,8 @@ test('new X account completes compact and profile before the browser return choi
   await page.getByRole('dialog').getByRole('button', { name: /agree.*continue/i }).click()
   await page.locator('form .onboarding-submit').click()
   const pushLater = page.locator('.onboarding-push-later')
-  await expect(panel.or(pushLater)).toBeVisible()
+  // Hosted builds may enable Web Push; the blocked worker probe settles after 5s.
+  await expect(panel.or(pushLater)).toBeVisible({ timeout: 10000 })
   if (await pushLater.isVisible()) await pushLater.click()
   await expect(panel).toBeVisible()
   expect(profileWrites).toBe(1)
@@ -339,7 +340,7 @@ for (const locale of ['zh-TW', 'en']) {
       await page.locator('form .onboarding-submit').click()
       const recovery = page.locator('section[aria-labelledby="onboarding-refresh-title"]')
       const pushLater = page.locator('.onboarding-push-later')
-      await expect(recovery.or(pushLater)).toBeVisible()
+      await expect(recovery.or(pushLater)).toBeVisible({ timeout: 10000 })
       if (await pushLater.isVisible()) await pushLater.click()
       await expect(recovery).toBeVisible()
       await expect(page.getByRole('dialog')).toHaveCount(0)

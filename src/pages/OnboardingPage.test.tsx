@@ -185,6 +185,21 @@ describe('OnboardingPage', () => {
     expect(insert).toHaveBeenCalledTimes(1)
   })
 
+  it('shows progress while the notification capability probe is pending', async () => {
+    let completeProbe!: (state: string) => void
+    getWebPushState.mockImplementationOnce(() => new Promise<string>(resolve => { completeProbe = resolve }))
+    const user = userEvent.setup()
+    render(<MemoryRouter><OnboardingPage /></MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: '同意並繼續' }))
+    await user.click(screen.getByRole('button', { name: '完成導覽' }))
+    expect(screen.getByRole('status').textContent).toBe('載入中...')
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(refreshProfile).not.toHaveBeenCalled()
+    await act(async () => completeProbe('unsubscribed'))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('button', { name: '稍後到通知設定' })).toBeTruthy()
+  })
+
   it('shows safety compact modal automatically on mount', () => {
     render(
       <MemoryRouter>
