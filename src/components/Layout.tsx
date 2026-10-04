@@ -14,7 +14,7 @@ import { useScrollVisibility } from '../hooks/useScrollVisibility'
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/events', icon: 'nav-events', labelKey: 'nav.events', isMore: false },
-  { to: '/virtual-lovers', icon: 'nav-heart', labelKey: 'virtualLover.title', isMore: false },
+  { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myActivities', isMore: false },
   { to: '/profile/me', icon: 'nav-profile', labelKey: 'nav.myProfile', isMore: false },
   { to: null, icon: 'nav-more', labelKey: 'nav.more', isMore: true },
 ] as const
@@ -23,7 +23,7 @@ const DESKTOP_MORE_ITEMS = [
   { to: '/messages', icon: 'nav-message', labelKey: 'nav.messages' },
   { to: '/users', icon: 'nav-profile', labelKey: 'nav.browseUsers' },
   { to: '/following', icon: 'nav-profile', labelKey: 'nav.following' },
-  { to: '/registrations/me', icon: 'nav-calendar', labelKey: 'nav.myRegistrations' },
+  { to: '/virtual-lovers', icon: 'nav-heart', labelKey: 'virtualLover.title' },
   { to: '/events/bookmarks', icon: 'nav-heart', labelKey: 'nav.bookmarks' },
   { to: '/settings/analytics', icon: 'nav-chart', labelKey: 'nav.analytics' },
   { to: '/notifications', icon: 'nav-bell', labelKey: 'nav.notifications' },
@@ -98,6 +98,8 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
     return location.pathname === itemTo || location.pathname.startsWith(itemTo + '/')
   }
 
+  const moreRouteActive = DESKTOP_MORE_ITEMS.some(item => isActive(item.to))
+
   return (
     <main className="page" role="main">
       <header className="topbar">
@@ -126,15 +128,17 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
             {user && unreadNotificationCount > 0 ? <span className="notification-count" aria-label={`${unreadNotificationCount} unread`}>{unreadNotificationCount}</span> : null}
           </Link>
             <nav className="nav desktop-nav">
-              <Link to="/events"><Icon href="/nav-icons.svg" name="nav-events" size={16} /> {t('nav.events')}</Link>
-              <Link to="/virtual-lovers"><Icon href="/nav-icons.svg" name="nav-heart" size={16} /> {t('virtualLover.title')}</Link>
-              <Link to="/profile/me"><Icon href="/nav-icons.svg" name="nav-profile" size={16} /> {t('nav.myProfile')}</Link>
+              {BOTTOM_NAV_ITEMS.filter(item => !item.isMore).map(item => (
+                <Link key={item.to} to={item.to} className={isActive(item.to) ? 'active' : undefined} aria-current={isActive(item.to) ? 'page' : undefined}>
+                  <Icon href="/nav-icons.svg" name={item.icon} size={16} /> {t(item.labelKey)}
+                </Link>
+              ))}
 
             <div className="desktop-more-wrapper" ref={desktopMoreRef}>
               <button
                 type="button"
                 ref={desktopMoreButtonRef}
-                className={`desktop-nav-more-btn${desktopMoreOpen ? ' active' : ''}`}
+                className={`desktop-nav-more-btn${desktopMoreOpen || moreRouteActive ? ' active' : ''}`}
                 onClick={() => setDesktopMoreOpen((v) => !v)}
                 aria-haspopup="true"
                 aria-expanded={desktopMoreOpen}
@@ -209,7 +213,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
               <button
                 key="more"
                 type="button"
-                className={`bottom-nav-item${moreOpen ? ' active' : ''}`}
+                className={`bottom-nav-item${moreOpen || moreRouteActive ? ' active' : ''}`}
                 onClick={() => setMoreOpen(true)}
                 aria-label={t('nav.more')}
               >
@@ -222,6 +226,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
             <Link
               key={item.to}
               to={item.to!}
+              aria-current={isActive(item.to) ? 'page' : undefined}
               className={`bottom-nav-item${isActive(item.to) ? ' active' : ''}`}
             >
               <Icon href="/nav-icons.svg" name={item.icon} size={20} />

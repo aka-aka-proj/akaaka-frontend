@@ -37,6 +37,7 @@ vi.mock('../hooks/useT', () => ({
       'nav.messages': 'Messages',
       'nav.following': 'Following',
       'nav.myRegistrations': 'My registrations',
+      'virtualLover.title': 'Virtual Lover',
       'nav.bookmarks': 'Bookmarks',
       'nav.analytics': 'Analytics',
       'nav.notificationSettings': 'Notification settings',
@@ -59,6 +60,17 @@ vi.mock('./Icon', () => ({ Icon: () => null }))
 describe('MoreMenuDrawer accessibility', () => {
   beforeEach(() => {
     signOut.mockClear()
+  })
+
+  it('opens Virtual Lover from More without duplicating the primary registrations entry', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<MoreMenuDrawer open onClose={onClose} />)
+    const link = screen.getByRole('link', { name: 'Virtual Lover' })
+    expect(link.getAttribute('href')).toBe('/virtual-lovers')
+    expect(screen.queryByRole('link', { name: 'My registrations' })).toBeNull()
+    await user.click(link)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('moves focus into the dialog, traps its Tab boundary, and restores focus on close', async () => {

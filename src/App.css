@@ -1120,6 +1120,17 @@ dd {
   justify-content: flex-end;
 }
 
+.desktop-nav > a,
+.desktop-nav .desktop-nav-more-btn {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
+
+.desktop-nav a[aria-current="page"] {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 /* ── Desktop Nav: More Dropdown ── */
 
 .desktop-more-wrapper {
