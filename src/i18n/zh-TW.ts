@@ -57,6 +57,7 @@ const zhTW = {
   nav: {
     events: '活動',
     createEvent: '建立活動',
+    myActivities: '我的活動',
     myRegistrations: '我的報名',
     bookmarks: '我的收藏',
     myProfile: '個人資料',

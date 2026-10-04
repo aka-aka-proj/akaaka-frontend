@@ -137,6 +137,44 @@ test.describe('authenticated synthetic route boundary', () => {
     await installAuthenticatedFixture(page)
   })
 
+  for (const locale of ['en', 'zh-TW']) {
+    test(`prioritizes My Activities navigation (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
+      await gotoAuthenticatedRoute(page, '/events')
+      const mobile = await page.locator('.bottom-nav').isVisible()
+      const nav = page.locator(mobile ? '.bottom-nav' : '.desktop-nav')
+      const activities = nav.getByRole('link', { name: locale === 'en' ? 'My Activities' : '我的活動', exact: true })
+      await expect(activities).toHaveAttribute('href', '/registrations/me')
+      await expect(nav.locator('a')).toHaveCount(3)
+      await expect(nav.locator('a[href="/virtual-lovers"]')).toHaveCount(0)
+      await activities.click()
+      await expect(page).toHaveURL(/\/registrations\/me$/)
+      await expect(activities).toHaveAttribute('aria-current', 'page')
+      const more = nav.getByRole('button', { name: locale === 'en' ? 'More' : '更多', exact: true })
+      await more.click()
+      const menu = page.locator(mobile ? '.more-drawer' : '.desktop-more-dropdown')
+      const lover = menu.locator('a[href="/virtual-lovers"]')
+      await expect(lover).toBeVisible()
+      await expect(menu.locator('a[href="/registrations/me"]')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
+      await expect(more).toBeFocused()
+      await more.click()
+      await lover.click()
+      await expect(page).toHaveURL(/\/virtual-lovers$/)
+      await expect(menu).toBeHidden()
+      await expect(more).toHaveClass(/active/)
+      await expect(nav.locator('a[aria-current]')).toHaveCount(0)
+      for (const control of await nav.locator('a, button').all()) {
+        const box = await control.boundingBox()
+        expect(box?.width).toBeGreaterThanOrEqual(44)
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`navigation-${locale}.png`), fullPage: true })
+    })
+  }
+
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await gotoAuthenticatedRoute(page, '/events')
     await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: authenticatedStateTimeout })

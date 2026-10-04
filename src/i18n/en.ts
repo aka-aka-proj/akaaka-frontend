@@ -57,6 +57,7 @@ const en = {
   nav: {
     events: 'Events',
     createEvent: 'Create Event',
+    myActivities: 'My Activities',
     myRegistrations: 'My Registrations',
     bookmarks: 'Saved events',
     myProfile: 'My Profile',
