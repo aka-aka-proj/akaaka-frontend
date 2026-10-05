@@ -175,7 +175,7 @@ const zhTW = {
     downloadIcs: '下載 ICS',
     googleCalendar: 'Google Calendar',
     noResults: '找不到符合條件的活動。',
-    myEvents: '我的活動',
+    myEvents: '我建立的活動',
     activityTypeLabel: '活動類型',
     timeLabel: '時間',
     share: '分享',
@@ -499,7 +499,7 @@ const zhTW = {
     saveFailed: "儲存失敗，內容已保留，請重試。",
   },
   ownedEvents: {
-    title: "我的活動",
+    title: "我建立的活動",
     kind: "內容類型",
     status: "發布狀態",
     events: "活動",

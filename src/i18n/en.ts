@@ -175,7 +175,7 @@ const en = {
     downloadIcs: 'Download ICS',
     googleCalendar: 'Google Calendar',
     noResults: 'No events match your filters.',
-    myEvents: 'My Events',
+    myEvents: 'Events I Host',
     activityTypeLabel: 'Activity Type',
     timeLabel: 'Time',
     share: 'Share',
@@ -501,7 +501,7 @@ const en = {
     saveFailed: "Saving failed. Your input is retained. Please retry.",
   },
   ownedEvents: {
-    title: "My activities",
+    title: "Events I Host",
     kind: "Content type",
     status: "Publication status",
     events: "Events",

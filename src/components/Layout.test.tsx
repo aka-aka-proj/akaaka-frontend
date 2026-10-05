@@ -82,6 +82,20 @@ describe('Layout desktop More menu accessibility', () => {
     expect(screen.queryByRole('menuitem', { name: 'My registrations' })).toBeNull()
   })
 
+  it.each(['/events/example', '/events/example/edit', '/events/new', '/events/mine'])('keeps event navigation current on %s', (route) => {
+    render(<MemoryRouter initialEntries={[route]}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' })
+    expect(within(mobile).getByRole('link', { name: 'Events' }).getAttribute('aria-current')).toBe('page')
+    expect(within(mobile).getByRole('button', { name: 'More' }).classList.contains('active')).toBe(false)
+  })
+
+  it.each(['/events/bookmarks', '/events/bookmarks/example'])('keeps bookmarks exclusively under More on %s', (route) => {
+    render(<MemoryRouter initialEntries={[route]}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' })
+    expect(within(mobile).getByRole('link', { name: 'Events' }).getAttribute('aria-current')).toBeNull()
+    expect(within(mobile).getByRole('button', { name: 'More' }).classList.contains('active')).toBe(true)
+  })
+
   it('focuses the first menu item and returns focus after Escape', async () => {
     const user = userEvent.setup()
     render(

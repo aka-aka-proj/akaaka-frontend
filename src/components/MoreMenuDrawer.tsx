@@ -124,38 +124,38 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
 
         <nav className="more-drawer-body">
           <h3 className="more-drawer-section-title">{t('nav.activityGroup')}</h3>
-          <Link to="/messages" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/messages" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-message" size={20} />
             <span>{t('nav.messages')}</span>
           </Link>
-          <Link to="/users" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/users" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
             <span>{t('nav.browseUsers')}</span>
           </Link>
-          <Link to="/following" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/following" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-profile" size={20} />
             <span>{t('nav.following')}</span>
           </Link>
-          <Link to="/virtual-lovers" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/virtual-lovers" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-heart" size={20} />
             <span>{t('virtualLover.title')}</span>
           </Link>
-          <Link to="/events/bookmarks" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/events/bookmarks" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-heart" size={20} />
             <span>{t('nav.bookmarks')}</span>
           </Link>
-          <Link to="/settings/analytics" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/settings/analytics" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-chart" size={20} />
             <span>{t('nav.analytics')}</span>
           </Link>
 
           <div className="more-drawer-divider" />
           <h3 className="more-drawer-section-title">{t('nav.notificationsGroup')}</h3>
-          <Link to="/notifications" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/notifications" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
             <span>{t('nav.notifications')}</span>
           </Link>
-          <Link to="/settings/notifications" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/settings/notifications" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-bell" size={20} />
             <span>{t('nav.notificationSettings')}</span>
           </Link>
@@ -177,23 +177,23 @@ export function MoreMenuDrawer({ open, onClose }: MoreMenuDrawerProps) {
               ))}
             </select>
           </div>
-          <Link to="/settings/blocklist" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/settings/blocklist" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
             <span>{t('blocklist.title')}</span>
           </Link>
-          <Link to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/settings/security-privacy" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-lock" size={20} />
             <span>{t('nav.securityPrivacy')}</span>
           </Link>
 
           <div className="more-drawer-divider" />
           <h3 className="more-drawer-section-title">{t('nav.supportGroup')}</h3>
-          <Link to="/issues" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/issues" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-flag" size={20} />
             <span>{t('nav.myIssues')}</span>
           </Link>
 
-          <Link to="/reports/me" onClick={onClose} className="more-drawer-item">
+          <Link state={{ focusMoreNavigation: true }} to="/reports/me" onClick={onClose} className="more-drawer-item">
             <Icon href="/nav-icons.svg" name="nav-shield" size={20} />
             <span>{t('nav.myReports')}</span>
           </Link>
