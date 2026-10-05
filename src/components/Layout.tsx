@@ -53,7 +53,17 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
   const desktopMoreRef = useRef<HTMLDivElement>(null)
   const desktopMoreButtonRef = useRef<HTMLButtonElement>(null)
   const desktopMoreMenuRef = useRef<HTMLDivElement>(null)
+  const mobileMoreButtonRef = useRef<HTMLButtonElement>(null)
   const mobileShellVisible = useScrollVisibility()
+
+  useEffect(() => {
+    // Each page owns a Layout, so focus must survive the old menu unmounting.
+    if (location.state?.focusMoreNavigation) {
+      const desktop = desktopMoreButtonRef.current
+      const trigger = desktop?.getClientRects().length ? desktop : mobileMoreButtonRef.current
+      trigger?.focus()
+    }
+  }, [location.key, location.state])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -94,7 +104,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
 
   const isActive = (itemTo: string | null) => {
     if (!itemTo) return false
-    if (itemTo === '/events') return location.pathname === '/events'
+    if (itemTo === '/events' && (location.pathname === '/events/bookmarks' || location.pathname.startsWith('/events/bookmarks/'))) return false
     return location.pathname === itemTo || location.pathname.startsWith(itemTo + '/')
   }
 
@@ -153,7 +163,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
                       {index > 0 ? <div className="desktop-more-divider" /> : null}
                       <h3 className="desktop-more-section-title">{t(section.labelKey)}</h3>
                       {section.items.map((item) => (
-                        <Link key={item.to} to={item.to} className="desktop-more-dropdown-item" role="menuitem" onClick={() => setDesktopMoreOpen(false)}>
+                        <Link key={item.to} to={item.to} state={{ focusMoreNavigation: true }} className="desktop-more-dropdown-item" role="menuitem" onClick={() => { setDesktopMoreOpen(false); desktopMoreButtonRef.current?.focus() }}>
                           <Icon href="/nav-icons.svg" name={item.icon} size={16} />
                           <span>{t(item.labelKey)}</span>
                         </Link>
@@ -212,6 +222,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
             return (
               <button
                 key="more"
+                ref={mobileMoreButtonRef}
                 type="button"
                 className={`bottom-nav-item${moreOpen || moreRouteActive ? ' active' : ''}`}
                 onClick={() => setMoreOpen(true)}
