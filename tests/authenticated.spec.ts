@@ -169,6 +169,10 @@ test.describe('authenticated synthetic route boundary', () => {
       await expect(menu).toBeHidden()
       await expect(more).toHaveClass(/active/)
       await expect(more).toBeFocused()
+      await expect.poll(() => page.evaluate(() => history.state?.usr?.focusMoreNavigation)).toBeUndefined()
+      await more.click()
+      await expect(menu.locator('a[href="/virtual-lovers"]')).toHaveAttribute('aria-current', 'page')
+      await page.keyboard.press('Escape')
       await expect(nav.locator('a[aria-current]')).toHaveCount(0)
       for (const control of await nav.locator('a, button').all()) {
         const box = await control.boundingBox()

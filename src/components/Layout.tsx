@@ -62,8 +62,11 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
       const desktop = desktopMoreButtonRef.current
       const trigger = desktop?.getClientRects().length ? desktop : mobileMoreButtonRef.current
       trigger?.focus()
+      const nextState = { ...location.state }
+      delete nextState.focusMoreNavigation
+      navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: nextState })
     }
-  }, [location.key, location.state])
+  }, [location.key, location.state, location.pathname, location.search, location.hash, navigate])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -163,7 +166,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
                       {index > 0 ? <div className="desktop-more-divider" /> : null}
                       <h3 className="desktop-more-section-title">{t(section.labelKey)}</h3>
                       {section.items.map((item) => (
-                        <Link key={item.to} to={item.to} state={{ focusMoreNavigation: true }} className="desktop-more-dropdown-item" role="menuitem" onClick={() => { setDesktopMoreOpen(false); desktopMoreButtonRef.current?.focus() }}>
+                        <Link key={item.to} to={item.to} state={{ focusMoreNavigation: true }} aria-current={isActive(item.to) ? 'page' : undefined} className="desktop-more-dropdown-item" role="menuitem" onClick={() => { setDesktopMoreOpen(false); desktopMoreButtonRef.current?.focus() }}>
                           <Icon href="/nav-icons.svg" name={item.icon} size={16} />
                           <span>{t(item.labelKey)}</span>
                         </Link>
@@ -247,6 +250,7 @@ export function Layout({ children, showPageBack = true }: { children: ReactNode;
         })}
       </nav>
       <MoreMenuDrawer
+        isActive={isActive}
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
       />

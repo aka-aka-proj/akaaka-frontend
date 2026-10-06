@@ -79,6 +79,7 @@ describe('Layout desktop More menu accessibility', () => {
     expect(container.querySelector('.bottom-nav a[aria-current]')).toBeNull()
     await user.click(moreButtons[0])
     expect(screen.getByRole('menuitem', { name: 'Virtual Lover' }).getAttribute('href')).toBe('/virtual-lovers')
+    expect(screen.getByRole('menuitem', { name: 'Virtual Lover' }).getAttribute('aria-current')).toBe('page')
     expect(screen.queryByRole('menuitem', { name: 'My registrations' })).toBeNull()
   })
 
