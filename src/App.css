@@ -1120,6 +1120,17 @@ dd {
   justify-content: flex-end;
 }
 
+.desktop-nav > a,
+.desktop-nav .desktop-nav-more-btn {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
+
+.desktop-nav a[aria-current="page"] {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
 /* ── Desktop Nav: More Dropdown ── */
 
 .desktop-more-wrapper {
@@ -1141,8 +1152,8 @@ dd {
 
 .desktop-nav-more-btn:hover,
 .desktop-nav-more-btn.active {
-  color: #0d6efd;
-  background: #f0f4ff;
+  color: var(--color-text);
+  background: var(--color-selection);
 }
 
 .desktop-more-dropdown {
@@ -1163,6 +1174,8 @@ dd {
 }
 
 .desktop-more-dropdown-item {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
   display: flex;
   align-items: center;
   gap: 0.5rem;
