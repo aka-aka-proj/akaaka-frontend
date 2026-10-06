@@ -145,6 +145,9 @@ const en = {
     captchaError: 'The security check could not load. Please try again later.',
   },
   events: {
+    loadError: 'Unable to load events. Please try again.',
+    seriesLoadError: 'Unable to load event series. Please try again.',
+    retry: 'Retry',
     startTimeLabel: 'Start time',
     attendanceFeeLabel: 'Attendance fee',
     title: 'Events',

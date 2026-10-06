@@ -145,6 +145,9 @@ const zhTW = {
     captchaError: '安全驗證載入失敗，請稍後再試。',
   },
   events: {
+    loadError: '無法載入活動，請重試。',
+    seriesLoadError: '無法載入活動系列，請重試。',
+    retry: '重試',
     title: '活動',
     attendanceFeeLabel: '參加費用',
     exploreTitle: '探索活動',
