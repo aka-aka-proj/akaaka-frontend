@@ -137,6 +137,61 @@ test.describe('authenticated synthetic route boundary', () => {
     await installAuthenticatedFixture(page)
   })
 
+  for (const locale of ['en', 'zh-TW']) {
+    test(`recovers delayed event and series loads (${locale})`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
+      let releaseEvents!: () => void
+      const eventsGate = new Promise<void>((resolve) => { releaseEvents = resolve })
+      let eventsFailing = true
+      let eventCalls = 0
+      await page.route('**/rest/v1/rpc/search_events', async (route) => {
+        eventCalls += 1
+        if (eventsFailing) {
+          await eventsGate
+          await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'private backend detail' }) })
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        }
+      })
+      await gotoAuthenticatedRoute(page, '/events')
+      await expect(page.getByRole('status')).toContainText(/Loading|載入/)
+      releaseEvents()
+      await expect(page.getByRole('alert')).toContainText(/Unable to load events|無法載入活動/)
+      await expect(page.getByRole('alert')).not.toContainText('private backend detail')
+      const callsBeforeRetry = eventCalls
+      eventsFailing = false
+      await page.getByRole('button', { name: /^(Retry|重試)$/ }).click()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      expect(eventCalls).toBe(callsBeforeRetry + 1)
+
+      let releaseSeries!: () => void
+      const seriesGate = new Promise<void>((resolve) => { releaseSeries = resolve })
+      let seriesCalls = 0
+      await page.route('**/rest/v1/event_series?*', async (route) => {
+        seriesCalls += 1
+        if (seriesCalls === 1) {
+          await seriesGate
+          await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'private backend detail' }) })
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        }
+      })
+      await page.locator('.category-tabs').getByRole('button', { name: /Activity series|活動系列/i }).click()
+      await expect(page.getByRole('status')).toContainText(/Loading|載入/)
+      await expect(page.locator('.card')).not.toContainText(/沒有可加入|No eligible/)
+      releaseSeries()
+      await expect(page.getByRole('alert')).toContainText(/Unable to load event series|無法載入活動系列/)
+      await page.getByRole('button', { name: /^(Retry|重試)$/ }).click()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      expect(seriesCalls).toBe(2)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+  }
+
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await gotoAuthenticatedRoute(page, '/events')
     await expect(page.locator('.events-toolbar h1')).toBeVisible({ timeout: authenticatedStateTimeout })
