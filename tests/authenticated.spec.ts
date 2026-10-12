@@ -187,6 +187,8 @@ test.describe('authenticated synthetic route boundary', () => {
       await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
       let releaseEvents!: () => void
       const eventsGate = new Promise<void>((resolve) => { releaseEvents = resolve })
+      let releaseRetry!: () => void
+      const retryGate = new Promise<void>((resolve) => { releaseRetry = resolve })
       let eventsFailing = true
       let eventCalls = 0
       await page.route('**/rest/v1/rpc/search_events', async (route) => {
@@ -195,6 +197,7 @@ test.describe('authenticated synthetic route boundary', () => {
           await eventsGate
           await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'private backend detail' }) })
         } else {
+          await retryGate
           await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
         }
       })
@@ -205,7 +208,12 @@ test.describe('authenticated synthetic route boundary', () => {
       await expect(page.getByRole('alert')).not.toContainText('private backend detail')
       const callsBeforeRetry = eventCalls
       eventsFailing = false
-      await page.getByRole('button', { name: /^(Retry|重試)$/ }).click()
+      const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+      expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+      await retry.click()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /Retry.*Loading|重試.*載入/ })).toBeDisabled()
+      releaseRetry()
       await expect(page.getByRole('alert')).toHaveCount(0)
       await expect(page.getByRole('status')).toHaveCount(0)
       expect(eventCalls).toBe(callsBeforeRetry + 1)
@@ -227,6 +235,7 @@ test.describe('authenticated synthetic route boundary', () => {
       await expect(page.locator('.card')).not.toContainText(/沒有可加入|No eligible/)
       releaseSeries()
       await expect(page.getByRole('alert')).toContainText(/Unable to load event series|無法載入活動系列/)
+      expect((await page.getByRole('button', { name: /^(Retry|重試)$/ }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
       await page.getByRole('button', { name: /^(Retry|重試)$/ }).click()
       await expect(page.getByRole('alert')).toHaveCount(0)
       await expect(page.getByRole('status')).toHaveCount(0)
@@ -236,6 +245,32 @@ test.describe('authenticated synthetic route boundary', () => {
       expect(results.violations).toEqual([])
     })
   }
+
+  test('keeps keyboard pagination retry at the same control', async ({ page }) => {
+    let releasePage!: () => void
+    const pageGate = new Promise<void>((resolve) => { releasePage = resolve })
+    await page.route('**/rest/v1/rpc/search_events', async (route) => {
+      if (route.request().postDataJSON().p_offset > 0) {
+        await pageGate
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'page failed' }) })
+        return
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Array.from({ length: 50 }, (_, i) => ({
+        id: `pagination-${i}`, creator_id: syntheticUserId, title: `Pagination event ${i}`,
+        lifecycle_status: 'published', publication_status: 'published', category: 'Social',
+        visibility_settings: { type: 'public' }, event_type: '[]', start_time: '2099-01-01T12:00:00Z',
+      }))) })
+    })
+    await gotoAuthenticatedRoute(page, '/events')
+    const more = page.getByRole('button', { name: /^(Load more events|載入更多活動)$/i })
+    await more.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: /Load more.*Loading|載入更多.*載入中/i })).toBeDisabled()
+    releasePage()
+    const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+    await expect(retry).toBeFocused()
+    expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  })
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await gotoAuthenticatedRoute(page, '/events')
