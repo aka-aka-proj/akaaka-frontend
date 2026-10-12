@@ -138,51 +138,6 @@ test.describe('authenticated synthetic route boundary', () => {
   })
 
   for (const locale of ['en', 'zh-TW']) {
-    test(`prioritizes My Activities navigation (${locale})`, async ({ page }, testInfo) => {
-      await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
-      await gotoAuthenticatedRoute(page, '/events')
-      await expect(page.locator('.bottom-nav')).toBeAttached()
-      const mobile = await page.locator('.bottom-nav').isVisible()
-      const nav = page.locator(mobile ? '.bottom-nav' : '.desktop-nav')
-      const activities = nav.getByRole('link', { name: locale === 'en' ? 'My Activities' : '我的活動', exact: true })
-      await expect(activities).toHaveAttribute('href', '/registrations/me')
-      await expect(nav.locator('a')).toHaveCount(3)
-      await expect(nav.locator('a[href="/virtual-lovers"]')).toHaveCount(0)
-      await activities.click()
-      await expect(page).toHaveURL(/\/registrations\/me$/)
-      await expect(activities).toHaveAttribute('aria-current', 'page')
-      const more = nav.getByRole('button', { name: locale === 'en' ? 'More' : '更多', exact: true })
-      await more.click()
-      const menu = page.locator(mobile ? '.more-drawer' : '.desktop-more-dropdown')
-      const lover = menu.locator('a[href="/virtual-lovers"]')
-      await expect(lover).toBeVisible()
-      const loverBox = await lover.boundingBox()
-      expect(loverBox?.height).toBeGreaterThanOrEqual(44)
-      expect(loverBox?.width).toBeGreaterThanOrEqual(44)
-      await expect(menu.locator('a[href="/registrations/me"]')).toHaveCount(0)
-      await page.keyboard.press('Escape')
-      await expect(menu).toBeHidden()
-      await expect(more).toBeFocused()
-      await more.click()
-      await lover.click()
-      await expect(page).toHaveURL(/\/virtual-lovers$/)
-      await expect(menu).toBeHidden()
-      await expect(more).toHaveClass(/active/)
-      await expect(more).toBeFocused()
-      await expect.poll(() => page.evaluate(() => history.state?.usr?.focusMoreNavigation)).toBeUndefined()
-      await more.click()
-      await expect(menu.locator('a[href="/virtual-lovers"]')).toHaveAttribute('aria-current', 'page')
-      await page.keyboard.press('Escape')
-      await expect(nav.locator('a[aria-current]')).toHaveCount(0)
-      for (const control of await nav.locator('a, button').all()) {
-        const box = await control.boundingBox()
-        expect(box?.width).toBeGreaterThanOrEqual(44)
-        expect(box?.height).toBeGreaterThanOrEqual(44)
-      }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await page.screenshot({ path: testInfo.outputPath(`navigation-${locale}.png`), fullPage: true })
-    })
-
     test(`recovers delayed event and series loads (${locale})`, async ({ page }) => {
       await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
       let releaseEvents!: () => void
@@ -246,6 +201,36 @@ test.describe('authenticated synthetic route boundary', () => {
     })
   }
 
+  for (const kind of ['events', 'series']) {
+    test(`keeps keyboard focus when ${kind} retry fails again`, async ({ page }) => {
+      let pending = false
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      let calls = 0
+      await page.route(kind === 'events' ? '**/rest/v1/rpc/search_events' : '**/rest/v1/event_series?*', async (route) => {
+        calls += 1
+        if (pending) await gate
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'load failed' }) })
+      })
+      await gotoAuthenticatedRoute(page, '/events')
+      if (kind === 'series') await page.locator('.category-tabs').getByRole('button', { name: /Activity series|活動系列/i }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+      const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+      await retry.focus()
+      const previousCalls = calls
+      pending = true
+      await page.keyboard.press('Enter')
+      const busy = page.getByRole('button', { name: /Retry.*Loading|重試.*載入/ })
+      await expect(busy).toBeDisabled()
+      await expect(busy).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect.poll(() => calls).toBe(previousCalls + 1)
+      release()
+      await expect(retry).toBeFocused()
+      await expect(page.getByRole('alert')).toBeVisible()
+    })
+  }
+
   test('keeps keyboard pagination retry at the same control', async ({ page }) => {
     let releasePage!: () => void
     const pageGate = new Promise<void>((resolve) => { releasePage = resolve })
@@ -271,6 +256,53 @@ test.describe('authenticated synthetic route boundary', () => {
     await expect(retry).toBeFocused()
     expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44)
   })
+
+  for (const locale of ['en', 'zh-TW']) {
+    test(`prioritizes My Activities navigation (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
+      await gotoAuthenticatedRoute(page, '/events')
+      await expect(page.locator('.bottom-nav')).toBeAttached()
+      const mobile = await page.locator('.bottom-nav').isVisible()
+      const nav = page.locator(mobile ? '.bottom-nav' : '.desktop-nav')
+      const activities = nav.getByRole('link', { name: locale === 'en' ? 'My Activities' : '我的活動', exact: true })
+      await expect(activities).toHaveAttribute('href', '/registrations/me')
+      await expect(nav.locator('a')).toHaveCount(3)
+      await expect(nav.locator('a[href="/virtual-lovers"]')).toHaveCount(0)
+      await activities.click()
+      await expect(page).toHaveURL(/\/registrations\/me$/)
+      await expect(activities).toHaveAttribute('aria-current', 'page')
+      const more = nav.getByRole('button', { name: locale === 'en' ? 'More' : '更多', exact: true })
+      await more.click()
+      const menu = page.locator(mobile ? '.more-drawer' : '.desktop-more-dropdown')
+      const lover = menu.locator('a[href="/virtual-lovers"]')
+      await expect(lover).toBeVisible()
+      const loverBox = await lover.boundingBox()
+      expect(loverBox?.height).toBeGreaterThanOrEqual(44)
+      expect(loverBox?.width).toBeGreaterThanOrEqual(44)
+      await expect(menu.locator('a[href="/registrations/me"]')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
+      await expect(more).toBeFocused()
+      await more.click()
+      await lover.click()
+      await expect(page).toHaveURL(/\/virtual-lovers$/)
+      await expect(menu).toBeHidden()
+      await expect(more).toHaveClass(/active/)
+      await expect(more).toBeFocused()
+      await expect.poll(() => page.evaluate(() => history.state?.usr?.focusMoreNavigation)).toBeUndefined()
+      await more.click()
+      await expect(menu.locator('a[href="/virtual-lovers"]')).toHaveAttribute('aria-current', 'page')
+      await page.keyboard.press('Escape')
+      await expect(nav.locator('a[aria-current]')).toHaveCount(0)
+      for (const control of await nav.locator('a, button').all()) {
+        const box = await control.boundingBox()
+        expect(box?.width).toBeGreaterThanOrEqual(44)
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`navigation-${locale}.png`), fullPage: true })
+    })
+  }
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await gotoAuthenticatedRoute(page, '/events')

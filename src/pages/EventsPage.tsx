@@ -42,6 +42,7 @@ export function EventsPage() {
   const [seriesRetry, setSeriesRetry] = useState(0)
   const eventRequest = useRef(0)
   const eventPending = useRef(false)
+  const seriesPending = useRef(false)
   const retryOffset = useRef(0)
   const resultsOwner = useRef<string | undefined>(user?.id)
   const userId = user?.id
@@ -102,7 +103,11 @@ export function EventsPage() {
   useEffect(() => {
     let cancelled = false
     const loadSeries = async () => {
-      if (categoryFilter !== 'series') return
+      if (categoryFilter !== 'series') {
+        seriesPending.current = false
+        return
+      }
+      seriesPending.current = true
       setSeriesLoading(true)
       try {
         const { data: seriesData, error: seriesError } = await supabase
@@ -157,7 +162,10 @@ export function EventsPage() {
       } catch {
         if (!cancelled) setSeriesError('events.seriesLoadError')
       } finally {
-        if (!cancelled) setSeriesLoading(false)
+        if (!cancelled) {
+          seriesPending.current = false
+          setSeriesLoading(false)
+        }
       }
     }
 
@@ -445,7 +453,7 @@ export function EventsPage() {
 
         {categoryFilter !== 'series' && message ? <div className="message" role={eventsLoading ? undefined : 'alert'}>
           {!eventsLoading ? <p>{t(message)}</p> : null}
-          {retryOffset.current === 0 ? <button type="button" className="secondary-action" disabled={eventsLoading} onClick={() => {
+          {retryOffset.current === 0 ? <button type="button" className="secondary-action" aria-disabled={eventsLoading} onClick={() => {
             if (!eventPending.current) void loadEvents(retryOffset.current)
           }}>{eventsLoading ? `${t('events.retry')} — ${t('common.loading')}` : t('events.retry')}</button> : null}
         </div> : null}
@@ -457,7 +465,11 @@ export function EventsPage() {
           seriesError ? (
             <div className="empty-state" role={seriesLoading ? undefined : 'alert'}>
               {!seriesLoading ? <p>{t(seriesError)}</p> : null}
-              <button type="button" className="secondary-action" disabled={seriesLoading} onClick={() => setSeriesRetry((value) => value + 1)}>{seriesLoading ? `${t('events.retry')} — ${t('common.loading')}` : t('events.retry')}</button>
+              <button type="button" className="secondary-action" aria-disabled={seriesLoading} onClick={() => {
+                if (seriesPending.current) return
+                seriesPending.current = true
+                setSeriesRetry((value) => value + 1)
+              }}>{seriesLoading ? `${t('events.retry')} — ${t('common.loading')}` : t('events.retry')}</button>
             </div>
           ) : seriesLoading && seriesList.length === 0 ? null : seriesList.length === 0 ? (
             <p className="empty-state">{t('eventSeries.noEligibleEvents')}</p>
