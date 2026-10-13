@@ -17,7 +17,7 @@ interface AuthContextValue {
   isProfileLoading: boolean
   isInitialProfileLoad: boolean
   hasOnboarded: boolean
-  refreshProfile: () => Promise<void>
+  refreshProfile: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) {
       setProfile(null)
       setIsInitialProfileLoad(false)
-      return
+      return false
     }
 
     setIsProfileLoading(true)
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       setProfile(null)
-      return
+      return false
     }
 
     const newProfile = data ? mapProfileRow(data) : null
@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return newProfile
     })
+    return newProfile !== null
   }, [session?.user.id])
 
   useEffect(() => {

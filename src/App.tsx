@@ -1,3 +1,4 @@
+import { BlocklistPage } from './pages/BlocklistPage'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { AdminRoute } from './components/AdminRoute'
@@ -15,6 +16,7 @@ import { DirectChatPage } from './pages/DirectChatPage'
 import { EditProfilePage } from './pages/EditProfilePage'
 import { EditEventPage } from './pages/EditEventPage'
 import { EventDetailPage } from './pages/EventDetailPage'
+import { EventSchedulingPollPage } from './pages/EventSchedulingPollPage'
 import { MyEventsPage } from './pages/MyEventsPage'
 import { EventsPage } from './pages/EventsPage'
 import { BookmarksPage } from './pages/BookmarksPage'
@@ -118,6 +120,10 @@ function App() {
             <EditEventPage />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/events/:id/scheduling-poll"
+        element={<ProtectedRoute><EventSchedulingPollPage /></ProtectedRoute>}
       />
       <Route
         path="/events/:id"
@@ -295,6 +301,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/settings/blocklist" element={<ProtectedRoute><BlocklistPage /></ProtectedRoute>} />
       <Route
         path="/settings/security-privacy"
         element={

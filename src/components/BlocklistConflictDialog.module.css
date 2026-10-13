@@ -1,0 +1,25 @@
+.dialog a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  overflow-wrap: anywhere;
+}
+
+.dialog button {
+  min-height: var(--touch-target);
+  white-space: nowrap;
+}
+
+.dialog :global(.modal-actions) {
+  flex-wrap: wrap;
+}
+
+.dialog :global(.modal-actions) .confirm {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.dialog :global(.modal-actions) .confirm:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}

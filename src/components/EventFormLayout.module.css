@@ -2,7 +2,7 @@
   width: 100%;
   align-self: center;
   margin-inline: auto;
-  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--touch-target) + (var(--space-5) * 2) + env(safe-area-inset-bottom, 0px));
 }
 
 .header {
@@ -79,19 +79,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  margin: var(--space-5) calc(var(--space-5) * -1) calc(var(--space-5) * -1);
-  padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  gap: var(--space-3);
+  margin: var(--space-4) calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+  padding: var(--space-2) var(--space-5) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
   backdrop-filter: blur(10px);
 }
 .actionBar > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--color-text-muted);
   font: var(--type-caption-weight) var(--type-caption-size) / var(--type-caption-line-height) var(--font-family-sans);
 }
-.actionBar > span:global(.message) { color: var(--color-danger); }
-.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.actionBar > span:global(.message),
+.actionBar > span[role='alert'] {
+  color: var(--color-danger);
+}
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .actions > :global(button), .actions > :global(a) {
   box-sizing: border-box;
   display: inline-flex;
@@ -100,7 +107,7 @@
   gap: var(--space-1);
   min-width: var(--action-button-min-width);
   min-height: var(--touch-target);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font: inherit;
@@ -164,12 +171,26 @@
 }
 
 @media (max-width: 639px) {
-  .form { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
+  .form {
+    padding-bottom: calc(var(--touch-target) + (var(--space-4) * 2) + env(safe-area-inset-bottom, 0px));
+  }
   .header { flex-direction: column; }
   .section { padding: var(--space-4); }
-  .actionBar { bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); align-items: stretch; flex-direction: column; }
-  .actions { width: 100%; }
-  .actions > :global(button), .actions > :global(a) { flex: 1 1 10rem; }
+  .actionBar {
+    bottom: calc((var(--touch-target) + var(--space-3)) + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    margin-inline: calc(var(--space-4) * -1);
+    margin-bottom: calc(var(--space-4) * -1);
+    padding: var(--space-2) var(--space-4);
+  }
+  .actionBar > span { flex: 1 1 auto; }
+  .actions { flex: 0 1 auto; flex-wrap: nowrap; }
+  .actions > :global(button), .actions > :global(a) {
+    min-width: 0;
+    padding-inline: var(--space-3);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) { .actionBar { transition: none; } }
