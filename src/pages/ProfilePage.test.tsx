@@ -192,6 +192,7 @@ describe('ProfilePage', () => {
     })
     expect(screen.queryByRole('button', { name: 'Give Recommendation' })).toBeNull()
     expect(screen.queryByLabelText('Display name')).toBeNull()
+    expect(screen.queryByText('How blocking works')).toBeNull()
     expect(screen.getByRole('link', { name: 'Edit profile' }).getAttribute('href')).toBe('/profile/me/edit')
   })
 
@@ -422,6 +423,22 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('menu')).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Block user' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Report user' })).toBeTruthy()
+
+    const help = screen.getByText('How blocking works')
+    const disclosure = help.closest('details')!
+    expect(disclosure.open).toBe(false)
+    await userEvent.click(help)
+    expect(disclosure.open).toBe(true)
+    expect(disclosure.textContent).toContain('Existing registrations and follows are not cancelled automatically.')
+    expect(disclosure.textContent).toContain('Messaging still requires mutual following and neither person blocking the other.')
+    expect(blocksQuery.insert).not.toHaveBeenCalled()
+    expect(blocksQuery.delete).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Block user' }))
+    expect(await screen.findByText('User blocked.')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.getByRole('menuitem', { name: 'Unblock user' })).toBeTruthy()
+    expect(screen.getByText('How blocking works').closest('details')!.open).toBe(true)
   })
 
   it('shows rate limit message when Edge Function returns 429', async () => {

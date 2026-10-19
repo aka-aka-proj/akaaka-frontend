@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { Icon } from '../components/Icon'
@@ -25,7 +25,7 @@ export function EventsPage() {
   const { user } = useAuth()
   const [events, setEvents] = useState<EventItem[]>([])
   const [message, setMessage] = useState('')
-  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsLoading, setEventsLoading] = useState(true)
   const [hasMoreEvents, setHasMoreEvents] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
@@ -38,6 +38,13 @@ export function EventsPage() {
   const [seriesList, setSeriesList] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
   const [seriesError, setSeriesError] = useState('')
   const [seriesGroups, setSeriesGroups] = useState<Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }>>([])
+  const [seriesLoading, setSeriesLoading] = useState(false)
+  const [seriesRetry, setSeriesRetry] = useState(0)
+  const eventRequest = useRef(0)
+  const eventPending = useRef(false)
+  const seriesPending = useRef(false)
+  const retryOffset = useRef(0)
+  const resultsOwner = useRef<string | undefined>(user?.id)
   const userId = user?.id
 
   const activeFilterCount = [selectedType !== null, selectedRegion !== null, timeFilter !== 'all', myEventsOnly].filter(Boolean).length
@@ -49,102 +56,123 @@ export function EventsPage() {
     setMyEventsOnly(false)
   }
 
-  useEffect(() => {
-    const loadEvents = async () => {
-      setEventsLoading(true)
+  const loadEvents = useCallback(async (offset = 0) => {
+    const request = ++eventRequest.current
+    eventPending.current = true
+    retryOffset.current = offset
+    setEventsLoading(true)
+    try {
+      const { data, error } = await supabase.rpc('search_events', {
+        p_search: search || null,
+        p_event_type: selectedType,
+        p_location_region: selectedRegion,
+        p_time_filter: timeFilter,
+        p_creator_id: myEventsOnly ? userId : null,
+        p_limit: EVENT_PAGE_SIZE,
+        p_offset: offset,
+      })
+      // Search changes invalidate both older searches and their pending pages.
+      if (request !== eventRequest.current) return
+      if (error) throw error
       setMessage('')
-      const { data, error } = await supabase
-        .rpc('search_events', {
-          p_search: search || null,
-          p_event_type: selectedType,
-          p_location_region: selectedRegion,
-          p_time_filter: timeFilter,
-          p_creator_id: myEventsOnly ? userId : null,
-          p_limit: EVENT_PAGE_SIZE,
-          p_offset: 0,
-        })
-
-      if (error) {
-        setMessage(error.message)
-        setEvents([])
-        setHasMoreEvents(false)
-        setEventsLoading(false)
-        return
-      }
-
       const nextEvents = (data as EventItem[]) ?? []
-      setEvents(nextEvents)
+      setEvents((current) => offset === 0 ? nextEvents : [...current, ...nextEvents])
       setHasMoreEvents(nextEvents.length === EVENT_PAGE_SIZE)
-      setEventsLoading(false)
+    } catch {
+      if (request === eventRequest.current) setMessage('events.loadError')
+    } finally {
+      if (request === eventRequest.current) {
+        eventPending.current = false
+        setEventsLoading(false)
+      }
     }
-
-    void loadEvents()
   }, [search, selectedType, selectedRegion, timeFilter, myEventsOnly, userId])
 
   useEffect(() => {
+    // Retain refresh results only within the same authenticated identity.
+    if (resultsOwner.current !== userId) {
+      setEvents([])
+      setHasMoreEvents(false)
+      resultsOwner.current = userId
+    }
+    const requests = eventRequest
+    void loadEvents()
+    return () => { ++requests.current }
+  }, [loadEvents, userId])
+
+  useEffect(() => {
+    let cancelled = false
     const loadSeries = async () => {
-      if (categoryFilter !== 'series') return
-      setSeriesError('')
-      const { data: seriesData, error: seriesError } = await supabase
-        .from('event_series')
-        .select('*')
-        .eq('lifecycle_status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (seriesError) {
-        setSeriesError(seriesError.message)
-        setSeriesList([])
+      if (categoryFilter !== 'series') {
+        seriesPending.current = false
         return
       }
-
-      if (!seriesData || seriesData.length === 0) {
-        setSeriesList([])
-        return
-      }
-
-      const results: Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }> = []
-      for (const s of seriesData as EventSeriesWithMembers[]) {
-        const { data: members, error: membersError } = await supabase
-          .from('event_series_membership')
-          .select('event_id, position')
-          .eq('series_id', s.id)
-          .order('position', { ascending: true })
-
-        if (membersError) {
-          setSeriesError(membersError.message)
-          setSeriesList([])
-          return
-        }
-
-        const memberList = (members as EventSeriesMember[] | null) ?? []
-        if (memberList.length === 0) continue
-
-        const memberIds = memberList.map((m) => m.event_id)
-        const { data: events, error: eventsError } = await supabase
-          .from('events')
+      seriesPending.current = true
+      setSeriesLoading(true)
+      try {
+        const { data: seriesData, error: seriesError } = await supabase
+          .from('event_series')
           .select('*')
-          .in('id', memberIds)
           .eq('lifecycle_status', 'published')
+          .order('created_at', { ascending: false })
+          .limit(20)
 
-        if (eventsError) {
-          setSeriesError(eventsError.message)
+        if (cancelled) return
+        if (seriesError) throw seriesError
+
+        if (!seriesData || seriesData.length === 0) {
+          setSeriesError('')
           setSeriesList([])
           return
         }
 
-        if (events && events.length > 0) {
-          results.push({
-            series: { ...s, members: memberList },
-            memberEvents: (events as EventItem[]).filter((e) => canSeeEvent(e, user?.id)),
-          })
+        const results: Array<{ series: EventSeriesWithMembers; memberEvents: EventItem[] }> = []
+        for (const s of seriesData as EventSeriesWithMembers[]) {
+          const { data: members, error: membersError } = await supabase
+            .from('event_series_membership')
+            .select('event_id, position')
+            .eq('series_id', s.id)
+            .order('position', { ascending: true })
+
+          if (cancelled) return
+          if (membersError) throw membersError
+
+          const memberList = (members as EventSeriesMember[] | null) ?? []
+          if (memberList.length === 0) continue
+
+          const memberIds = memberList.map((m) => m.event_id)
+          const { data: events, error: eventsError } = await supabase
+            .from('events')
+            .select('*')
+            .in('id', memberIds)
+            .eq('lifecycle_status', 'published')
+
+          if (cancelled) return
+          if (eventsError) throw eventsError
+
+          if (events && events.length > 0) {
+            results.push({
+              series: { ...s, members: memberList },
+              memberEvents: (events as EventItem[]).filter((e) => canSeeEvent(e, userId)),
+            })
+          }
+        }
+        setSeriesError('')
+        setSeriesList(results)
+      } catch {
+        if (!cancelled) setSeriesError('events.seriesLoadError')
+      } finally {
+        if (!cancelled) {
+          seriesPending.current = false
+          setSeriesLoading(false)
         }
       }
-      setSeriesList(results)
     }
 
+    setSeriesList([])
     void loadSeries()
-  }, [categoryFilter, user])
+    return () => { cancelled = true }
+  }, [categoryFilter, userId, seriesRetry])
 
   useEffect(() => {
     let cancelled = false
@@ -202,26 +230,9 @@ export function EventsPage() {
     }
   }, [events])
 
-  const loadMoreEvents = async () => {
-    if (eventsLoading || !hasMoreEvents) return
-    setEventsLoading(true)
-    const { data, error } = await supabase.rpc('search_events', {
-      p_search: search || null,
-      p_event_type: selectedType,
-      p_location_region: selectedRegion,
-      p_time_filter: timeFilter,
-      p_creator_id: myEventsOnly ? userId : null,
-      p_limit: EVENT_PAGE_SIZE,
-      p_offset: events.length,
-    })
-    if (error) {
-      setMessage(error.message)
-    } else {
-      const nextEvents = (data as EventItem[]) ?? []
-      setEvents((current) => [...current, ...nextEvents])
-      setHasMoreEvents(nextEvents.length === EVENT_PAGE_SIZE)
-    }
-    setEventsLoading(false)
+  const loadMoreEvents = () => {
+    if (eventPending.current || !hasMoreEvents) return
+    void loadEvents(events.length)
   }
 
   useEffect(() => {
@@ -440,12 +451,27 @@ export function EventsPage() {
           </div>
         </details>
 
-        {message ? <p className="message">{message}</p> : null}
+        {categoryFilter !== 'series' && message ? <div className="message" role={eventsLoading ? undefined : 'alert'}>
+          {!eventsLoading ? <p>{t(message)}</p> : null}
+          {retryOffset.current === 0 ? <button type="button" className="secondary-action" aria-disabled={eventsLoading} onClick={() => {
+            if (!eventPending.current) void loadEvents(retryOffset.current)
+          }}>{eventsLoading ? `${t('events.retry')} — ${t('common.loading')}` : t('events.retry')}</button> : null}
+        </div> : null}
+        {(categoryFilter === 'series' ? seriesLoading : eventsLoading) ? (
+          <p className="empty-state" role="status">{t('common.loading')}</p>
+        ) : null}
 
         {categoryFilter === 'series' ? (
           seriesError ? (
-            <p className="empty-state" role="alert">{seriesError}</p>
-          ) : seriesList.length === 0 ? (
+            <div className="empty-state" role={seriesLoading ? undefined : 'alert'}>
+              {!seriesLoading ? <p>{t(seriesError)}</p> : null}
+              <button type="button" className="secondary-action" aria-disabled={seriesLoading} onClick={() => {
+                if (seriesPending.current) return
+                seriesPending.current = true
+                setSeriesRetry((value) => value + 1)
+              }}>{seriesLoading ? `${t('events.retry')} — ${t('common.loading')}` : t('events.retry')}</button>
+            </div>
+          ) : seriesLoading && seriesList.length === 0 ? null : seriesList.length === 0 ? (
             <p className="empty-state">{t('eventSeries.noEligibleEvents')}</p>
           ) : (
             <ul className="series-grid">
@@ -456,9 +482,7 @@ export function EventsPage() {
               ))}
             </ul>
           )
-        ) : eventsLoading && events.length === 0 ? (
-          <p className="empty-state" role="status">{t('common.loading')}</p>
-        ) : events.length === 0 ? (
+        ) : (eventsLoading || message) && events.length === 0 ? null : events.length === 0 ? (
           <div className="empty-state">
             <img src="/illustration-empty-events.svg" alt="" width={480} height={320} className="illustration" />
             <p>{t('events.noDescription')}</p>
@@ -515,9 +539,13 @@ export function EventsPage() {
           </ul>
           </>
         )}
-        {hasMoreEvents ? (
-          <button type="button" onClick={() => void loadMoreEvents()} disabled={eventsLoading}>
-            {eventsLoading ? t('common.loading') : t('events.loadMore')}
+        {categoryFilter !== 'series' && hasMoreEvents && (!message || retryOffset.current > 0) ? (
+          <button type="button" className="secondary-action" onClick={() => {
+            if (eventPending.current) return
+            if (message) void loadEvents(retryOffset.current)
+            else loadMoreEvents()
+          }} aria-disabled={eventsLoading}>
+            {t(message && retryOffset.current > 0 ? 'events.retry' : 'events.loadMore')}{eventsLoading ? ` — ${t('common.loading')}` : ''}
           </button>
         ) : null}
       </section>

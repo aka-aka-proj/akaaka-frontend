@@ -30,3 +30,7 @@
 - 修改前端程式後，依影響範圍執行 `rtk npm run lint`、`rtk npm test` 或 `rtk npm run build`。
 - 不得儲存原始照片；多媒體僅能使用 FB、IG、X.com 的外部社群連結。
 - 聲譽系統僅能累積點數，不得扣點；場地方角色升級僅能由管理員手動處理。
+
+## 環境教訓：Node regression runner
+
+- 獨立 `node:test` scripts 不使用 `*.test.mjs` 命名：Vitest unit project 會自動收集該命名，導致 Vite 無法 bundle `node:test`。使用 `*-regression.mjs` 並由 `test:ci-contract` 明確以 `node --test` 執行。實例：PR #222 後續 deployment evidence validator。

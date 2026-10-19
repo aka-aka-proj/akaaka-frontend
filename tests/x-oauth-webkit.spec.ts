@@ -23,7 +23,7 @@ test('iPhone Safari starts X OAuth with the expected provider and callback', asy
   await page.getByRole('button', { name: /continue with x|使用 x 登入/i }).click()
   await expect.poll(() => authorizeUrl?.searchParams.get('provider')).toBe('x')
 
-  expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${appOrigin}/onboarding`)
+  expect(authorizeUrl?.searchParams.get('redirect_to')).toBe(`${appOrigin}/onboarding?pwa_return=1`)
   expect(pageErrors).toEqual([])
   expect(failedRequests).toEqual([])
 })

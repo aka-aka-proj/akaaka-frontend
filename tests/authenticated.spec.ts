@@ -84,6 +84,7 @@ const authenticatedRoutes = [
   '/virtual-lovers/new',
   '/virtual-lovers/synthetic-lover/chat',
   '/settings/security-privacy',
+  '/settings/blocklist',
   '/settings/analytics',
 ]
 
@@ -135,6 +136,173 @@ test.describe('authenticated synthetic route boundary', () => {
   test.beforeEach(async ({ page }) => {
     await installAuthenticatedFixture(page)
   })
+
+  for (const locale of ['en', 'zh-TW']) {
+    test(`recovers delayed event and series loads (${locale})`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
+      let releaseEvents!: () => void
+      const eventsGate = new Promise<void>((resolve) => { releaseEvents = resolve })
+      let releaseRetry!: () => void
+      const retryGate = new Promise<void>((resolve) => { releaseRetry = resolve })
+      let eventsFailing = true
+      let eventCalls = 0
+      await page.route('**/rest/v1/rpc/search_events', async (route) => {
+        eventCalls += 1
+        if (eventsFailing) {
+          await eventsGate
+          await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'private backend detail' }) })
+        } else {
+          await retryGate
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        }
+      })
+      await gotoAuthenticatedRoute(page, '/events')
+      await expect(page.getByRole('status')).toContainText(/Loading|載入/)
+      releaseEvents()
+      await expect(page.getByRole('alert')).toContainText(/Unable to load events|無法載入活動/)
+      await expect(page.getByRole('alert')).not.toContainText('private backend detail')
+      const callsBeforeRetry = eventCalls
+      eventsFailing = false
+      const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+      expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+      await retry.click()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /Retry.*Loading|重試.*載入/ })).toBeDisabled()
+      releaseRetry()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      expect(eventCalls).toBe(callsBeforeRetry + 1)
+
+      let releaseSeries!: () => void
+      const seriesGate = new Promise<void>((resolve) => { releaseSeries = resolve })
+      let seriesCalls = 0
+      await page.route('**/rest/v1/event_series?*', async (route) => {
+        seriesCalls += 1
+        if (seriesCalls === 1) {
+          await seriesGate
+          await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'private backend detail' }) })
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        }
+      })
+      await page.locator('.category-tabs').getByRole('button', { name: /Activity series|活動系列/i }).click()
+      await expect(page.getByRole('status')).toContainText(/Loading|載入/)
+      await expect(page.locator('.card')).not.toContainText(/沒有可加入|No eligible/)
+      releaseSeries()
+      await expect(page.getByRole('alert')).toContainText(/Unable to load event series|無法載入活動系列/)
+      expect((await page.getByRole('button', { name: /^(Retry|重試)$/ }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
+      await page.getByRole('button', { name: /^(Retry|重試)$/ }).click()
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      expect(seriesCalls).toBe(2)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      const results = await new AxeBuilder({ page }).analyze()
+      expect(results.violations).toEqual([])
+    })
+  }
+
+  for (const kind of ['events', 'series']) {
+    test(`keeps keyboard focus when ${kind} retry fails again`, async ({ page }) => {
+      let pending = false
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => { release = resolve })
+      let calls = 0
+      await page.route(kind === 'events' ? '**/rest/v1/rpc/search_events' : '**/rest/v1/event_series?*', async (route) => {
+        calls += 1
+        if (pending) await gate
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'load failed' }) })
+      })
+      await gotoAuthenticatedRoute(page, '/events')
+      if (kind === 'series') await page.locator('.category-tabs').getByRole('button', { name: /Activity series|活動系列/i }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+      const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+      await retry.focus()
+      const previousCalls = calls
+      pending = true
+      await page.keyboard.press('Enter')
+      const busy = page.getByRole('button', { name: /Retry.*Loading|重試.*載入/ })
+      await expect(busy).toBeDisabled()
+      await expect(busy).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect.poll(() => calls).toBe(previousCalls + 1)
+      release()
+      await expect(retry).toBeFocused()
+      await expect(page.getByRole('alert')).toBeVisible()
+    })
+  }
+
+  test('keeps keyboard pagination retry at the same control', async ({ page }) => {
+    let releasePage!: () => void
+    const pageGate = new Promise<void>((resolve) => { releasePage = resolve })
+    await page.route('**/rest/v1/rpc/search_events', async (route) => {
+      if (route.request().postDataJSON().p_offset > 0) {
+        await pageGate
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'page failed' }) })
+        return
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Array.from({ length: 50 }, (_, i) => ({
+        id: `pagination-${i}`, creator_id: syntheticUserId, title: `Pagination event ${i}`,
+        lifecycle_status: 'published', publication_status: 'published', category: 'Social',
+        visibility_settings: { type: 'public' }, event_type: '[]', start_time: '2099-01-01T12:00:00Z',
+      }))) })
+    })
+    await gotoAuthenticatedRoute(page, '/events')
+    const more = page.getByRole('button', { name: /^(Load more events|載入更多活動)$/i })
+    await more.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: /Load more.*Loading|載入更多.*載入中/i })).toBeDisabled()
+    releasePage()
+    const retry = page.getByRole('button', { name: /^(Retry|重試)$/ })
+    await expect(retry).toBeFocused()
+    expect((await retry.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  })
+
+  for (const locale of ['en', 'zh-TW']) {
+    test(`prioritizes My Activities navigation (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
+      await gotoAuthenticatedRoute(page, '/events')
+      await expect(page.locator('.bottom-nav')).toBeAttached()
+      const mobile = await page.locator('.bottom-nav').isVisible()
+      const nav = page.locator(mobile ? '.bottom-nav' : '.desktop-nav')
+      const activities = nav.getByRole('link', { name: locale === 'en' ? 'My Activities' : '我的活動', exact: true })
+      await expect(activities).toHaveAttribute('href', '/registrations/me')
+      await expect(nav.locator('a')).toHaveCount(3)
+      await expect(nav.locator('a[href="/virtual-lovers"]')).toHaveCount(0)
+      await activities.click()
+      await expect(page).toHaveURL(/\/registrations\/me$/)
+      await expect(activities).toHaveAttribute('aria-current', 'page')
+      const more = nav.getByRole('button', { name: locale === 'en' ? 'More' : '更多', exact: true })
+      await more.click()
+      const menu = page.locator(mobile ? '.more-drawer' : '.desktop-more-dropdown')
+      const lover = menu.locator('a[href="/virtual-lovers"]')
+      await expect(lover).toBeVisible()
+      const loverBox = await lover.boundingBox()
+      expect(loverBox?.height).toBeGreaterThanOrEqual(44)
+      expect(loverBox?.width).toBeGreaterThanOrEqual(44)
+      await expect(menu.locator('a[href="/registrations/me"]')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
+      await expect(more).toBeFocused()
+      await more.click()
+      await lover.click()
+      await expect(page).toHaveURL(/\/virtual-lovers$/)
+      await expect(menu).toBeHidden()
+      await expect(more).toHaveClass(/active/)
+      await expect(more).toBeFocused()
+      await expect.poll(() => page.evaluate(() => history.state?.usr?.focusMoreNavigation)).toBeUndefined()
+      await more.click()
+      await expect(menu.locator('a[href="/virtual-lovers"]')).toHaveAttribute('aria-current', 'page')
+      await page.keyboard.press('Escape')
+      await expect(nav.locator('a[aria-current]')).toHaveCount(0)
+      for (const control of await nav.locator('a, button').all()) {
+        const box = await control.boundingBox()
+        expect(box?.width).toBeGreaterThanOrEqual(44)
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`navigation-${locale}.png`), fullPage: true })
+    })
+  }
 
   test('renders the empty events state without automated axe violations', async ({ page }) => {
     await gotoAuthenticatedRoute(page, '/events')
@@ -231,7 +399,7 @@ test.describe('authenticated synthetic route boundary', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(single ? series : [series]) })
     })
     await gotoAuthenticatedRoute(page, '/events')
-    await page.getByRole('link', { name: /我的活動|my activities/i, exact: true }).click()
+    await page.getByRole('link', { name: /我建立的活動|events i host/i, exact: true }).click()
     await page.getByRole('button', { name: /活動系列|activity series/i, exact: true }).click()
     await expect(page.getByText('未完成的活動系列', { exact: true })).toBeVisible()
     await expect(page.getByText(/0 場|0 sessions/)).toBeVisible()
@@ -263,6 +431,171 @@ test.describe('authenticated synthetic route boundary', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('draft-resumed.png'), fullPage: true })
   })
+
+  for (const locale of ['en', 'zh-TW']) {
+    test(`explains blocking before and after profile actions (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript((value) => localStorage.setItem('akaaka-locale', value), locale)
+      const mutations: string[] = []
+      await page.route('**/rest/v1/blocks*', async (route) => {
+        const method = route.request().method()
+        if (method !== 'GET') mutations.push(method)
+        await route.fulfill({
+          status: method === 'GET' ? 200 : 204,
+          contentType: 'application/json',
+          body: method === 'GET' ? 'null' : '',
+        })
+      })
+      await gotoAuthenticatedRoute(page, '/profile/synthetic-profile')
+      const summary = page.locator('summary').filter({ hasText: /How blocking works|黑名單功能說明/ })
+      const help = page.locator('details').filter({ has: summary })
+      await expect(summary).toBeVisible()
+      const summaryBox = await summary.boundingBox()
+      expect(summaryBox!.height).toBeGreaterThanOrEqual(44)
+      await expect(help).not.toHaveAttribute('open', '')
+      await summary.focus()
+      await page.keyboard.press('Enter')
+      await expect(help).toHaveAttribute('open', '')
+      await expect(help.getByRole('listitem')).toHaveCount(5)
+      await expect(help).toContainText(locale === 'en'
+        ? 'Existing registrations and follows are not cancelled automatically.'
+        : '既有報名與追蹤不會自動取消。')
+      expect(mutations).toEqual([])
+      // Check the changed content itself; the shared English header has a
+      // separately tracked WebKit overflow independent of this disclosure.
+      const helpBounds = await help.evaluate((element) => ({
+        left: element.getBoundingClientRect().left,
+        right: element.getBoundingClientRect().right,
+        width: element.clientWidth,
+        contentWidth: element.scrollWidth,
+        viewport: window.innerWidth,
+      }))
+      expect(helpBounds.left).toBeGreaterThanOrEqual(0)
+      expect(helpBounds.right).toBeLessThanOrEqual(helpBounds.viewport)
+      expect(helpBounds.contentWidth).toBeLessThanOrEqual(helpBounds.width)
+      const results = await new AxeBuilder({ page }).include('details').analyze()
+      expect(results.violations).toEqual([])
+      await testInfo.attach(`block-help-${locale}`, {
+        body: await page.screenshot({ path: testInfo.outputPath(`block-help-${locale}.png`), fullPage: true }), contentType: 'image/png',
+      })
+
+      const more = page.getByRole('button', { name: /More options|更多選項/ })
+      await more.click()
+      await page.getByRole('menuitem', { name: /^Block user$|^加入黑名單$/ }).click()
+      await expect(page.getByText(/User blocked\.|已加入黑名單。/)).toBeVisible()
+      await expect(summary).toBeVisible()
+      await more.click()
+      await page.getByRole('menuitem', { name: /^Unblock user$|^從黑名單移除$/ }).click()
+      await expect(page.getByText(/User unblocked\.|已從黑名單移除。/)).toBeVisible()
+      expect(mutations).toEqual(['POST', 'DELETE'])
+      await summary.focus()
+      await page.keyboard.press('Space')
+      await expect(help).not.toHaveAttribute('open', '')
+      await expect(summary).toBeFocused()
+    })
+  }
+
+
+  for (const locale of ['en', 'zh-TW']) {
+    test(`manages the personal blocklist (${locale})`, async ({ page }, testInfo) => {
+      await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
+      let removed = false
+      await page.route('**/rest/v1/blocks**', async route => {
+        const request = route.request()
+        expect(new URL(request.url()).searchParams.get('blocker_id')).toBe(`eq.${syntheticUserId}`)
+        if (request.method() === 'DELETE') {
+          expect(new URL(request.url()).searchParams.get('blocked_id')).toBe('eq.blocked-person')
+          removed = true
+          await route.fulfill({ status: 204 }); return
+        }
+        await route.fulfill({ json: removed ? [] : [{ blocked_id: 'blocked-person', created_at: '2026-09-01T00:00:00Z' }] })
+      })
+      await page.route('**/rest/v1/public_profiles**', route => route.fulfill({ json: [{ id: 'blocked-person', display_name: 'Blocked Person', avatar_path: null }] }))
+      await gotoAuthenticatedRoute(page, '/settings/blocklist')
+      const section = page.locator('.blocklist-page')
+      await expect(section.getByRole('link', { name: 'Blocked Person' })).toBeVisible()
+      await expect(section).not.toContainText('blocked-person')
+      expect((await new AxeBuilder({ page }).include('.blocklist-page').analyze()).violations).toEqual([])
+      expect(await section.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`blocklist-${locale}.png`), fullPage: true })
+      await section.getByRole('button', { name: /Unblock Blocked Person|從黑名單移除 Blocked Person/ }).click()
+      await expect(section.getByText(/Your blocklist is empty|您的黑名單目前沒有用戶/)).toBeVisible()
+    })
+
+    for (const flow of ['single', 'form', 'series', 'review'] as const) {
+      test(`confirms blocklist ${flow} without writing on cancel (${locale})`, async ({ page }, testInfo) => {
+        await page.addInitScript(value => localStorage.setItem('akaaka-locale', value), locale)
+        const event = {
+          id: 'conflict-event', creator_id: flow === 'review' ? syntheticUserId : 'host-profile',
+          title: 'Blocklist event', description: 'Synthetic interaction verification',
+          event_type: 'Movie', category: 'Social', visibility_settings: { type: 'public' },
+          lifecycle_status: 'published', publication_status: 'published', start_time: '2099-01-08T12:00:00Z',
+          registration_deadline: null, max_capacity: null, location_region: 'Online', location_detail: null,
+          registration_form_config: flow === 'form' ? [{ id: 'answer', label: 'Registration answer', type: 'text', required: true }] : null,
+          attendance_fee_type: 'free', attendance_fee_amount: null, external_registration_url: null,
+          created_at: '2026-09-01T00:00:00Z',
+        }
+        await page.route('**/rest/v1/rpc/get_profile_for_viewer', route => {
+          const id = route.request().postDataJSON().target_profile_id
+          return route.fulfill({ json: { ...syntheticProfile, id, display_name: id === syntheticUserId ? syntheticProfile.display_name : 'Test Person' } })
+        })
+        await page.route('**/rest/v1/events?**', route => route.fulfill({ json: [event] }))
+        if (flow === 'series') {
+          await page.route('**/rest/v1/event_series_membership?**', route => route.fulfill({ json: [{ event_id: event.id, series_id: 'conflict-series', position: 1 }] }))
+          await page.route('**/rest/v1/event_series?**', route => route.fulfill({ json: { id: 'conflict-series', creator_id: 'host-profile', title: 'Conflict series', is_whole_series_required: true, lifecycle_status: 'published' } }))
+        }
+        if (flow === 'review') {
+          await page.route('**/rest/v1/event_registrations?**', route => route.fulfill({ json: new URL(route.request().url()).searchParams.has('profile_id') ? [] : [{ id: 'applicant-reg', event_id: event.id, profile_id: 'private-applicant-fixture', status: 'pending', created_at: '2026-09-01T00:00:00Z' }] }))
+        }
+        const name = flow === 'review' ? 'review-registration' : flow === 'series' ? 'register-for-event-series' : 'create-registration'
+        const requests: Record<string, unknown>[] = []
+        await page.route(`**/functions/v1/${name}`, async route => {
+          const body = route.request().postDataJSON()
+          requests.push(body)
+          await route.fulfill(body.acknowledge_blocklist_conflict === true
+            ? { status: 200, json: { success: true } }
+            : { status: 409, json: { error: { code: 'blocklist_confirmation_required', details: flow === 'review' ? {} : { host_profile_id: 'host-profile', warning_event_id: event.id, ...(flow === 'series' ? { expected_event_ids: [event.id] } : {}) } } } })
+        })
+        await gotoAuthenticatedRoute(page, '/events/conflict-event')
+        const submit = page.getByRole('button', { name: flow === 'review' ? /^Approve$|^核准報名$/ : flow === 'series' ? /^Confirm Registration$|^確認報名$/ : /^Register$|^報名參加$/ }).first()
+        await expect(submit).toBeVisible()
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+        if (flow === 'form') {
+          await submit.click()
+          await page.getByLabel('Registration answer').fill('Keep my original answer')
+        }
+        await submit.click()
+        const dialog = page.getByRole('alertdialog', { name: /Blocklist conflict|黑名單同場提醒/ })
+        await expect(dialog).toBeVisible()
+        const cancel = dialog.getByRole('button', { name: /^Cancel$|^取消$/ })
+        await expect(cancel).toBeFocused()
+        if (flow !== 'review') {
+          await expect(dialog.getByRole('link', { name: /Message the host|開啟與主辦人的私訊/ })).toHaveAttribute('href', '/messages/new?user=host-profile')
+          await expect(dialog.getByRole('link', { name: /View host profile|查看主辦人個人頁/ })).toHaveAttribute('href', '/profile/host-profile')
+        } else {
+          await expect(dialog).not.toContainText('private-applicant-fixture')
+          await expect(dialog.getByRole('link')).toHaveCount(0)
+        }
+        expect((await new AxeBuilder({ page }).include('dialog[open]').analyze()).violations).toEqual([])
+        expect(await dialog.evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && el.scrollWidth <= el.clientWidth })).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`blocklist-${flow}-${locale}.png`), fullPage: true })
+        const confirmButton = dialog.getByRole('button').last()
+        expect(await confirmButton.evaluate(el => getComputedStyle(el).color !== getComputedStyle(el).backgroundColor)).toBe(true)
+        expect(Math.round((await confirmButton.boundingBox())!.height)).toBeGreaterThanOrEqual(44)
+        await cancel.click()
+        await expect(dialog).not.toBeVisible()
+        await expect(submit).toBeFocused()
+        expect(requests).toHaveLength(1)
+        await submit.click()
+        await expect(dialog).toBeVisible()
+        await dialog.getByRole('button', { name: flow === 'review' ? /^Approve anyway$|^仍要核可$/ : /^Agree$|^同意$/ }).click()
+        await expect(dialog).not.toBeVisible()
+        expect(requests).toHaveLength(3)
+        expect(requests[2]).toEqual({ ...requests[0], acknowledge_blocklist_conflict: true })
+        if (flow === 'form') expect(requests[2].form_responses).toEqual({ answer: 'Keep my original answer' })
+        if (flow === 'review') expect(requests[2]).toMatchObject({ event_id: 'conflict-event', registration_id: 'applicant-reg', action: 'approve' })
+      })
+    }
+  }
 
   for (const route of authenticatedRoutes) {
     test(`keeps protected route authenticated: ${route}`, async ({ page }) => {

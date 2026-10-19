@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { SafetyCompactModal } from '../components/SafetyCompactModal'
 import { VisibilityTooltip } from '../components/VisibilityTooltip'
+import { PwaOAuthReturn } from '../components/PwaOAuthReturn'
+import { buildPwaReturnLinks, isStandaloneDisplay } from '../lib/pwa-oauth-return'
 import { useAuth } from '../context/AuthContext'
 import { useT } from '../hooks/useT'
 import { PRESET_AVATAR_PATHS } from '../lib/profile'
@@ -30,23 +32,38 @@ export function OnboardingPage() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [profileRefreshFailed, setProfileRefreshFailed] = useState(false)
+  const [profileRefreshBusy, setProfileRefreshBusy] = useState(false)
+  const profileRefreshInFlight = useRef(false)
   const [pushPromptVisible, setPushPromptVisible] = useState(false)
   const [pushPromptBusy, setPushPromptBusy] = useState(false)
   const [pushPromptMessage, setPushPromptMessage] = useState('')
+  const oauthParams = new URLSearchParams(location.search)
+  const callbackHash = new URLSearchParams(location.hash.slice(1))
+  const callbackFailed = [...oauthParams.keys(), ...callbackHash.keys()].some((key) =>
+    /^(error|error_code|error_description|error_uri)$/i.test(key),
+  )
+  const wantsPwaReturn = !callbackFailed && !isStandaloneDisplay() && oauthParams.get('pwa_return') === '1'
+  const showPwaReturn = Boolean(user && profile) && wantsPwaReturn
 
-  const getReturnPath = () => {
-    const fromQuery = new URLSearchParams(location.search).get('from')
-    const fromState = (location.state as { from?: string } | null)?.from
-    return fromQuery ?? fromState ?? '/events'
-  }
+  const fromQuery = new URLSearchParams(location.search).get('from')
+  const fromState = (location.state as { from?: string } | null)?.from
+  const returnPath = fromQuery ?? fromState ?? '/events'
 
   useEffect(() => {
-    if (profile) navigate(getReturnPath(), { replace: true })
-  }, [profile, navigate, location.search, location.state])
+    if (profile && !showPwaReturn) navigate(returnPath, { replace: true })
+  }, [profile, showPwaReturn, navigate, returnPath])
 
   useEffect(() => {
     if (agreed) headingRef.current?.focus()
-  }, [agreed])
+  }, [agreed, profileRefreshFailed])
+
+  if (showPwaReturn) {
+    const links = buildPwaReturnLinks(window.location.origin, location.search, navigator.userAgent)
+    return <Layout showPageBack={false}>
+      <PwaOAuthReturn intent={links.intent} onContinue={() => navigate(links.continuePath, { replace: true })} />
+    </Layout>
+  }
 
   if (profile) return null
 
@@ -75,9 +92,26 @@ export function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
-    const returnPath = getReturnPath()
-    await refreshProfile()
-    navigate(returnPath, { replace: true })
+    if (profileRefreshInFlight.current) return false
+    profileRefreshInFlight.current = true
+    setProfileRefreshBusy(true)
+    try {
+      const profileLoaded = await refreshProfile()
+      if (!profileLoaded) {
+        setProfileRefreshFailed(true)
+        return false
+      }
+      setProfileRefreshFailed(false)
+      if (!wantsPwaReturn) navigate(returnPath, { replace: true })
+      return true
+    } catch {
+      setProfileRefreshFailed(true)
+      return false
+    } finally {
+      profileRefreshInFlight.current = false
+      setProfileRefreshBusy(false)
+      setPushPromptBusy(false)
+    }
   }
 
   const acceptPush = async () => {
@@ -91,7 +125,13 @@ export function OnboardingPage() {
   return <Layout>
     <SafetyCompactModal open={compactOpen} onClose={async () => { await supabase.auth.signOut(); navigate('/auth', { replace: true }) }} onAgree={() => { setAgreed(true); setCompactOpen(false) }} />
     {agreed && <div className="onboarding-shell">
-      {profileSaved && pushPromptVisible ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
+      {profileSaved && !profileRefreshFailed && !pushPromptVisible ? <p role="status">{t('common.loading')}</p> : null}
+      {profileSaved && profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-refresh-title" aria-busy={profileRefreshBusy}>
+        <h1 id="onboarding-refresh-title" ref={headingRef} tabIndex={-1}>{t('onboarding.profileRefreshFailedTitle')}</h1>
+        <p>{t('onboarding.profileRefreshFailedDescription')}</p>
+        <button type="button" className="primary onboarding-submit" disabled={profileRefreshBusy} onClick={() => void finishOnboarding()}>{profileRefreshBusy ? t('common.loading') : t('onboarding.profileRefreshRetry')}</button>
+      </section> : null}
+      {profileSaved && pushPromptVisible && !profileRefreshFailed ? <section className="card onboarding-push-prompt" aria-labelledby="onboarding-push-title">
         <p className="eyebrow">{t('onboarding.pushEyebrow')}</p><h1 id="onboarding-push-title">{t('onboarding.pushTitle')}</h1><p>{t('onboarding.pushDescription')}</p>
         <div className="onboarding-push-actions"><button type="button" className="primary onboarding-submit" disabled={pushPromptBusy} onClick={() => void acceptPush()}>{pushPromptBusy ? t('onboarding.pushWorking') : t('onboarding.pushAccept')}</button><button type="button" className="secondary onboarding-push-later" disabled={pushPromptBusy} onClick={() => void skipPush()}>{t('onboarding.pushLater')}</button></div>
         {pushPromptMessage ? <p className="message" role="alert">{pushPromptMessage}</p> : null}

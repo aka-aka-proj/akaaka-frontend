@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -31,6 +31,7 @@ vi.mock('../hooks/useT', () => ({
       'nav.messages': 'Messages',
       'nav.following': 'Following',
       'nav.myRegistrations': 'My registrations',
+      'nav.myActivities': 'My Activities',
       'nav.bookmarks': 'Bookmarks',
       'nav.analytics': 'Analytics',
       'nav.notificationSettings': 'Notification settings',
@@ -56,6 +57,44 @@ vi.mock('./MoreMenuDrawer', () => ({ MoreMenuDrawer: () => null }))
 describe('Layout desktop More menu accessibility', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
+  })
+
+  it.each(['/registrations/me', '/registrations/me/history'])('prioritizes My Activities on %s', (route) => {
+    const { container } = render(<MemoryRouter initialEntries={[route]}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' })
+    expect(within(mobile).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/events', '/registrations/me', '/profile/me'])
+    const activity = within(mobile).getByRole('link', { name: 'My Activities' })
+    expect(activity.getAttribute('aria-current')).toBe('page')
+    expect(activity.classList.contains('active')).toBe(true)
+    expect(container.querySelector('.desktop-nav a[href="/registrations/me"]')?.getAttribute('aria-current')).toBe('page')
+    expect(within(mobile).getByRole('button', { name: 'More' }).classList.contains('active')).toBe(false)
+    expect(screen.queryByRole('link', { name: 'Virtual Lover' })).toBeNull()
+  })
+
+  it('places Virtual Lover in desktop More and highlights More on its child route', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<MemoryRouter initialEntries={['/virtual-lovers/example/chat']}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const moreButtons = screen.getAllByRole('button', { name: 'More' })
+    moreButtons.forEach(button => expect(button.classList.contains('active')).toBe(true))
+    expect(container.querySelector('.bottom-nav a[aria-current]')).toBeNull()
+    await user.click(moreButtons[0])
+    expect(screen.getByRole('menuitem', { name: 'Virtual Lover' }).getAttribute('href')).toBe('/virtual-lovers')
+    expect(screen.getByRole('menuitem', { name: 'Virtual Lover' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.queryByRole('menuitem', { name: 'My registrations' })).toBeNull()
+  })
+
+  it.each(['/events/example', '/events/example/edit', '/events/new', '/events/mine'])('keeps event navigation current on %s', (route) => {
+    render(<MemoryRouter initialEntries={[route]}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' })
+    expect(within(mobile).getByRole('link', { name: 'Events' }).getAttribute('aria-current')).toBe('page')
+    expect(within(mobile).getByRole('button', { name: 'More' }).classList.contains('active')).toBe(false)
+  })
+
+  it.each(['/events/bookmarks', '/events/bookmarks/example'])('keeps bookmarks exclusively under More on %s', (route) => {
+    render(<MemoryRouter initialEntries={[route]}><Layout><p>Content</p></Layout></MemoryRouter>)
+    const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' })
+    expect(within(mobile).getByRole('link', { name: 'Events' }).getAttribute('aria-current')).toBeNull()
+    expect(within(mobile).getByRole('button', { name: 'More' }).classList.contains('active')).toBe(true)
   })
 
   it('focuses the first menu item and returns focus after Escape', async () => {

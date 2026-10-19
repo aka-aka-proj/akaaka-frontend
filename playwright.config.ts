@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 const allProjects = [
   { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
-  { name: 'chromium-mobile', use: { ...devices['Pixel 5'] } },
+  // Pin the complete reviewed mobile emulation instead of changing only the viewport in a test.
+  // This keeps viewport, screen and device metrics internally consistent across Playwright upgrades.
+  { name: 'chromium-mobile', use: { ...devices['Pixel 5'], viewport: { width: 396, height: 740 }, screen: { width: 396, height: 740 } } },
   { name: 'chromium-narrow', use: { ...devices['Pixel 5'], viewport: { width: 360, height: 800 } } },
   { name: 'chromium-390', use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } } },
   { name: 'chromium-1024', use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 800 } } },

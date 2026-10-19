@@ -1,3 +1,5 @@
+import { useBlocklistConfirmation } from '../hooks/useBlocklistConfirmation'
+import { BlocklistConflictDialog } from '../components/BlocklistConflictDialog'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
@@ -95,6 +97,7 @@ export function EventDetailPage() {
   const { showError } = useError()
   const navigate = useNavigate()
   const [eventItem, setEventItem] = useState<EventItem | null>(null)
+  const [hasSchedulingPoll, setHasSchedulingPoll] = useState(false)
   const [seriesInstances, setSeriesInstances] = useState<{ id: string; start_time: string; registration_deadline: string | null }[]>([])
   const [seriesIndex, setSeriesIndex] = useState(0)
   const [threads, setThreads] = useState<EventThread[]>([])
@@ -111,7 +114,9 @@ export function EventDetailPage() {
   const [publicCapacityOccupied, setPublicCapacityOccupied] = useState<number | null>(null)
   const [capacityQueryFailed, setCapacityQueryFailed] = useState(false)
   const [profileNameMap, setProfileNameMap] = useState<Map<string, string | null>>(new Map())
-  const [submitting, setSubmitting] = useState(false)
+  const [otherSubmitting, setSubmitting] = useState(false)
+  const { run: runConfirmed, confirmation, busy: confirmationBusy, confirm: confirmBlocklist, cancel: cancelBlocklist } = useBlocklistConfirmation(`${user?.id ?? ''}:${id ?? ''}`)
+  const submitting = otherSubmitting || confirmationBusy
   const [publicationPending, setPublicationPending] = useState(false)
   const [formResponses, setFormResponses] = useState<FormResponseWithRegistrant[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -343,6 +348,7 @@ export function EventDetailPage() {
     // cannot briefly expose registrations, guests, invitations, or capacity
     // data that belong to the previous event.
     setEventItem(null)
+    setHasSchedulingPoll(false)
     setThreads([])
     setSeriesInstances([])
     setSeriesIndex(0)
@@ -380,14 +386,20 @@ export function EventDetailPage() {
       ? supabase.from('events').select('*').eq('id', id).maybeSingle()
       : supabase.from('events').select('*').eq('id', id).maybeSingle()
 
-    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }] =
+    const schedulingPollQuery = user
+      ? supabase.from('event_scheduling_polls').select('id').eq('event_id', id).maybeSingle()
+      : Promise.resolve({ data: null, error: null })
+
+    const [{ data: eventData, error: eventError }, { data: threadData, error: threadError }, { data: bookmarkData }, { data: schedulingPollData }] =
       await Promise.all([
         eventsQuery,
         threadQuery,
         bookmarkQuery,
+        schedulingPollQuery,
       ])
 
     if (!isCurrentRequest()) return
+    setHasSchedulingPoll(Boolean(schedulingPollData))
 
     if (eventError || threadError) {
       showError(eventError?.message ?? threadError?.message ?? t('eventDetail.unableToLoad'), eventError || threadError)
@@ -673,22 +685,11 @@ export function EventDetailPage() {
     if (!id || !user) {
       return
     }
-    setSubmitting(true)
-
-    const { error } = await supabase.functions.invoke('create-registration', {
-      body: { event_id: id },
+    await runConfirmed({
+      name: 'create-registration', kind: 'register', body: { event_id: id },
+      onSuccess: load, onError: error => showError(error.message, error),
     })
-
-    setSubmitting(false)
-
-    if (error) {
-      const errorMessage = error.message
-      showError(errorMessage, error)
-      return
-    }
-
-    await load()
-  }, [id, user, showError, load])
+  }, [id, user, showError, load, runConfirmed])
 
   const mobileRegistrationShortcut = useMemo(() => {
     if (!eventItem
@@ -895,20 +896,11 @@ export function EventDetailPage() {
     if (!id || !user) {
       return
     }
-    setSubmitting(true)
-
-    const { error } = await supabase.functions.invoke('review-registration', {
+    await runConfirmed({
+      name: 'review-registration', kind: 'review',
       body: { event_id: id, registration_id: registrationId, action },
+      onSuccess: load, onError: error => showError(error.message, error),
     })
-
-    setSubmitting(false)
-
-    if (error) {
-      showError(error.message, error)
-      return
-    }
-
-    await load()
   }
 
   const postThread = async () => {
@@ -1151,6 +1143,9 @@ export function EventDetailPage() {
               </div>
             ) : null}
             <h2>{eventItem.title}</h2>
+            {hasSchedulingPoll ? (
+              <p><Link className="secondary-action" to={`/events/${eventItem.id}/scheduling-poll`}>{t('schedulingPoll.open')}</Link></p>
+            ) : null}
             {eventItem.lifecycle_status === 'draft' ? (
               <p className="message">{t('eventDetail.draftNotice')}</p>
             ) : null}
@@ -1501,27 +1496,20 @@ export function EventDetailPage() {
                       }
                     }
                   }
-                  setSubmitting(true)
-                  const { error } = await supabase.functions.invoke('create-registration', {
-                    body: { event_id: id, form_responses: formData },
+                  await runConfirmed({
+                    name: 'create-registration', kind: 'register', body: { event_id: id, form_responses: formData },
+                    onError: async error => {
+                      const response = error instanceof FunctionsHttpError ? error.context : undefined
+                      const responseBody = response?.status === 400 ? await response.clone().json().catch(() => null) : null
+                      if (responseBody?.error === 'form_validation_error') setFormValidationError(t('eventDetail.formValidationError'))
+                      else showError(responseBody?.message || error.message, error)
+                    },
+                    onSuccess: async () => {
+                      setFormValidationError('')
+                      setShowForm(false)
+                      await load()
+                    },
                   })
-                  setSubmitting(false)
-                  if (error) {
-                    const response = error instanceof FunctionsHttpError ? error.context : undefined
-                    let responseBody: { error?: string; message?: string } | null = null
-                    if (response?.status === 400) {
-                      responseBody = await response.clone().json().catch(() => null)
-                    }
-                    if (response?.status === 400 && responseBody?.error === 'form_validation_error') {
-                      setFormValidationError(t('eventDetail.formValidationError'))
-                    } else {
-                      showError(responseBody?.message || error.message, error)
-                    }
-                    return
-                  }
-                  setFormValidationError('')
-                  setShowForm(false)
-                  await load()
                 }}>
                   {isAtCapacity ? t('eventDetail.waitlistRegister') : t('eventDetail.register')}
                 </button>
@@ -2054,6 +2042,8 @@ export function EventDetailPage() {
           }}
         />
       ) : null}
+      <BlocklistConflictDialog open={Boolean(confirmation)} kind={confirmation?.request.kind ?? 'register'}
+        hostId={confirmation?.hostId} returnFocus={confirmation?.request.trigger} busy={confirmationBusy} onConfirm={() => void confirmBlocklist()} onCancel={cancelBlocklist} />
     </Layout>
   )
 }
