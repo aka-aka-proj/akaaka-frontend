@@ -61,7 +61,7 @@
     "lighthouse": "^13.4.1",
     "oxlint": "^1.71.0",
     "playwright": "latest",
-    "storybook": "^10.5.7",
+    "storybook": "^10.6.3",
     "typescript": "~6.0.2"
   }
 }
